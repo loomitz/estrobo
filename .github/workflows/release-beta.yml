@@ -136,8 +136,6 @@ jobs:
       RELEASE_COMMIT: ${{ needs.validate.outputs.commit }}
       RELEASE_FILE: ${{ needs.validate.outputs.release_file }}
       SIGNING_IDENTITY: ${{ secrets.ESTROBO_SIGNING_IDENTITY }}
-      SIGNING_KEYCHAIN: ${{ runner.temp }}/estrobo-signing.keychain-db
-      SIGNING_P12: ${{ runner.temp }}/estrobo-signing.p12
     steps:
       # actions/checkout v7.0.1, pinned to its verified commit.
       - name: Check out tagged commit
@@ -146,6 +144,15 @@ jobs:
           ref: ${{ needs.validate.outputs.commit }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Prepare ephemeral signing paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "SIGNING_KEYCHAIN=$RUNNER_TEMP/estrobo-signing.keychain-db"
+            echo "SIGNING_P12=$RUNNER_TEMP/estrobo-signing.p12"
+          } >>"$GITHUB_ENV"
 
       - name: Import stable signing identity
         shell: bash
