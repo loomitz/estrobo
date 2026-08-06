@@ -46,7 +46,7 @@ Conexión, descubrimiento de `FFF0`/`FEC0`, características y suscripciones tie
 - Un nombre/UUID coincidente no demuestra que el código sea correcto.
 - Cancelar, fallar o desconectar limpia el código en memoria. Introdúcelo de nuevo.
 
-No se admite código vacío por conjetura. Un radio que aparentemente funcione sin código requiere una prueba física separada antes de cambiar el protocolo.
+El handshake `Psub`/`PWOK` siempre es obligatorio y utiliza el Código del radio. Ese código es el PIN local del transmisor, no una credencial fuerte ni un secreto de alto valor.
 
 ## Conecté y cambió el estado del radio
 

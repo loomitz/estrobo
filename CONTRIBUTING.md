@@ -44,7 +44,7 @@ Los builds universales firmados y paquetes públicos pertenecen al workflow de r
 - A0 confirma por GATT; A1 por GATT + `FEC8`. `FEC8` no identifica grupo ni resultado óptico.
 - Test es explícito, fail-fast y sin reintento automático.
 - App Sandbox/Bluetooth permanecen activos y no se añade red, analítica o telemetría.
-- No se añade código vacío, pairing obligatorio, criptografía casera, cambio de código, firmware u OAD por conjetura.
+- No se omite el handshake `Psub`/`PWOK` ni se añade pairing obligatorio, criptografía casera, cambio de código, firmware u OAD por conjetura.
 
 Si tu propuesta cambia alguno, primero abre una discusión y aporta evidencia suficiente para una decisión explícita.
 

@@ -1,93 +1,94 @@
 # estrobo
 
-Control local de transmisores Godox desde macOS. Estrobo organiza grupos de trabajo y permite ajustar potencia, modo, luz de modelado y controles globales desde una app nativa, sin cuenta, backend, analítica ni telemetría.
+**English** | [Español](README.es.md)
+
+Local control for Godox transmitters on macOS. Estrobo organizes working groups and lets you adjust power, mode, modeling light, and global controls from a native app, with no account, backend, analytics, or telemetry.
 
 > [!WARNING]
-> Estrobo es un beta público limitado. No está firmado con Developer ID ni notarizado por Apple. Su firma autosignada sólo conserva una identidad consistente entre betas; macOS mostrará una advertencia de Gatekeeper.
+> Estrobo is a limited public beta. It is neither signed with Developer ID nor notarized by Apple. Its self-signed identity only keeps the app identity consistent across beta builds; macOS will show a Gatekeeper warning.
 
-![Vista Canales de Estrobo en modo simulado](prototype/GodoxMacControlPrototype/QA/channels-after-dark-final-es.png)
+![Estrobo Channels view in simulated mode](prototype/GodoxMacControlPrototype/QA/channels-after-dark-final-en.png)
 
-![Configuración local de grupos y modelos](prototype/GodoxMacControlPrototype/QA/workspace-configuration-unified-light-es.png)
+![Local settings for groups and flash models](prototype/GodoxMacControlPrototype/QA/group-colors-settings-light-en-window.png)
 
-## Requisitos
+## Requirements
 
-- macOS 13.0 o posterior.
-- Mac con Apple Silicon (`arm64`) o Intel (`x86_64`).
-- Bluetooth disponible y permiso concedido a Estrobo.
-- Un transmisor BLE compatible con el protocolo observado. La cobertura física todavía es limitada; consulta [Beta y compatibilidad](docs/BETA.md).
-- Conexión exclusiva: cierra antes cualquier app móvil o de escritorio conectada al transmisor. El radio sólo admite una conexión Bluetooth a la vez.
+- macOS 13.0 or later.
+- A Mac with Apple Silicon (`arm64`) or Intel (`x86_64`).
+- Bluetooth available and permission granted to Estrobo.
+- A BLE transmitter compatible with the observed protocol. Physical coverage is still limited; see [Beta and compatibility](docs/BETA.md).
+- An exclusive connection: first close any mobile or desktop app connected to the transmitter. The radio supports only one Bluetooth connection at a time.
 
-## Descargar e instalar
+## Download and install
 
-1. Descarga `estrobo-<tag>-macos-universal.zip` y `SHA256SUMS` de [GitHub Releases](../../releases). No descargues builds desde issues ni enlaces de terceros.
-2. Calcula `shasum -a 256 nombre-del-archivo.zip` y comprueba que coincida con la línea correspondiente de `SHA256SUMS`.
-3. Descomprime el ZIP y mueve `estrobo.app` a Aplicaciones.
-4. Intenta abrir Estrobo una vez. macOS lo bloqueará porque Apple no ha firmado ni notarizado esta app.
-5. Ve a **menú Apple → Configuración del Sistema → Privacidad y seguridad**, baja a **Seguridad**, pulsa **Abrir de todos modos**, autentícate y confirma **Abrir**. Apple mantiene ese botón disponible por un tiempo limitado después del primer intento. No desactives Gatekeeper ni retires la cuarentena del archivo. Consulta el [procedimiento oficial de Apple](https://support.apple.com/guide/mac-help/mh40617/mac).
+1. Download `estrobo-<tag>-macos-universal.zip` and `SHA256SUMS` from [GitHub Releases](../../releases). Do not download builds from issues or third-party links.
+2. Run `shasum -a 256 archive-name.zip` and check that it matches the corresponding line in `SHA256SUMS`.
+3. Extract the ZIP and move `estrobo.app` to Applications.
+4. Try to open Estrobo once. macOS will block it because Apple has not signed or notarized this app.
+5. Go to **Apple menu → System Settings → Privacy & Security**, scroll down to **Security**, click **Open Anyway**, authenticate, and confirm **Open**. Apple keeps this button available for a limited time after the first launch attempt. Do not disable Gatekeeper or remove the file's quarantine attribute. See [Apple's official procedure](https://support.apple.com/guide/mac-help/mh40617/mac).
 
-La advertencia es esperada, pero no prueba que cualquier archivo sea seguro: verifica siempre el checksum y el origen del release.
+The warning is expected, but it does not prove that every file is safe. Always verify the checksum and release source.
 
-## Inicio rápido
+## Quick start
 
-1. Enciende el transmisor y cierra cualquier otra app conectada a él.
-2. Abre Estrobo y configura el perfil, los grupos de trabajo y al menos un modelo de flash por grupo.
-3. Pulsa **Buscar**. Elige el radio usando nombre, RSSI y el sufijo de UUID; nombre y UUID ayudan a distinguirlo, pero no lo autentican criptográficamente.
-4. Introduce el **Código del radio** de seis dígitos. Es un parámetro local de compatibilidad y proximidad, no una credencial fuerte. No reutilices un PIN personal.
-5. La opción para recordarlo comienza apagada. Si la activas, Estrobo lo guarda localmente y sin cifrar sólo después de completar `PWOK` y la sincronización; nunca lo envía a Internet. **Olvidar** elimina radio y código guardados.
-6. Conecta sabiendo que Estrobo es la fuente de verdad: después del handshake sobrescribe deliberadamente el estado global A0 y los A1 de todos los grupos configurados. No importa el estado previo del transmisor.
-7. En **Automático**, un cambio se envía 700 ms después del último ajuste. Un arrastre no transmite valores intermedios: el plazo comienza al soltar. También puedes elegir **Con botón** y usar **Enviar ahora** o **Descartar**.
+1. Turn on the transmitter and close any other app connected to it.
+2. Open Estrobo and configure the profile, working groups, and at least one flash model per group.
+3. Click **Find**. Choose the trigger using its name, RSSI, and UUID suffix; the name and UUID help distinguish it but do not authenticate it cryptographically.
+4. Enter the six-digit **Radio Code**. It is the transmitter's local compatibility/proximity PIN, not a strong credential or a high-value secret. Do not reuse a personal PIN.
+5. The option to remember it starts off. If enabled, Estrobo stores it locally and unencrypted only after completing `PWOK` and synchronization; it never sends it over the Internet. **Forget** removes the saved radio and code.
+6. The BLE handshake is still required. Once it completes, Estrobo acts as the source of truth and deliberately overwrites global A0 and every configured group's A1. The transmitter's previous state does not matter.
+7. In **Automatic**, a change is sent 700 ms after the last adjustment. Dragging does not transmit intermediate values: the delay starts when you release the control. You can also choose **On Apply** and use **Send now** or **Discard**.
 
-Lee [Sincronización automática](docs/AUTOMATIC-SYNC.md) antes de conectar hardware.
+Read [Automatic synchronization](docs/AUTOMATIC-SYNC.md) before connecting hardware.
 
-## Modo simulado
+## Simulated mode
 
-Para explorar la interfaz sin crear una sesión Bluetooth ni enviar comandos físicos:
+To explore the interface without creating a Bluetooth session or sending physical commands:
 
 ```sh
 /usr/bin/open -n /Applications/estrobo.app --args --mock-radio
 ```
 
-Desde un checkout de desarrollo:
+From a development checkout:
 
 ```sh
 make mac-prototype-build
 /usr/bin/open -n prototype/GodoxMacControlPrototype/Build/estrobo.app --args --mock-radio
 ```
 
-La app muestra **Radio simulado** de forma explícita. Nunca activa este modo como fallback silencioso.
+The app displays **Simulated radio** explicitly. It never enables this mode as a silent fallback.
 
-## Qué incluye
+## What is included
 
-- Grupos `0–9` y `A–F` según el perfil; potencia Manual en pasos Godox de 1/3 EV y rango común seguro por modelos asignados.
-- M y Auto/TTL, Off, modelado apagado/proporcional/fijo, Beep global, Standby global y Test explícito.
-- Ajuste de potencia global con relación entre grupos conservada.
-- Vistas Canales, Inspector y Matriz; presets locales; español e inglés; apariencia clara y oscura.
-- Entrega automática con debounce de 700 ms o modo **Con botón**.
-- Recuperación fail-closed cuando el resultado de una escritura queda incierto.
+- Groups `0–9` and `A–F`, depending on the profile; Manual power in 1/3 EV Godox steps and a safe common range for the models assigned to each group.
+- M and Auto/TTL, Off, modeling light off/proportional/fixed, global Beep, global Standby, and explicit Test.
+- Global power adjustment that preserves the relationship between groups.
+- Channels, Inspector, and Matrix views; local presets; Spanish and English; light and dark appearance.
+- Automatic delivery with a 700 ms debounce or **On Apply** mode.
+- Fail-closed recovery when the outcome of a write is uncertain.
 
-## Límites importantes
+## Important limitations
 
-- No existe lectura completa radio → app. **Sync no importa valores: los sobrescribe.**
-- `FEC8` no identifica el grupo, no devuelve los valores y no demuestra el resultado óptico.
-- Test confirma como máximo la entrega a CoreBluetooth; la persona debe observar el destello.
-- La edición de Multi, canal, compensación TTL no neutra, cambio de código, firmware y OAD no está disponible.
-- La compatibilidad física varía por transmisor, flash y firmware. Un nombre BLE o UUID no demuestra el modelo ni la autenticidad del radio.
-- Radios que supuestamente funcionan sin código siguen pendientes de prueba física; Estrobo no relaja el handshake por conjetura.
+- There is no complete radio → app readback. **Sync does not import values; it overwrites them.**
+- `FEC8` does not identify the group, return values, or prove the optical result.
+- Test confirms at most delivery to CoreBluetooth; a person must observe the flash.
+- Multi editing, channel changes, non-neutral TTL compensation, Radio Code changes, firmware, and OAD are unavailable.
+- Physical compatibility varies by transmitter, flash, and firmware. A BLE name or UUID does not prove the radio's model or authenticity.
 
-## Documentación y comunidad
+## Documentation and community
 
-- [Cómo funciona](docs/HOW-IT-WORKS.md)
-- [Conexión Bluetooth](docs/BLUETOOTH-CONNECTION.md)
-- [Sincronización automática](docs/AUTOMATIC-SYNC.md)
-- [Beta, instalación y riesgos](docs/BETA.md)
-- [Solución de problemas](docs/TROUBLESHOOTING.md)
-- [Privacidad](PRIVACY.md)
-- [Seguridad](SECURITY.md)
-- [Soporte](SUPPORT.md)
-- [Contribuir](CONTRIBUTING.md)
-- [Historial de cambios](CHANGELOG.md)
-- [Avisos de terceros](THIRD-PARTY-NOTICES.md)
+- [How it works](docs/HOW-IT-WORKS.md)
+- [Bluetooth connection](docs/BLUETOOTH-CONNECTION.md)
+- [Automatic synchronization](docs/AUTOMATIC-SYNC.md)
+- [Beta, installation, and risks](docs/BETA.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Privacy](PRIVACY.md)
+- [Security](SECURITY.md)
+- [Support](SUPPORT.md)
+- [Contributing](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
+- [Third-party notices](THIRD-PARTY-NOTICES.md)
 
-Estrobo es un proyecto independiente. No está afiliado, patrocinado, aprobado ni mantenido oficialmente por Godox. Godox y los nombres de sus productos pertenecen a sus respectivos titulares.
+Estrobo is an independent project. It is not affiliated with, sponsored, endorsed, or officially maintained by Godox. Godox and its product names belong to their respective owners.
 
-Este repositorio no incluye una licencia open-source. La ausencia de licencia es intencional por ahora.
+This repository does not include an open-source license. The absence of a license is intentional for now.

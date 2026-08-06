@@ -78,6 +78,6 @@ Las pruebas verifican bytes/CRC, cola serial, timeouts, recuperación, persisten
 
 - Sin lectura completa radio → app.
 - Sin cuenta o backend.
-- Sin cambio de Código del radio, soporte especulativo de código vacío, criptografía casera, edición de firmware u OAD.
+- Sin cambio de Código del radio, omisión del handshake `Psub`/`PWOK`, criptografía casera, edición de firmware u OAD.
 - Sin reintento automático de Test.
 - Sin afirmaciones de autenticidad basadas sólo en nombre BLE, RSSI o UUID.

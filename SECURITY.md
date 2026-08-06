@@ -49,9 +49,9 @@ Estas propiedades no convierten el protocolo BLE en un canal autenticado de form
 
 ### Código del radio
 
-El Código del radio es un parámetro de compatibilidad/proximidad. Viaja en el protocolo Godox y no protege una cuenta o servicio. Si se recuerda, se guarda localmente y sin cifrar sólo por opt-in. No debe reutilizarse un PIN personal.
+El Código del radio es el PIN local de compatibilidad/proximidad del transmisor. Viaja en el protocolo Godox, no es un secreto de alto valor y no protege una cuenta o servicio. Si se recuerda, se guarda localmente y sin cifrar sólo por opt-in. No debe reutilizarse un PIN personal.
 
-Estrobo no añade criptografía casera, pairing obligatorio ni soporte de código vacío sin evidencia física. `PWOK`, `Psub` y el protocolo BLE observado se conservan compatibles.
+El handshake `Psub`/`PWOK` siempre es obligatorio y utiliza ese PIN local. Estrobo no añade criptografía casera ni pairing obligatorio; conserva compatible el protocolo BLE observado.
 
 ### Identidad del dispositivo
 
