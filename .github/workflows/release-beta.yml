@@ -73,10 +73,12 @@ jobs:
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             non_workflow_changes="$(
               git diff --name-only "$commit" "$GITHUB_SHA" -- \
-                . ':(exclude).github/workflows/release-beta.yml'
+                . \
+                ':(exclude).github/workflows/release-beta.yml' \
+                ':(exclude)scripts/verify-macos-release.sh'
             )"
             if [[ -n "$non_workflow_changes" ]]; then
-              echo "Protected main contains non-workflow changes after $TAG:" >&2
+              echo "Protected main contains non-release-tooling changes after $TAG:" >&2
               printf '%s\n' "$non_workflow_changes" >&2
               exit 1
             fi
@@ -328,7 +330,7 @@ jobs:
       - name: Check out tagged commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ needs.validate.outputs.commit }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || needs.validate.outputs.commit }}
           persist-credentials: false
 
       # actions/download-artifact v8.0.1, pinned to its verified commit.
@@ -392,7 +394,7 @@ jobs:
                 commit: $workflowCommit,
                 event: $event
               },
-              guard: "Protected main differs from the release commit only in .github/workflows/release-beta.yml"
+              guard: "Protected main differs from the release commit only in release-beta.yml and verify-macos-release.sh"
             }' >"$RUNNER_TEMP/manual-rebuild-predicate.json"
 
       # Manual rebuilds cannot use the dispatch ref as source provenance for
