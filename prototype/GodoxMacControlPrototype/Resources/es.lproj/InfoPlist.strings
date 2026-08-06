@@ -1,0 +1,3 @@
+"CFBundleDisplayName" = "estrobo";
+"CFBundleName" = "estrobo";
+"NSBluetoothAlwaysUsageDescription" = "estrobo usa Bluetooth para comunicarse localmente con un transmisor autorizado por ti.";

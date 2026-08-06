@@ -1,0 +1,34 @@
+# macOS and editor metadata
+.DS_Store
+*.af~lock~
+*~
+
+# Swift and local build outputs
+Build/
+Dist/
+.build/
+.swiftpm/
+DerivedData/
+*.app/
+*.dSYM/
+
+# Packaged release artifacts
+*.zip
+*.dmg
+*.pkg
+*.exe
+
+# Signing secrets and temporary keychains
+*.p12
+*.pfx
+*.key
+*.pem
+*.keychain
+*.keychain-db
+*.keychain-password
+*.signing-password
+
+# Local environment files
+.env
+.env.*
+!.env.example

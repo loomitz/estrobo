@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mac-native:
+    name: macOS 15 (${{ matrix.expected_arch }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            expected_arch: arm64
+          - runner: macos-15-intel
+            expected_arch: x86_64
+    env:
+      EXPECTED_ARCH: ${{ matrix.expected_arch }}
+    steps:
+      # actions/checkout v7.0.1, pinned to its verified commit.
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Verify native runner architecture
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual_arch="$(uname -m)"
+          if [[ "$actual_arch" != "$EXPECTED_ARCH" ]]; then
+            echo "Expected $EXPECTED_ARCH runner, received $actual_arch" >&2
+            exit 1
+          fi
+
+      - name: Type-check
+        run: make mac-prototype-check TARGET_ARCH="$EXPECTED_ARCH"
+
+      - name: Test
+        run: make mac-prototype-test TARGET_ARCH="$EXPECTED_ARCH"
+
+      - name: Build native bundle
+        run: make mac-prototype-build TARGET_ARCH="$EXPECTED_ARCH"
+
+      - name: Verify native executable slice
+        run: |
+          lipo prototype/GodoxMacControlPrototype/Build/estrobo.app/Contents/MacOS/estrobo \
+            -verify_arch "$EXPECTED_ARCH"
