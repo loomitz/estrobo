@@ -1,15 +1,21 @@
-# estrobo
+<p align="center">
+  <img src="prototype/GodoxMacControlPrototype/Resources/Brand/EstroboMark1024.png" width="132" alt="Icono de la app Estrobo">
+</p>
 
-[English](README.md) | **Español**
+<h1 align="center">estrobo</h1>
 
-Control local desde macOS para disparadores de flash Godox compatibles con Bluetooth activado. Estrobo organiza grupos de trabajo y permite ajustar potencia, modo, luz de modelado y controles globales desde una app nativa, sin cuenta, backend, analítica ni telemetría.
+<p align="center"><strong>Control local y nativo desde macOS para disparadores de flash Godox compatibles con Bluetooth.</strong></p>
+
+<p align="center"><sub>macOS 13+ &nbsp;·&nbsp; Apple Silicon + Intel &nbsp;·&nbsp; Todo permanece local</sub></p>
+
+<p align="center"><a href="README.md">English</a> &nbsp;·&nbsp; <strong>Español</strong></p>
+
+Estrobo reúne los controles de disparadores de flash Godox compatibles en un espacio de trabajo enfocado para Mac. Organiza grupos y ajusta potencia, modo, luz de modelado y controles globales sin cuenta, backend, analítica ni telemetría.
 
 > [!WARNING]
-> Estrobo es un beta público limitado. No está firmado con Developer ID ni notarizado por Apple. Su firma autosignada sólo conserva una identidad consistente entre betas; macOS mostrará una advertencia de Gatekeeper.
+> Esta primera beta pública no está firmada con Apple Developer ID ni notarizada por Apple. Usa una firma autosignada únicamente para conservar su identidad entre builds beta, por lo que macOS bloqueará el primer inicio con una advertencia de Gatekeeper.
 
 ![Vista Canales de Estrobo en modo simulado](prototype/GodoxMacControlPrototype/QA/channels-after-dark-final-es.png)
-
-![Configuración local de grupos y modelos](prototype/GodoxMacControlPrototype/QA/workspace-configuration-unified-light-es.png)
 
 ## Requisitos
 
@@ -25,15 +31,31 @@ Estrobo se conecta por Bluetooth a un disparador de flash Godox compatible. No s
 
 El Bluetooth integrado debe estar activado, pero tener Bluetooth no garantiza por sí solo la compatibilidad. El disparador debe exponer el perfil BLE/GATT de Godox Flash compatible con Estrobo y el soporte puede variar según modelo y firmware. Un nombre Godox, anuncio BLE o UUID no demuestra compatibilidad.
 
-## Descargar e instalar
+### Configuración probada físicamente
 
-1. Descarga `estrobo-<tag>-macos-universal.zip` y `SHA256SUMS` de [GitHub Releases](../../releases). No descargues builds desde issues ni enlaces de terceros.
-2. Calcula `shasum -a 256 nombre-del-archivo.zip` y comprueba que coincida con la línea correspondiente de `SHA256SUMS`.
+| Conexión | Hardware probado |
+| --- | --- |
+| Mac ↔ disparador por Bluetooth | Godox X3Pro con Bluetooth activado |
+| Disparador ↔ flashes | Godox AD400Pro II |
+
+Esta es la única matriz de hardware utilizada en pruebas físicas hasta ahora; no se registraron la variante exacta de cámara ni las revisiones de firmware, y no todas las funciones se han validado ópticamente. Otros disparadores con Bluetooth que expongan el perfil BLE/GATT de Godox Flash compatible, y otros flashes del sistema Godox X controlados mediante el disparador, también podrían ser compatibles, pero Estrobo no declara soporte hasta verificar físicamente cada combinación de disparador, flash y firmware.
+
+## Instalar esta beta
+
+1. Descarga `estrobo-<tag>-macos-universal.zip`, `SHA256SUMS` y `estrobo-<tag>-manifest.json` desde [GitHub Releases](https://github.com/loomitz/estrobo/releases). Conserva los tres archivos juntos en Descargas y no uses builds publicados en issues ni enlaces de terceros.
+2. Abre Terminal y verifica los archivos del release antes de extraerlos:
+
+   ```sh
+   cd ~/Downloads
+   shasum -a 256 -c SHA256SUMS
+   ```
+
+   Continúa únicamente si tanto el ZIP como el manifiesto muestran `OK`.
 3. Descomprime el ZIP y mueve `estrobo.app` a Aplicaciones.
-4. Intenta abrir Estrobo una vez. macOS lo bloqueará porque Apple no ha firmado ni notarizado esta app.
-5. Ve a **menú Apple → Configuración del Sistema → Privacidad y seguridad**, baja a **Seguridad**, pulsa **Abrir de todos modos**, autentícate y confirma **Abrir**. Apple mantiene ese botón disponible por un tiempo limitado después del primer intento. No desactives Gatekeeper ni retires la cuarentena del archivo. Consulta el [procedimiento oficial de Apple](https://support.apple.com/guide/mac-help/mh40617/mac).
+4. Haz doble clic en Estrobo una vez. Como esta beta no tiene firma Apple Developer ID ni notarización, macOS bloqueará el primer inicio.
+5. Ve a **menú Apple → Configuración del Sistema → Privacidad y seguridad**, baja a **Seguridad**, pulsa **Abrir de todos modos**, autentícate y confirma **Abrir**. Apple mantiene ese botón disponible por un tiempo limitado después del primer intento. Consulta el [procedimiento oficial de Apple](https://support.apple.com/guide/mac-help/mh40617/mac).
 
-La advertencia es esperada, pero no prueba que cualquier archivo sea seguro: verifica siempre el checksum y el origen del release.
+La advertencia es esperada, pero no prueba que cualquier archivo sea seguro: verifica siempre el checksum y el origen del release. No desactives Gatekeeper, retires la cuarentena ni marques manualmente como confiable la autofirma del proyecto.
 
 ## Inicio rápido
 
@@ -73,13 +95,24 @@ La app muestra **Radio simulado** de forma explícita. Nunca activa este modo co
 - Entrega automática con debounce de 700 ms o modo **Con botón**.
 - Recuperación fail-closed cuando el resultado de una escritura queda incierto.
 
+<details>
+<summary><strong>Ver configuración del espacio de trabajo</strong></summary>
+
+![Configuración local de grupos y modelos](prototype/GodoxMacControlPrototype/QA/workspace-configuration-unified-light-es.png)
+
+</details>
+
 ## Límites importantes
 
 - No existe lectura completa radio → app. **Sync no importa valores: los sobrescribe.**
 - `FEC8` no identifica el grupo, no devuelve los valores y no demuestra el resultado óptico.
 - Test confirma como máximo la entrega a CoreBluetooth; la persona debe observar el destello.
-- La edición de Multi, canal, compensación TTL no neutra, cambio de código, firmware y OAD no está disponible.
+- La edición Multi no está disponible en esta beta. Tampoco están disponibles el cambio de canal, la compensación TTL no neutra, el cambio de código, firmware u OAD.
 - La compatibilidad física varía por transmisor, flash y firmware. Un nombre BLE o UUID no demuestra el modelo ni la autenticidad del radio.
+
+## Planeado
+
+El modo Multi está planeado para una versión futura. La cobertura de compatibilidad también crecerá conforme se validen físicamente más combinaciones de disparador, flash y firmware.
 
 ## Documentación y comunidad
 

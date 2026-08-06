@@ -1,15 +1,21 @@
-# estrobo
+<p align="center">
+  <img src="prototype/GodoxMacControlPrototype/Resources/Brand/EstroboMark1024.png" width="132" alt="Estrobo app icon">
+</p>
 
-**English** | [Español](README.es.md)
+<h1 align="center">estrobo</h1>
 
-Local macOS control for compatible Godox flash triggers with Bluetooth enabled. Estrobo organizes working groups and lets you adjust power, mode, modeling light, and global controls from a native app, with no account, backend, analytics, or telemetry.
+<p align="center"><strong>Local, native macOS control for compatible Bluetooth-enabled Godox flash triggers.</strong></p>
+
+<p align="center"><sub>macOS 13+ &nbsp;·&nbsp; Apple Silicon + Intel &nbsp;·&nbsp; Local-only</sub></p>
+
+<p align="center"><strong>English</strong> &nbsp;·&nbsp; <a href="README.es.md">Español</a></p>
+
+Estrobo brings compatible Godox flash-trigger controls into one focused Mac workspace. Organize working groups and adjust power, mode, modeling light, and global controls without an account, backend, analytics, or telemetry.
 
 > [!WARNING]
-> Estrobo is a limited public beta. It is neither signed with Developer ID nor notarized by Apple. Its self-signed identity only keeps the app identity consistent across beta builds; macOS will show a Gatekeeper warning.
+> This first public beta is not signed with Apple Developer ID and is not notarized by Apple. It is self-signed only to keep its identity consistent between beta builds, so macOS will block the first launch with a Gatekeeper warning.
 
 ![Estrobo Channels view in simulated mode](prototype/GodoxMacControlPrototype/QA/channels-after-dark-final-en.png)
-
-![Local settings for groups and flash models](prototype/GodoxMacControlPrototype/QA/group-colors-settings-light-en-window.png)
 
 ## Requirements
 
@@ -25,15 +31,31 @@ Estrobo connects over Bluetooth to a compatible Godox flash trigger. It does not
 
 Built-in Bluetooth must be turned on, but Bluetooth alone does not guarantee compatibility. The trigger must expose the Godox Flash BLE/GATT profile supported by Estrobo, and support can vary by model and firmware. A Godox name, BLE advertisement, or UUID is not proof of compatibility.
 
-## Download and install
+### Physically tested setup
 
-1. Download `estrobo-<tag>-macos-universal.zip` and `SHA256SUMS` from [GitHub Releases](../../releases). Do not download builds from issues or third-party links.
-2. Run `shasum -a 256 archive-name.zip` and check that it matches the corresponding line in `SHA256SUMS`.
+| Connection | Tested hardware |
+| --- | --- |
+| Mac ↔ Bluetooth trigger | Godox X3Pro with Bluetooth enabled |
+| Trigger ↔ flash units | Godox AD400Pro II |
+
+This is the only hardware matrix used for physical testing so far; the exact camera variant and firmware revisions were not recorded, and not every feature has been optically validated. Other Bluetooth-enabled triggers exposing the supported Godox Flash BLE/GATT profile, and other Godox X-system flashes controlled through the trigger, may also be compatible, but Estrobo does not claim support until each trigger, flash, and firmware combination is physically verified.
+
+## Install this beta
+
+1. Download `estrobo-<tag>-macos-universal.zip`, `SHA256SUMS`, and `estrobo-<tag>-manifest.json` from [GitHub Releases](https://github.com/loomitz/estrobo/releases). Keep the three files together in Downloads and do not use builds from issues or third-party links.
+2. Open Terminal and verify the release files before extracting them:
+
+   ```sh
+   cd ~/Downloads
+   shasum -a 256 -c SHA256SUMS
+   ```
+
+   Continue only if the ZIP and manifest both report `OK`.
 3. Extract the ZIP and move `estrobo.app` to Applications.
-4. Try to open Estrobo once. macOS will block it because Apple has not signed or notarized this app.
-5. Go to **Apple menu → System Settings → Privacy & Security**, scroll down to **Security**, click **Open Anyway**, authenticate, and confirm **Open**. Apple keeps this button available for a limited time after the first launch attempt. Do not disable Gatekeeper or remove the file's quarantine attribute. See [Apple's official procedure](https://support.apple.com/guide/mac-help/mh40617/mac).
+4. Double-click Estrobo once. Because this beta has no Apple Developer ID signature or notarization, macOS will block its first launch.
+5. Go to **Apple menu → System Settings → Privacy & Security**, scroll down to **Security**, click **Open Anyway**, authenticate, and confirm **Open**. Apple keeps this button available for a limited time after the first launch attempt. See [Apple's official procedure](https://support.apple.com/guide/mac-help/mh40617/mac).
 
-The warning is expected, but it does not prove that every file is safe. Always verify the checksum and release source.
+The warning is expected, but it does not prove that every file is safe. Always verify the checksum and release source. Do not disable Gatekeeper, remove the quarantine attribute, or manually trust the project's self-signed certificate.
 
 ## Quick start
 
@@ -73,13 +95,24 @@ The app displays **Simulated radio** explicitly. It never enables this mode as a
 - Automatic delivery with a 700 ms debounce or **On Apply** mode.
 - Fail-closed recovery when the outcome of a write is uncertain.
 
+<details>
+<summary><strong>See workspace configuration</strong></summary>
+
+![Local settings for groups and flash models](prototype/GodoxMacControlPrototype/QA/group-colors-settings-light-en-window.png)
+
+</details>
+
 ## Important limitations
 
 - There is no complete radio → app readback. **Sync does not import values; it overwrites them.**
 - `FEC8` does not identify the group, return values, or prove the optical result.
 - Test confirms at most delivery to CoreBluetooth; a person must observe the flash.
-- Multi editing, channel changes, non-neutral TTL compensation, Radio Code changes, firmware, and OAD are unavailable.
+- Multi editing is not available in this beta. Channel changes, non-neutral TTL compensation, Radio Code changes, firmware, and OAD are also unavailable.
 - Physical compatibility varies by transmitter, flash, and firmware. A BLE name or UUID does not prove the radio's model or authenticity.
+
+## Planned
+
+Multi mode is planned for a future release. Compatibility coverage will also expand as more trigger, flash, and firmware combinations are physically validated.
 
 ## Documentation and community
 

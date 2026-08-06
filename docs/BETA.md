@@ -23,13 +23,14 @@ Usa únicamente los assets del prerelease en GitHub Releases:
 - `estrobo-<tag>-manifest.json` con versión/procedencia;
 - attestation del artefacto cuando GitHub la muestre.
 
-Calcula el digest local y compáralo antes de extraer:
+Conserva los tres archivos juntos en Descargas y compruébalos antes de extraer:
 
 ```sh
-shasum -a 256 nombre-del-archivo.zip
+cd ~/Downloads
+shasum -a 256 -c SHA256SUMS
 ```
 
-El resultado debe coincidir exactamente con la línea del ZIP en `SHA256SUMS`. GitHub también permite verificar attestations con `gh attestation verify`; sigue la [documentación oficial de GitHub](https://docs.github.com/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations) y especifica este repositorio como origen.
+El ZIP y el manifiesto deben mostrar `OK`. Si alguno falla, no abras la app. GitHub también permite verificar attestations con `gh attestation verify`; sigue la [documentación oficial de GitHub](https://docs.github.com/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations) y especifica este repositorio como origen.
 
 La firma del bundle es autosignada y estable, independiente de Apple. El certificado público DER está en `release/signing/estrobo-beta-signing.cer` y el SHA-256 de esos bytes en `release/signing/estrobo-beta-signing.sha256`. Sirve para detectar un cambio de identidad entre betas y probar la actualización N→N+1, pero no crea confianza de Gatekeeper, no sustituye Developer ID y no implica revisión de Apple. Nadie debe instalar ni marcar como confiable manualmente el certificado autosignado.
 
@@ -59,7 +60,9 @@ Los grupos nuevos comienzan en Off. Aun así, su A1 completo forma parte de la s
 
 ## Cobertura conocida
 
-La investigación y las pruebas locales confirman el codec, CRC, máquina de estados y la secuencia BLE observada. Históricamente, un enlace físico permitió completar `PWOK`, Sync y cambios reversibles A1 de potencia y modelado fijo al 25% con acuse GATT + `FEC8` en un transmisor `GDBH-*` cuyo modelo comercial y firmware exactos no quedaron registrados. Esa evidencia no identifica ni garantiza todas las combinaciones de transmisor, flash o firmware.
+La configuración probada físicamente hasta ahora usa un disparador Godox X3Pro con Bluetooth activado y flashes Godox AD400Pro II. Estrobo se conecta al X3Pro; los AD400Pro II se comunican mediante el sistema de radio Godox del propio disparador. No se registraron la variante exacta de cámara ni las revisiones de firmware. Esta evidencia cubre esa combinación concreta y no garantiza otras variantes, flashes o versiones de firmware.
+
+Otros disparadores con Bluetooth que expongan el perfil BLE/GATT de Godox Flash compatible con Estrobo, así como otros flashes del sistema Godox X controlados mediante el disparador, podrían ser compatibles. Estrobo no declara soporte hasta verificar físicamente cada combinación de disparador, flash y firmware. El asset exacto de cada release sigue necesitando el smoke manual definido en el checklist antes de publicarse.
 
 El Bluetooth integrado y activado es obligatorio, pero no suficiente: el disparador también debe exponer el perfil BLE/GATT de Godox Flash compatible con Estrobo. Los flashes y receptores siguen comunicándose por el sistema de radio del disparador y no necesitan Bluetooth.
 
@@ -71,7 +74,7 @@ Pendientes de ampliar mediante pruebas físicas controladas:
 - todos los grupos `0–9`/`A–F` que la UI puede configurar;
 - reconexión y actualización entre betas en Macs limpios Intel y Apple Silicon.
 
-No están disponibles: edición Multi, canal global, compensación TTL no neutra, cambio de Código del radio, firmware u OAD.
+La edición Multi está planeada para una versión futura, pero no está disponible en esta beta. Tampoco están disponibles el canal global, la compensación TTL no neutra, el cambio de Código del radio, firmware u OAD.
 
 ## Qué probar
 

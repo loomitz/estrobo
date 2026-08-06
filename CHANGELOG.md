@@ -13,7 +13,10 @@ Primer candidato destinado a publicación pública. `beta.1` permaneció como dr
 ### Cambiado
 
 - README canónico en inglés con traducción completa al español y selector recíproco de idioma.
+- Portada del README renovada con el icono de Estrobo, descripción más clara e instrucciones seguras para instalar la beta no firmada con Apple Developer ID.
 - Compatibilidad aclarada: Estrobo se conecta a disparadores de flash Godox compatibles con Bluetooth integrado y activado, no directamente a flashes o receptores.
+- Matriz física documentada: Godox X3Pro con flashes Godox AD400Pro II; otras combinaciones candidatas siguen pendientes de verificación física.
+- El modo Multi queda documentado como una función planeada para una versión futura.
 - El handshake `Psub`/`PWOK` sigue siendo obligatorio; el Código del radio se documenta como PIN local de bajo valor.
 - Secuencia Mermaid de Bluetooth corregida para renderizar en GitHub.
 - Limpieza del workflow de firma reforzada para retirar del runner la confianza temporal del certificado incluso al fallar o cancelar.
