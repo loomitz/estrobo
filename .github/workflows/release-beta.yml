@@ -75,7 +75,8 @@ jobs:
               git diff --name-only "$commit" "$GITHUB_SHA" -- \
                 . \
                 ':(exclude).github/workflows/release-beta.yml' \
-                ':(exclude)scripts/verify-macos-release.sh'
+                ':(exclude)scripts/verify-macos-release.sh' \
+                ':(exclude)scripts/package-macos-release.sh'
             )"
             if [[ -n "$non_workflow_changes" ]]; then
               echo "Protected main contains non-release-tooling changes after $TAG:" >&2
@@ -394,7 +395,7 @@ jobs:
                 commit: $workflowCommit,
                 event: $event
               },
-              guard: "Protected main differs from the release commit only in release-beta.yml and verify-macos-release.sh"
+              guard: "Protected main differs from the release commit only in the release workflow, verifier, and packager"
             }' >"$RUNNER_TEMP/manual-rebuild-predicate.json"
 
       # Manual rebuilds cannot use the dispatch ref as source provenance for
