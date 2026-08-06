@@ -44,6 +44,5 @@ Primer candidato de beta pública limitada.
 - `FEC8` no identifica grupo ni demuestra resultado óptico.
 - Compatibilidad física todavía limitada por modelo y firmware.
 - Sin edición Multi, canal, compensación TTL no neutra, Código del radio, firmware u OAD.
-- Sin soporte de código vacío hasta observar un handshake físico compatible.
 
 Consulta las [notas completas](docs/releases/v0.1.0-beta.1.md).

@@ -14,17 +14,17 @@ sequenceDiagram
     participant E as Estrobo
     participant C as CoreBluetooth
     participant R as Transmisor BLE
-    Note over E,R: Flujo local; sin cuenta, backend ni Internet
+    Note over E,R: Flujo local sin cuenta ni backend ni Internet
     U->>E: Buscar y seleccionar por nombre, RSSI y sufijo UUID
     E->>C: Escanear y conectar al periférico elegido
     C->>R: Conexión BLE
     E->>C: Descubrir servicios FFF0 y FEC0
     C->>R: Descubrir características FFF1, FFF4, FEC7 y FEC8
-    E->>C: Suscribir FFF4; pausa; suscribir FEC8
+    E->>C: Suscribir FFF4 y luego FEC8 tras una pausa
     E->>R: FFF1 sin respuesta: reto local Psub con código sintético
     R-->>E: FFF4: PWOK con token temporal
     E->>R: FFF1 sin respuesta: Sync técnico
-    Note over E,R: Estrobo no lee el estado completo; empieza la sobrescritura deliberada
+    Note over E,R: Estrobo no lee el estado completo e inicia la sobrescritura deliberada
     E->>R: FEC7 con respuesta: snapshot global A0
     R-->>E: Acuse GATT de A0
     loop Un A1 serial por cada grupo configurado
@@ -95,11 +95,11 @@ Cancelar o agotar un plazo limpia el código en memoria y no debe iniciar A0/A1.
 
 ## Código del radio y riesgo aceptado
 
-El Código del radio es un parámetro local de compatibilidad/proximidad de seis dígitos. El protocolo Godox lo transmite dentro del reto BLE y no ofrece autenticación fuerte. No protege cuentas, pagos, datos personales ni servicios remotos.
+El Código del radio es el PIN local de compatibilidad/proximidad de seis dígitos del transmisor. El protocolo Godox lo transmite dentro del reto BLE y no ofrece autenticación fuerte. No es un secreto de alto valor y no protege cuentas, pagos, datos personales ni servicios remotos.
 
 La opción de recordarlo empieza apagada. Si la persona la activa, Estrobo lo conserva localmente y sin cifrar junto con nombre y UUID después de `PWOK` + Sync; nunca lo manda a Internet. No reutilices un PIN personal. **Olvidar** elimina esa copia.
 
-No se admite código vacío ni se añade pairing obligatorio. Radios que presuntamente trabajan sin código requieren observar primero su handshake físico; no se relaja el protocolo por conjetura.
+El handshake `Psub`/`PWOK` siempre es obligatorio y utiliza ese PIN local. Estrobo conserva el flujo observado y no añade pairing obligatorio.
 
 ## Sin lectura radio → app
 

@@ -39,7 +39,7 @@ Para vulnerabilidades usa [GitHub Private Vulnerability Reporting](SECURITY.md).
 
 La compatibilidad se amplía sólo con evidencia física reversible por modelo/firmware. Un nombre BLE, RSSI, UUID o acuse `FEC8` no basta para declarar soporte. Puede pedirse una reproducción en modo simulado o un gate físico coordinado; no se prometerá una fecha ni un SLA.
 
-No abras issues para pedir que se omita el Código del radio sin una captura física segura del handshake. Tampoco para eliminar Gatekeeper mediante firma ad hoc: el beta usa una identidad autosignada estable y la advertencia es intencional.
+El handshake `Psub`/`PWOK` es obligatorio; el Código del radio es el PIN local del transmisor, no una credencial fuerte. No abras issues para eliminar Gatekeeper mediante firma ad hoc: el beta usa una identidad autosignada estable y la advertencia es intencional.
 
 ## Proyecto independiente
 

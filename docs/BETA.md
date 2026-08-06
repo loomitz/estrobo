@@ -66,7 +66,6 @@ Pendientes de ampliar mediante pruebas físicas controladas:
 - Beep audible y Standby;
 - intensidad fija fuera del punto observado;
 - todos los grupos `0–9`/`A–F` que la UI puede configurar;
-- radios que presuntamente operan sin código;
 - reconexión y actualización entre betas en Macs limpios Intel y Apple Silicon.
 
 No están disponibles: edición Multi, canal global, compensación TTL no neutra, cambio de Código del radio, firmware u OAD.
