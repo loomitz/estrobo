@@ -271,6 +271,7 @@ jobs:
 
       - name: Preserve the signed app for clean-host verification
         shell: bash
+        timeout-minutes: 3
         run: |
           set -euo pipefail
           codesign --verify --deep --strict --verbose=2 \
@@ -278,6 +279,22 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent \
             prototype/GodoxMacControlPrototype/Build/Universal/estrobo.app \
             "$RUNNER_TEMP/estrobo-signed-app.zip"
+
+      - name: Remove temporary signing material
+        if: ${{ always() }}
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          cleanup_status=0
+          /bin/rm -f -- \
+            "$SIGNING_P12" \
+            "$RUNNER_TEMP/imported-signing.pem" \
+            "$RUNNER_TEMP/imported-signing.cer" || cleanup_status=1
+          if [[ -e "$SIGNING_KEYCHAIN" ]]; then
+            security delete-keychain "$SIGNING_KEYCHAIN" \
+              >/dev/null 2>&1 || cleanup_status=1
+          fi
+          exit "$cleanup_status"
 
       # actions/upload-artifact v7.0.1, pinned to its verified commit.
       - name: Upload signed app for clean-host verification
@@ -287,17 +304,6 @@ jobs:
           path: ${{ runner.temp }}/estrobo-signed-app.zip
           if-no-files-found: error
           retention-days: 1
-
-      - name: Remove temporary signing material
-        if: ${{ always() }}
-        shell: bash
-        timeout-minutes: 2
-        run: |
-          security delete-keychain "$SIGNING_KEYCHAIN" >/dev/null 2>&1 || true
-          /bin/rm -f -- \
-            "$SIGNING_P12" \
-            "$RUNNER_TEMP/imported-signing.pem" \
-            "$RUNNER_TEMP/imported-signing.cer"
 
   build-draft:
     name: Verify, attest, and create draft
@@ -352,15 +358,57 @@ jobs:
             COMMIT="$RELEASE_COMMIT"
           shasum -a 256 -c Dist/SHA256SUMS
 
+      # Tag events receive GitHub's standard build-provenance predicate.
       # actions/attest v4.2.2, pinned to its verified commit.
-      - name: Generate GitHub artifact attestations
-        id: attest
+      - name: Generate tag build-provenance attestations
+        if: ${{ github.event_name == 'push' }}
+        id: attest_tag
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
         with:
           subject-path: |
             Dist/*.zip
             Dist/*-manifest.json
             Dist/SHA256SUMS
+
+      - name: Record guarded manual-rebuild provenance
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg releaseTag "$TAG" \
+            --arg releaseCommit "$RELEASE_COMMIT" \
+            --arg workflowRef "$GITHUB_REF" \
+            --arg workflowCommit "$GITHUB_SHA" \
+            --arg event "$GITHUB_EVENT_NAME" \
+            '{
+              schemaVersion: 1,
+              releaseSource: {
+                tag: $releaseTag,
+                commit: $releaseCommit
+              },
+              workflowSource: {
+                ref: $workflowRef,
+                commit: $workflowCommit,
+                event: $event
+              },
+              guard: "Protected main differs from the release commit only in .github/workflows/release-beta.yml"
+            }' >"$RUNNER_TEMP/manual-rebuild-predicate.json"
+
+      # Manual rebuilds cannot use the dispatch ref as source provenance for
+      # the tagged source tree, so the custom predicate records both commits.
+      # actions/attest v4.2.2, pinned to its verified commit.
+      - name: Generate guarded manual-rebuild attestations
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        id: attest_manual
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: |
+            Dist/*.zip
+            Dist/*-manifest.json
+            Dist/SHA256SUMS
+          predicate-type: https://github.com/loomitz/estrobo/attestations/manual-tag-rebuild/v1
+          predicate-path: ${{ runner.temp }}/manual-rebuild-predicate.json
 
       - name: Create or refresh draft prerelease
         shell: bash
