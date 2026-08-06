@@ -18,6 +18,7 @@ private final class InteractiveTestDeadlineScheduler: SessionDeadlineScheduling 
 
     private var entries: [SessionDeadlineKind: [Entry]] = [:]
     private(set) var scheduleCounts: [SessionDeadlineKind: Int] = [:]
+    private(set) var fireDelays: [SessionDeadlineKind: [TimeInterval]] = [:]
     private let realtimeAutomaticApply: Bool
 
     init(realtimeAutomaticApply: Bool = false) {
@@ -34,7 +35,8 @@ private final class InteractiveTestDeadlineScheduler: SessionDeadlineScheduling 
         scheduleCounts[kind, default: 0] += 1
 
         if realtimeAutomaticApply, kind == .automaticApply {
-            let task = Task { @MainActor [weak entry] in
+            let scheduledAt = ProcessInfo.processInfo.systemUptime
+            let task = Task { @MainActor [weak self, weak entry] in
                 do {
                     try await Task.sleep(for: kind.duration)
                 } catch {
@@ -42,6 +44,9 @@ private final class InteractiveTestDeadlineScheduler: SessionDeadlineScheduling 
                 }
                 guard let entry, !entry.token.isCancelled, !entry.didFire else { return }
                 entry.didFire = true
+                self?.fireDelays[kind, default: []].append(
+                    ProcessInfo.processInfo.systemUptime - scheduledAt
+                )
                 entry.action()
             }
             token.installCancellation { task.cancel() }
@@ -521,16 +526,31 @@ enum InteractiveEditingCheck {
         expect(fixture.scheduler.scheduleCounts[.automaticApply] == 1)
         let expectedFinal = fixture.controller.groupDraft(.c).draft.power
 
-        pump(0.60)
         expect(
             fixture.transport.controlPayloads.isEmpty,
-            "Mouse-up must still honor the 700 ms debounce"
+            "Mouse-up must not send the final value synchronously"
         )
         expect(
             pumpUntil(timeout: 1.50) {
                 fixture.transport.controlPayloads.count == 1
             },
             "Mouse-up must eventually send exactly one final payload"
+        )
+        expect(
+            SessionDeadlineKind.automaticApply.duration == .milliseconds(700),
+            "Automatic delivery must request the exact 700 ms debounce"
+        )
+        guard let measuredDelay = fixture.scheduler.fireDelays[.automaticApply]?.first else {
+            fail("The realtime scheduler did not record the automatic delivery deadline")
+        }
+        expect(
+            measuredDelay >= 0.700,
+            "Automatic delivery fired before its 700 ms deadline"
+        )
+        pump(0.20)
+        expect(
+            fixture.transport.controlPayloads.count == 1,
+            "Mouse-up must produce only one final payload"
         )
         guard let decoded = fixture.transport.controlPayloads.first.flatMap({
             SafeGodoxProtocol.groupSnapshot(from: $0)
