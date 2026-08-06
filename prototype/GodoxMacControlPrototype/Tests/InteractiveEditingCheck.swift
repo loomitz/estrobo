@@ -521,8 +521,17 @@ enum InteractiveEditingCheck {
         expect(fixture.scheduler.scheduleCounts[.automaticApply] == 1)
         let expectedFinal = fixture.controller.groupDraft(.c).draft.power
 
-        pump(0.76)
-        expect(fixture.transport.controlPayloads.count == 1)
+        pump(0.60)
+        expect(
+            fixture.transport.controlPayloads.isEmpty,
+            "Mouse-up must still honor the 700 ms debounce"
+        )
+        expect(
+            pumpUntil(timeout: 1.50) {
+                fixture.transport.controlPayloads.count == 1
+            },
+            "Mouse-up must eventually send exactly one final payload"
+        )
         guard let decoded = fixture.transport.controlPayloads.first.flatMap({
             SafeGodoxProtocol.groupSnapshot(from: $0)
         }) else {
@@ -819,6 +828,22 @@ enum InteractiveEditingCheck {
 
     private static func pump(_ seconds: TimeInterval) {
         RunLoop.main.run(until: Date().addingTimeInterval(seconds))
+    }
+
+    private static func pumpUntil(
+        timeout: TimeInterval,
+        interval: TimeInterval = 0.02,
+        condition: () -> Bool
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition(), Date() < deadline {
+            let nextTurn = min(
+                deadline,
+                Date().addingTimeInterval(interval)
+            )
+            RunLoop.main.run(until: nextTurn)
+        }
+        return condition()
     }
 
     private static func expect(
