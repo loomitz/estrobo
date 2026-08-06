@@ -80,9 +80,14 @@ entitlements_plist="$temporary_dir/entitlements.plist"
   --xml \
   "$APP_BUNDLE" 2>"$temporary_dir/entitlements.log"
 /usr/bin/plutil -lint "$entitlements_plist" >/dev/null
-[[ "$(/usr/bin/plutil -extract com.apple.security.app-sandbox raw -o - "$entitlements_plist")" == true ]] || \
+
+entitlement_value() {
+  /usr/libexec/PlistBuddy -c "Print :$1" "$entitlements_plist" 2>/dev/null
+}
+
+[[ "$(entitlement_value com.apple.security.app-sandbox)" == true ]] || \
   fail "App Sandbox entitlement is missing"
-[[ "$(/usr/bin/plutil -extract com.apple.security.device.bluetooth raw -o - "$entitlements_plist")" == true ]] || \
+[[ "$(entitlement_value com.apple.security.device.bluetooth)" == true ]] || \
   fail "Bluetooth entitlement is missing"
 /usr/bin/grep -Fq '<key>com.apple.security.network.' "$entitlements_plist" && \
   fail "a network entitlement is present"
