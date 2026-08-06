@@ -59,12 +59,11 @@ archive_digest="$(/usr/bin/shasum -a 256 "$archive" | /usr/bin/awk '{ print $1 }
 /usr/bin/plutil -convert json -r "$manifest"
 
 (
-  cd "${DIST_DIR:h}"
-  dist_name="${DIST_DIR:t}"
+  cd "$DIST_DIR"
   /usr/bin/shasum -a 256 \
-    "$dist_name/$archive_name" \
-    "$dist_name/$manifest_name" >"$dist_name/SHA256SUMS"
-  /usr/bin/shasum -a 256 -c "$dist_name/SHA256SUMS"
+    "$archive_name" \
+    "$manifest_name" >SHA256SUMS
+  /usr/bin/shasum -a 256 -c SHA256SUMS
 )
 
 temporary_dir="$(/usr/bin/mktemp -d "${TMPDIR:-/tmp}/estrobo-release-package.XXXXXX")"

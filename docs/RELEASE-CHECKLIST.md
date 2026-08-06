@@ -49,7 +49,10 @@ Define rutas explícitas a la identidad de release y un directorio limpio. No us
 lipo "$BIN" -verify_arch arm64 x86_64
 codesign --verify --deep --strict --verbose=2 "$APP"
 codesign -dvv "$APP"
-shasum -a 256 -c Dist/SHA256SUMS
+(
+  cd Dist
+  shasum -a 256 -c SHA256SUMS
+)
 ```
 
 - [ ] `arm64` se compiló en runner/host arm64 y `x86_64` en runner/host Intel según el flujo autorizado.

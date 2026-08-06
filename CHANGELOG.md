@@ -4,7 +4,26 @@ Todos los cambios relevantes de Estrobo se documentan aquí. Mientras el proyect
 
 ## Sin publicar
 
-- Ningún cambio registrado después del primer candidato beta.
+- Ningún cambio registrado después de `0.1.0-beta.2`.
+
+## 0.1.0-beta.2 — 2026-08-06
+
+Primer candidato destinado a publicación pública. `beta.1` permaneció como draft interno y su tag no se movió para conservar procedencia.
+
+### Cambiado
+
+- README canónico en inglés con traducción completa al español y selector recíproco de idioma.
+- Compatibilidad aclarada: Estrobo se conecta a disparadores de flash Godox compatibles con Bluetooth integrado y activado, no directamente a flashes o receptores.
+- El handshake `Psub`/`PWOK` sigue siendo obligatorio; el Código del radio se documenta como PIN local de bajo valor.
+- Secuencia Mermaid de Bluetooth corregida para renderizar en GitHub.
+- Limpieza del workflow de firma reforzada para retirar del runner la confianza temporal del certificado incluso al fallar o cancelar.
+
+### Distribución
+
+- Versión `0.1.0`, build `2`, tag previsto `v0.1.0-beta.2`.
+- Artefacto universal `arm64` + `x86_64`, firma autosignada estable, checksums, manifiesto y attestation generados por el workflow protegido.
+
+Consulta las [notas en inglés](docs/releases/v0.1.0-beta.2.md) o la [traducción al español](docs/releases/v0.1.0-beta.2.es.md).
 
 ## 0.1.0-beta.1 — 2026-08-06
 

@@ -1,10 +1,11 @@
 # Beta pública limitada
 
-Estrobo `0.1.0-beta.1` es una prueba pública acotada para validar instalación, actualización, interfaz y compatibilidad física en una matriz pequeña de Macs, transmisores, flashes y firmware. No es una afirmación de compatibilidad general con la línea Godox.
+Estrobo `0.1.0-beta.2` es una prueba pública acotada para validar instalación, actualización, interfaz y compatibilidad física en una matriz pequeña de Macs, transmisores, flashes y firmware. No es una afirmación de compatibilidad general con la línea Godox.
 
 ## Antes de participar
 
 - Necesitas macOS 13.0 o posterior en Apple Silicon o Intel.
+- Necesitas un disparador de flash Godox compatible con Bluetooth integrado y activado. Estrobo se conecta al disparador, no directamente a flashes o receptores.
 - Debes poder identificar y restaurar manualmente la configuración de tu transmisor.
 - Cierra cualquier otra app conectada: el enlace Bluetooth del radio es exclusivo.
 - Conectar significa sobrescribir A0 y los A1 de los grupos configurados con el estado local de Estrobo. No existe importación completa del estado anterior.
@@ -45,7 +46,7 @@ Apple indica que la opción aparece durante un tiempo limitado después del prim
 
 ## Primer inicio limpio
 
-El beta usa el identificador `mx.loo.estrobo`, versión `0.1.0` y build `1`. El identificador anterior pertenecía al prototipo. El cambio crea una identidad limpia de preferencias y contenedor antes de incorporar participantes públicos; no se migran automáticamente radios, códigos, espacios de trabajo ni presets del prototipo.
+El beta usa el identificador `mx.loo.estrobo`, versión `0.1.0` y build `2`. El identificador anterior pertenecía al prototipo. El cambio crea una identidad limpia de preferencias y contenedor antes de incorporar participantes públicos; no se migran automáticamente radios, códigos, espacios de trabajo ni presets del prototipo.
 
 La primera vez configura:
 
@@ -58,7 +59,9 @@ Los grupos nuevos comienzan en Off. Aun así, su A1 completo forma parte de la s
 
 ## Cobertura conocida
 
-La investigación y las pruebas locales confirman el codec, CRC, máquina de estados y la secuencia BLE observada. Históricamente, un enlace físico permitió completar `PWOK`, Sync y cambios reversibles A1 de potencia y modelado fijo al 25% con acuse GATT + `FEC8`. Esa evidencia no identifica ni garantiza todas las combinaciones de transmisor, flash o firmware.
+La investigación y las pruebas locales confirman el codec, CRC, máquina de estados y la secuencia BLE observada. Históricamente, un enlace físico permitió completar `PWOK`, Sync y cambios reversibles A1 de potencia y modelado fijo al 25% con acuse GATT + `FEC8` en un transmisor `GDBH-*` cuyo modelo comercial y firmware exactos no quedaron registrados. Esa evidencia no identifica ni garantiza todas las combinaciones de transmisor, flash o firmware.
+
+El Bluetooth integrado y activado es obligatorio, pero no suficiente: el disparador también debe exponer el perfil BLE/GATT de Godox Flash compatible con Estrobo. Los flashes y receptores siguen comunicándose por el sistema de radio del disparador y no necesitan Bluetooth.
 
 Pendientes de ampliar mediante pruebas físicas controladas:
 
@@ -80,7 +83,7 @@ Con hardware, sigue únicamente el gate manual coordinado del [Checklist de rele
 
 El workflow crea primero un release **draft**. Debe quedarse así si falta CI, una arquitectura, verificación de firma/checksum/attestation, aprobación del environment `public-beta`, un Mac limpio o cualquier smoke físico requerido. La variable protegida `PUBLIC_BETA_SMOKE_APPROVED_TAG` debe coincidir exactamente con el tag que se intenta publicar; una aprobación de otro tag no sirve. Sólo después puede publicarse como **prerelease**.
 
-El archivo de notas de esta versión está en [releases/v0.1.0-beta.1.md](releases/v0.1.0-beta.1.md).
+Las notas canónicas en inglés están en [releases/v0.1.0-beta.2.md](releases/v0.1.0-beta.2.md) y su traducción en [releases/v0.1.0-beta.2.es.md](releases/v0.1.0-beta.2.es.md).
 
 ## Comentarios y reportes
 

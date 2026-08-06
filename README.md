@@ -2,7 +2,7 @@
 
 **English** | [Español](README.es.md)
 
-Local control for Godox transmitters on macOS. Estrobo organizes working groups and lets you adjust power, mode, modeling light, and global controls from a native app, with no account, backend, analytics, or telemetry.
+Local macOS control for compatible Godox flash triggers with Bluetooth enabled. Estrobo organizes working groups and lets you adjust power, mode, modeling light, and global controls from a native app, with no account, backend, analytics, or telemetry.
 
 > [!WARNING]
 > Estrobo is a limited public beta. It is neither signed with Developer ID nor notarized by Apple. Its self-signed identity only keeps the app identity consistent across beta builds; macOS will show a Gatekeeper warning.
@@ -16,8 +16,14 @@ Local control for Godox transmitters on macOS. Estrobo organizes working groups 
 - macOS 13.0 or later.
 - A Mac with Apple Silicon (`arm64`) or Intel (`x86_64`).
 - Bluetooth available and permission granted to Estrobo.
-- A BLE transmitter compatible with the observed protocol. Physical coverage is still limited; see [Beta and compatibility](docs/BETA.md).
+- A compatible Godox flash trigger with built-in Bluetooth enabled and the BLE/GATT profile observed by Estrobo. Physical coverage is still limited; see [Beta and compatibility](docs/BETA.md).
 - An exclusive connection: first close any mobile or desktop app connected to the transmitter. The radio supports only one Bluetooth connection at a time.
+
+## Compatibility status
+
+Estrobo connects over Bluetooth to a compatible Godox flash trigger. It does not connect directly to flashes or receivers: those devices continue to communicate through the trigger's own Godox radio system and do not need Bluetooth.
+
+Built-in Bluetooth must be turned on, but Bluetooth alone does not guarantee compatibility. The trigger must expose the Godox Flash BLE/GATT profile supported by Estrobo, and support can vary by model and firmware. A Godox name, BLE advertisement, or UUID is not proof of compatibility.
 
 ## Download and install
 

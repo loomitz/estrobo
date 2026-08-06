@@ -2,7 +2,7 @@
 
 [English](README.md) | **Español**
 
-Control local de transmisores Godox desde macOS. Estrobo organiza grupos de trabajo y permite ajustar potencia, modo, luz de modelado y controles globales desde una app nativa, sin cuenta, backend, analítica ni telemetría.
+Control local desde macOS para disparadores de flash Godox compatibles con Bluetooth activado. Estrobo organiza grupos de trabajo y permite ajustar potencia, modo, luz de modelado y controles globales desde una app nativa, sin cuenta, backend, analítica ni telemetría.
 
 > [!WARNING]
 > Estrobo es un beta público limitado. No está firmado con Developer ID ni notarizado por Apple. Su firma autosignada sólo conserva una identidad consistente entre betas; macOS mostrará una advertencia de Gatekeeper.
@@ -16,8 +16,14 @@ Control local de transmisores Godox desde macOS. Estrobo organiza grupos de trab
 - macOS 13.0 o posterior.
 - Mac con Apple Silicon (`arm64`) o Intel (`x86_64`).
 - Bluetooth disponible y permiso concedido a Estrobo.
-- Un transmisor BLE compatible con el protocolo observado. La cobertura física todavía es limitada; consulta [Beta y compatibilidad](docs/BETA.md).
+- Un disparador de flash Godox compatible, con Bluetooth integrado y activado, que exponga el perfil BLE/GATT observado por Estrobo. La cobertura física todavía es limitada; consulta [Beta y compatibilidad](docs/BETA.md).
 - Conexión exclusiva: cierra antes cualquier app móvil o de escritorio conectada al transmisor. El radio sólo admite una conexión Bluetooth a la vez.
+
+## Estado de compatibilidad
+
+Estrobo se conecta por Bluetooth a un disparador de flash Godox compatible. No se conecta directamente a los flashes ni a los receptores: esos dispositivos continúan comunicándose mediante el sistema de radio Godox del propio disparador y no necesitan Bluetooth.
+
+El Bluetooth integrado debe estar activado, pero tener Bluetooth no garantiza por sí solo la compatibilidad. El disparador debe exponer el perfil BLE/GATT de Godox Flash compatible con Estrobo y el soporte puede variar según modelo y firmware. Un nombre Godox, anuncio BLE o UUID no demuestra compatibilidad.
 
 ## Descargar e instalar
 
