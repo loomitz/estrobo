@@ -747,7 +747,7 @@ private extension BluetoothClient.CommandKind {
     }
 }
 
-extension BluetoothClient: @MainActor CBCentralManagerDelegate {
+extension BluetoothClient: @preconcurrency CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         guard central === centralManager else { return }
 
@@ -862,7 +862,7 @@ extension BluetoothClient: @MainActor CBCentralManagerDelegate {
     }
 }
 
-extension BluetoothClient: @MainActor CBPeripheralDelegate {
+extension BluetoothClient: @preconcurrency CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard currentPeripheral === peripheral else { return }
         if let error {
