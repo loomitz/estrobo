@@ -537,4 +537,7 @@ jobs:
 
           draft="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq .draft)"
           [[ "$draft" == "true" ]]
-          gh release edit "$TAG" --draft=false --prerelease
+          gh release edit "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft=false \
+            --prerelease
