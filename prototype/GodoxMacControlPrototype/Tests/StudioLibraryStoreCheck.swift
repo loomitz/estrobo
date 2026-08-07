@@ -23,6 +23,7 @@ enum StudioLibraryStoreCheck {
         checkPresetNameValidation()
         checkWorkspaceValidation()
         try checkVersionedRoundTrip()
+        try checkLegacyV1Defaults()
         try checkCorruptAndUnknownRecords()
         checkWriteFailure()
         print("Workspace y presets versionados verificados sin credenciales ni UserDefaults reales")
@@ -60,6 +61,38 @@ enum StudioLibraryStoreCheck {
         )
         expect(preset?.name == "Retrato principal")
         expect(preset?.profileID == "gdbh-observed-0-f")
+        expect(preset?.multiFlashSettings == .default)
+        expect(StudioPreset(
+            name: "Restauración inválida sobre M",
+            profileID: "gdbh-observed-0-f",
+            groups: [.b],
+            states: [.b: state],
+            groupsRestoredAfterMulti: [.b]
+        ) == nil)
+
+        let multiState = snapshot(power: 50, modeling: .off, mode: .multi)
+        let offState = snapshot(power: 50, modeling: .off, mode: .off)
+        expect(StudioPreset(
+            name: "Restauración sin Multi",
+            profileID: "gdbh-observed-0-f",
+            groups: [.b],
+            states: [.b: offState],
+            lastKnownActiveModes: [.b: .manual],
+            groupsRestoredAfterMulti: [.b]
+        ) == nil)
+        expect(StudioPreset(
+            name: "Mezcla insegura",
+            profileID: "gdbh-observed-0-f",
+            groups: [.b, .c],
+            states: [.b: state, .c: multiState]
+        ) == nil)
+        expect(StudioPreset(
+            name: "Origen inválido",
+            profileID: "gdbh-observed-0-f",
+            groups: [.c],
+            states: [.c: multiState],
+            lastKnownActiveModes: [.c: .multi]
+        ) == nil)
     }
 
     private static func checkWorkspaceValidation() {
@@ -71,6 +104,11 @@ enum StudioLibraryStoreCheck {
             preconditionFailure("No se pudo construir un grupo válido")
         }
         expect(group.assignedFlashModelIDs == ["ad600pro-ii"])
+        expect(StudioWorkspaceGroup(
+            snapshot: state,
+            assignedFlashModelIDs: ["ad600pro-ii"],
+            restoresAfterMulti: true
+        ) == nil)
         expect(StudioWorkspace(
             onboardingCompleted: true,
             profileID: "gdbh-observed-0-f",
@@ -84,6 +122,51 @@ enum StudioLibraryStoreCheck {
             workingGroups: [.b],
             visibleGroups: [.c],
             groupConfigurations: [.b: group]
+        ) == nil)
+
+        let workspace = StudioWorkspace(
+            onboardingCompleted: true,
+            profileID: "gdbh-observed-0-f",
+            workingGroups: [.b],
+            visibleGroups: [.b],
+            groupConfigurations: [.b: group]
+        )
+        expect(workspace?.multiFlashSettings == .default)
+        let multiState = snapshot(power: 50, modeling: .off, mode: .multi)
+        let offState = snapshot(power: 50, modeling: .off, mode: .off)
+        guard let restoringOffGroup = StudioWorkspaceGroup(
+            snapshot: offState,
+            assignedFlashModelIDs: ["ad600pro-ii"],
+            lastKnownActiveMode: .manual,
+            restoresAfterMulti: true
+        ) else {
+            preconditionFailure("No se pudo construir el grupo Off restaurable")
+        }
+        expect(StudioWorkspace(
+            onboardingCompleted: true,
+            profileID: "gdbh-observed-0-f",
+            workingGroups: [.b],
+            visibleGroups: [.b],
+            groupConfigurations: [.b: restoringOffGroup]
+        ) == nil)
+        guard let multiGroup = StudioWorkspaceGroup(
+            snapshot: multiState,
+            assignedFlashModelIDs: ["ad400pro"],
+            lastKnownActiveMode: .autoTTL
+        ) else {
+            preconditionFailure("No se pudo construir el grupo Multi válido")
+        }
+        expect(StudioWorkspace(
+            onboardingCompleted: true,
+            profileID: "gdbh-observed-0-f",
+            workingGroups: [.b, .c],
+            visibleGroups: [.b],
+            groupConfigurations: [.b: group, .c: multiGroup]
+        ) == nil)
+        expect(StudioWorkspaceGroup(
+            snapshot: multiState,
+            assignedFlashModelIDs: ["ad400pro"],
+            lastKnownActiveMode: .multi
         ) == nil)
         expect(StudioWorkspace(
             onboardingCompleted: true,
@@ -103,22 +186,37 @@ enum StudioLibraryStoreCheck {
             power: 23,
             modeling: .fixed(percent: 37),
             beep: true,
-            mode: .manual,
+            mode: .off,
             compensation: 0x81
         )
         let cState = snapshot(
             power: 70,
             modeling: .proportional,
             beep: false,
-            mode: .off,
+            mode: .multi,
             compensation: 0x22
         )
+        guard let workspaceMulti = MultiFlashSettings(
+            power: multiPower(20),
+            count: 7,
+            hertz: 19
+        ), let presetMulti = MultiFlashSettings(
+            power: multiPower(70),
+            count: 83,
+            hertz: 100
+        ) else {
+            preconditionFailure("No se pudieron construir los ajustes Multi de prueba")
+        }
         guard let bConfiguration = StudioWorkspaceGroup(
             snapshot: bState,
-            assignedFlashModelIDs: ["ad600", "ad600pro-ii"]
+            assignedFlashModelIDs: ["ad600", "ad600pro-ii"],
+            lastKnownActiveMode: .manual,
+            restoresAfterMulti: true
         ), let cConfiguration = StudioWorkspaceGroup(
             snapshot: cState,
-            assignedFlashModelIDs: ["ad400pro"]
+            assignedFlashModelIDs: ["ad400pro"],
+            lastKnownActiveMode: .autoTTL,
+            restoresAfterMulti: true
         ), let workspace = StudioWorkspace(
             onboardingCompleted: true,
             profileID: "gdbh-observed-0-f",
@@ -127,7 +225,8 @@ enum StudioLibraryStoreCheck {
             groupConfigurations: [
                 .b: bConfiguration,
                 .c: cConfiguration,
-            ]
+            ],
+            multiFlashSettings: workspaceMulti
         ), let preset = StudioPreset(
             id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
             name: "Producto blanco",
@@ -135,7 +234,10 @@ enum StudioLibraryStoreCheck {
             updatedAt: Date(timeIntervalSince1970: 1_700_100_900.75),
             profileID: "gdbh-observed-0-f",
             groups: [.c, .b],
-            states: [.b: bState, .c: cState]
+            states: [.b: bState, .c: cState],
+            lastKnownActiveModes: [.b: .manual, .c: .autoTTL],
+            groupsRestoredAfterMulti: [.b, .c],
+            multiFlashSettings: presetMulti
         ), let library = StudioLibrary(workspace: workspace, presets: [preset]) else {
             preconditionFailure("No se pudo construir la biblioteca válida")
         }
@@ -152,6 +254,12 @@ enum StudioLibraryStoreCheck {
         expect(json.contains(#""workingGroups""#))
         expect(json.contains(#""visibleGroups""#))
         expect(json.contains(#""assignedFlashModelIDs""#))
+        expect(json.components(separatedBy: #""multiFlashSettings""#).count - 1 == 2)
+        expect(json.contains(#""lastKnownActiveModeByte":0"#))
+        expect(json.contains(#""lastKnownActiveModeByte":1"#))
+        expect(json.components(separatedBy: #""restoresAfterMulti":true"#).count - 1 == 4)
+        expect(json.contains(#""countByte":7"#))
+        expect(json.contains(#""hertzByte":100"#))
         expect(!json.contains(#""deviceID""#))
         expect(!json.contains(#""password""#))
         expect(!json.contains(#""radioCode""#))
@@ -167,6 +275,92 @@ enum StudioLibraryStoreCheck {
         expectA1Bytes(decodedPresetB, equalTo: bState)
         expect(decoded.workspace.workingGroups == [.b, .c])
         expect(decoded.workspace.visibleGroups == [.b])
+        expect(decoded.workspace.multiFlashSettings == workspaceMulti)
+        expect(decoded.presets.first?.multiFlashSettings == presetMulti)
+        expect(decoded.workspace.groupConfigurations[.c]?.snapshot.operatingMode == .multi)
+        expect(decoded.workspace.groupConfigurations[.b]?.restoresAfterMulti == true)
+        expect(decoded.workspace.groupConfigurations[.c]?.restoresAfterMulti == true)
+        expect(decoded.workspace.groupConfigurations[.c]?.lastKnownActiveMode == .autoTTL)
+        expect(decoded.presets.first?.lastKnownActiveModes[.c] == .autoTTL)
+        expect(decoded.presets.first?.groupsRestoredAfterMulti == [.b, .c])
+    }
+
+    private static func checkLegacyV1Defaults() throws {
+        let memory = MemoryStudioLibraryStorage()
+        let store = memory.makeStore()
+        expect(store.save(makeMinimalLibrary()))
+        guard let data = memory.object as? Data,
+              var object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              var workspace = object["workspace"] as? [String: Any],
+              var presets = object["presets"] as? [[String: Any]] else {
+            preconditionFailure("No se pudo preparar un registro v1 anterior a Multi")
+        }
+
+        workspace.removeValue(forKey: "multiFlashSettings")
+        if var groupStates = workspace["groupStates"] as? [[String: Any]] {
+            for index in groupStates.indices {
+                groupStates[index].removeValue(forKey: "lastKnownActiveModeByte")
+            }
+            workspace["groupStates"] = groupStates
+        }
+        for index in presets.indices {
+            presets[index].removeValue(forKey: "multiFlashSettings")
+            if var states = presets[index]["states"] as? [[String: Any]] {
+                for stateIndex in states.indices {
+                    states[stateIndex].removeValue(forKey: "lastKnownActiveModeByte")
+                }
+                presets[index]["states"] = states
+            }
+        }
+        object["workspace"] = workspace
+        object["presets"] = presets
+        memory.object = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+
+        guard case .record(let decoded) = store.load() else {
+            preconditionFailure("Un registro v1 sin Multi debe conservar compatibilidad")
+        }
+        expect(decoded.workspace.multiFlashSettings == .default)
+        expect(decoded.presets.allSatisfy { $0.multiFlashSettings == .default })
+        expect(decoded.workspace.groupConfigurations[.b]?.lastKnownActiveMode == .manual)
+        expect(decoded.workspace.groupConfigurations[.b]?.restoresAfterMulti == false)
+        expect(decoded.presets.first?.groupsRestoredAfterMulti.isEmpty == true)
+
+        expect(store.save(makeMultiRestorationLibrary()))
+        guard let multiData = memory.object as? Data,
+              var multiObject = try JSONSerialization.jsonObject(
+                  with: multiData
+              ) as? [String: Any],
+              var multiWorkspace = multiObject["workspace"] as? [String: Any],
+              var multiGroupStates = multiWorkspace["groupStates"] as? [[String: Any]],
+              var multiPresets = multiObject["presets"] as? [[String: Any]] else {
+            preconditionFailure("No se pudo preparar el v1 Multi sin flags")
+        }
+        for index in multiGroupStates.indices {
+            multiGroupStates[index].removeValue(forKey: "restoresAfterMulti")
+        }
+        multiWorkspace["groupStates"] = multiGroupStates
+        for index in multiPresets.indices {
+            guard var states = multiPresets[index]["states"] as? [[String: Any]] else {
+                preconditionFailure("El preset Multi no contenía estados")
+            }
+            for stateIndex in states.indices {
+                states[stateIndex].removeValue(forKey: "restoresAfterMulti")
+            }
+            multiPresets[index]["states"] = states
+        }
+        multiObject["workspace"] = multiWorkspace
+        multiObject["presets"] = multiPresets
+        memory.object = try JSONSerialization.data(
+            withJSONObject: multiObject,
+            options: [.sortedKeys]
+        )
+
+        guard case .record(let legacyMulti) = store.load() else {
+            preconditionFailure("El v1 Multi sin flags debe inferir la restauración")
+        }
+        expect(legacyMulti.workspace.groupConfigurations[.b]?.restoresAfterMulti == false)
+        expect(legacyMulti.workspace.groupConfigurations[.c]?.restoresAfterMulti == true)
+        expect(legacyMulti.presets.first?.groupsRestoredAfterMulti == [.c])
     }
 
     private static func checkCorruptAndUnknownRecords() throws {
@@ -228,6 +422,90 @@ enum StudioLibraryStoreCheck {
             options: [.sortedKeys]
         )
         expect(store.load() == .invalid)
+
+        expect(store.save(validLibrary))
+        guard let multiData = memory.object as? Data,
+              var invalidMultiObject = try JSONSerialization.jsonObject(
+                  with: multiData
+              ) as? [String: Any],
+              var multiWorkspace = invalidMultiObject["workspace"] as? [String: Any],
+              var workspaceMulti = multiWorkspace["multiFlashSettings"] as? [String: Any]
+        else {
+            preconditionFailure("No se pudo preparar el ajuste Multi corrupto")
+        }
+        workspaceMulti["countByte"] = 0
+        multiWorkspace["multiFlashSettings"] = workspaceMulti
+        invalidMultiObject["workspace"] = multiWorkspace
+        memory.object = try JSONSerialization.data(
+            withJSONObject: invalidMultiObject,
+            options: [.sortedKeys]
+        )
+        expect(store.load() == .invalid)
+
+        expect(store.save(validLibrary))
+        guard let presetMultiData = memory.object as? Data,
+              var invalidPresetMultiObject = try JSONSerialization.jsonObject(
+                  with: presetMultiData
+              ) as? [String: Any],
+              var multiPresets = invalidPresetMultiObject["presets"] as? [[String: Any]],
+              var firstPreset = multiPresets.first,
+              var presetMulti = firstPreset["multiFlashSettings"] as? [String: Any]
+        else {
+            preconditionFailure("No se pudo preparar el Multi corrupto del preset")
+        }
+        presetMulti["hertzByte"] = 0
+        firstPreset["multiFlashSettings"] = presetMulti
+        multiPresets[0] = firstPreset
+        invalidPresetMultiObject["presets"] = multiPresets
+        memory.object = try JSONSerialization.data(
+            withJSONObject: invalidPresetMultiObject,
+            options: [.sortedKeys]
+        )
+        expect(store.load() == .invalid)
+
+        expect(store.save(validLibrary))
+        guard let restorationFlagData = memory.object as? Data,
+              var invalidRestorationFlagObject = try JSONSerialization.jsonObject(
+                  with: restorationFlagData
+              ) as? [String: Any],
+              var restorationWorkspace = invalidRestorationFlagObject["workspace"]
+                as? [String: Any],
+              var restorationStates = restorationWorkspace["groupStates"]
+                as? [[String: Any]],
+              !restorationStates.isEmpty else {
+            preconditionFailure("No se pudo preparar el flag de restauración corrupto")
+        }
+        restorationStates[0]["restoresAfterMulti"] = true
+        restorationWorkspace["groupStates"] = restorationStates
+        invalidRestorationFlagObject["workspace"] = restorationWorkspace
+        memory.object = try JSONSerialization.data(
+            withJSONObject: invalidRestorationFlagObject,
+            options: [.sortedKeys]
+        )
+        expect(store.load() == .invalid)
+
+        expect(store.save(validLibrary))
+        guard let noMultiFlagData = memory.object as? Data,
+              var noMultiFlagObject = try JSONSerialization.jsonObject(
+                  with: noMultiFlagData
+              ) as? [String: Any],
+              var noMultiWorkspace = noMultiFlagObject["workspace"] as? [String: Any],
+              var noMultiStates = noMultiWorkspace["groupStates"] as? [[String: Any]],
+              var noMultiState = noMultiStates.first,
+              var noMultiA1 = noMultiState["state"] as? [String: Any] else {
+            preconditionFailure("No se pudo preparar el flag Off sin Multi")
+        }
+        noMultiA1["modeByte"] = Int(GroupOperatingMode.off.rawValue)
+        noMultiState["state"] = noMultiA1
+        noMultiState["restoresAfterMulti"] = true
+        noMultiStates[0] = noMultiState
+        noMultiWorkspace["groupStates"] = noMultiStates
+        noMultiFlagObject["workspace"] = noMultiWorkspace
+        memory.object = try JSONSerialization.data(
+            withJSONObject: noMultiFlagObject,
+            options: [.sortedKeys]
+        )
+        expect(store.load() == .invalid)
     }
 
     private static func checkWriteFailure() {
@@ -262,6 +540,40 @@ enum StudioLibraryStoreCheck {
         return library
     }
 
+    private static func makeMultiRestorationLibrary() -> StudioLibrary {
+        let offState = snapshot(power: 30, modeling: .off, mode: .off)
+        let multiState = snapshot(power: 50, modeling: .off, mode: .multi)
+        guard let offGroup = StudioWorkspaceGroup(
+            snapshot: offState,
+            assignedFlashModelIDs: ["ad600pro-ii"],
+            lastKnownActiveMode: .manual,
+            restoresAfterMulti: true
+        ), let multiGroup = StudioWorkspaceGroup(
+            snapshot: multiState,
+            assignedFlashModelIDs: ["ad400pro"],
+            lastKnownActiveMode: .autoTTL,
+            restoresAfterMulti: true
+        ), let workspace = StudioWorkspace(
+            onboardingCompleted: true,
+            profileID: "gdbh-observed-0-f",
+            workingGroups: [.b, .c],
+            visibleGroups: [.b, .c],
+            groupConfigurations: [.b: offGroup, .c: multiGroup]
+        ), let preset = StudioPreset(
+            id: UUID(uuidString: "22222222-3333-4444-5555-666666666666")!,
+            name: "Escena Multi",
+            createdAt: Date(timeIntervalSince1970: 1_700_200_000),
+            profileID: "gdbh-observed-0-f",
+            groups: [.b, .c],
+            states: [.b: offState, .c: multiState],
+            lastKnownActiveModes: [.b: .manual, .c: .autoTTL],
+            groupsRestoredAfterMulti: [.b, .c]
+        ), let library = StudioLibrary(workspace: workspace, presets: [preset]) else {
+            preconditionFailure("No se pudo construir la biblioteca Multi restaurable")
+        }
+        return library
+    }
+
     private static func snapshot(
         power decimal: Int,
         modeling: ModelingLight,
@@ -279,6 +591,14 @@ enum StudioLibraryStoreCheck {
             operatingMode: mode,
             compensationByte: compensation
         )
+    }
+
+    private static func multiPower(_ decimal: Int) -> ManualPower {
+        guard let power = ManualPower.value(decimal: decimal),
+              MultiFlashSettings.supportedPowers.contains(power) else {
+            preconditionFailure("Potencia Multi de prueba inválida: \(decimal)")
+        }
+        return power
     }
 
     private static func expectA1Bytes(

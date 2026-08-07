@@ -638,14 +638,17 @@ enum InteractiveEditingCheck {
 
     private static func checkGlobalSliderMouseLifecycle(app: NSApplication) {
         let fixture = makeReadyFixture(configureGlobalPower: true)
+        let quickControlsHeight: CGFloat = 96
         let window = makeWindow(
             rootView: QuickControlsBar(controller: fixture.controller)
-                .frame(width: 1_180, height: 96),
+                .frame(width: 1_180, height: quickControlsHeight),
             controller: fixture.controller,
-            size: NSSize(width: 1_180, height: 96)
+            size: NSSize(width: 1_180, height: quickControlsHeight)
         )
         defer { window.orderOut(nil) }
 
+        // Multi starts inactive, so its global panel is absent and the slider
+        // remains in the compact top row until the mode is activated.
         let point = NSPoint(x: 540, y: 48)
         let target = NSPoint(x: 620, y: 48)
         sendMouse(.leftMouseDown, to: window, at: point, eventNumber: 40, app: app)

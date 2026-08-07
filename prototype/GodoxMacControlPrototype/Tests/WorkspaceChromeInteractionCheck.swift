@@ -122,12 +122,56 @@ enum WorkspaceChromeInteractionCheck {
             from: "struct QuickControlsBar: View",
             to: "private struct GlobalStepButton: View"
         )
+        let multiConsole = section(
+            in: source,
+            from: "private struct MultiFlashConsole: View",
+            to: "// MARK: - Common chrome"
+        )
+        let multiModeButton = section(
+            in: source,
+            from: "private struct MultiModeButton: View",
+            to: "private struct GlobalStateToggleStyle: ToggleStyle"
+        )
         expect(
             quickControls.contains("title: \"Beep\"") &&
                 quickControls.contains("controller.setGlobalBeep") &&
+                quickControls.contains("MultiModeButton(") &&
+                quickControls.contains("controller.canSetGlobalMultiFlashEnabled") &&
+                quickControls.contains("controller.setGlobalMultiFlashEnabled") &&
+                quickControls.contains("if multiIsActive") &&
+                !quickControls.contains("showsMultiConsole") &&
                 quickControls.contains("title: \"Standby\"") &&
-                quickControls.contains("controller.setGlobalStandby"),
-            "Beep and Standby must be exposed once as global controls"
+                quickControls.contains("controller.setGlobalStandby") &&
+                quickControls.contains("MultiFlashConsole(controller: controller)") &&
+                multiModeButton.contains("Button(action: action)") &&
+                multiModeButton.contains("Desactivar Multi") &&
+                multiModeButton.contains("Activar Multi") &&
+                multiModeButton.contains("Multi activo") &&
+                multiModeButton.contains("Multi inactivo") &&
+                multiModeButton.contains(".disabled(!enabled)") &&
+                !multiModeButton.contains("Toggle(") &&
+                source.contains("private struct MultiConsolePowerRail: View") &&
+                source.contains("private struct MultiParticipantButton: View") &&
+                source.contains("controller.setMultiFlashParticipation") &&
+                !source.contains("private struct MultiFlashEditor: View") &&
+                !source.contains(".popover(isPresented: $showsEditor") &&
+                !multiConsole.contains(".pickerStyle(.menu)"),
+            "Multi must be the global on/off button beside Beep and own the inline panel"
+        )
+
+        let excludedOverlay = section(
+            in: source,
+            from: "private struct MultiExcludedGroupModifier: ViewModifier",
+            to: "// MARK: - Reusable controls and styling"
+        )
+        expect(
+            source.components(separatedBy: ".multiExcludedGroupOverlay(").count - 1 == 3 &&
+                excludedOverlay.contains("bolt.slash.fill") &&
+                excludedOverlay.contains("GRUPO %@ DESACTIVADO") &&
+                excludedOverlay.contains("Activar en Multi") &&
+                excludedOverlay.contains(".allowsHitTesting(!isExcluded)") &&
+                excludedOverlay.contains("controller.setMultiFlashParticipation"),
+            "Every workspace view must show an actionable disabled overlay for groups outside Multi"
         )
 
         let groupStateControls = section(
@@ -142,8 +186,13 @@ enum WorkspaceChromeInteractionCheck {
         )
         expect(
             groupStateControls.contains("AUTO · TTL") &&
-                groupStateControls.contains("setOperatingMode"),
-            "Every group control must expose Manual and Auto/TTL modes"
+                groupStateControls.contains("selectableOperatingModes") &&
+                groupStateControls.contains("$0 == .manual || $0 == .autoTTL") &&
+                groupStateControls.contains("MULTI · GLOBAL") &&
+                groupStateControls.contains("case .multi") &&
+                groupStateControls.contains("setOperatingMode") &&
+                !groupStateControls.contains("Text(verbatim: mode == .multi"),
+            "Group mode controls must expose only M/Auto and render Multi as global status"
         )
 
         let channels = section(
@@ -167,9 +216,10 @@ enum WorkspaceChromeInteractionCheck {
             ("Matrix", matrix),
         ] {
             expect(
-                layout.contains("GroupStateControls(") &&
-                    layout.contains("ModelingEditor("),
-                "\(name) must expose the shared mode, activation, power, and modeling controls"
+                    layout.contains("GroupStateControls(") &&
+                    layout.contains("ModelingEditor(") &&
+                    layout.contains("MultiModeSummary("),
+                "\(name) must identify Multi participation without duplicating the global editor"
             )
         }
     }

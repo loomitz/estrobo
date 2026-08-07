@@ -256,6 +256,14 @@ enum GodoxSessionRecoveryCheck {
         checkTestRequiresReadyAndNoPendingChanges()
         checkTestDeliverySuccessFailureAndTimeout()
         checkManualAndAutoTTLModeTransitions()
+        checkMultiFlashGlobalAndGroupSequencing()
+        checkMultiFlashUnderlyingModeAndGlobalSelection()
+        checkMultiFlashGlobalExitForcesManualScene()
+        checkMultiFlashBatchRecoveryRestoresWholeScene()
+        checkMultiFlashUnsupportedGroups()
+        checkVerifiedMultiFlashCountLimit()
+        checkMultiFlashModelChangeKeepsSafePendingDraft()
+        checkStoredMultiFlashLimitMigrationPersists()
         checkBeepIncludesGlobalA0Gate()
         checkGlobalStandbyPreservesGroups()
         checkGlobalControlsDoNotApplyPendingGroupChanges()
@@ -350,6 +358,851 @@ enum GodoxSessionRecoveryCheck {
         expect(manualSnapshot.power == originalPower)
         expect(fixture.transport.testWriteCount == 0)
         confirmCurrentGroup(fixture)
+    }
+
+    private static func checkMultiFlashGlobalAndGroupSequencing() {
+        let deliveryMemory = MemoryChangeDeliveryStorage()
+        let preferences = deliveryMemory.makePreferences()
+        preferences.save(.manual)
+        let fixture = makeFixture(changeDeliveryPreferences: preferences)
+        completeDefaultWorkspace(fixture)
+        prepareConfiguredReadyConnection(fixture)
+
+        guard let power = ManualPower.value(decimal: 40),
+              let configuredMulti = MultiFlashSettings(
+                  power: power,
+                  count: 7,
+                  hertz: 11
+              ) else {
+            preconditionFailure("Falta una configuración Multi válida para la regresión")
+        }
+
+        expect(fixture.controller.supportsMultiFlash(.c))
+        expect(fixture.controller.availableOperatingModes(for: .c).contains(.multi))
+        expect(fixture.controller.groupDraft(.c).draft.operatingMode == .manual)
+
+        expect(!fixture.controller.canSetMultiFlashParticipation(.c, enabled: true))
+        fixture.controller.setMultiFlashParticipation(.c, enabled: true)
+        expect(fixture.controller.multiFlashGroups.isEmpty)
+        fixture.controller.setDraftOperatingMode(.c, mode: .multi)
+        expect(
+            fixture.controller.multiFlashGroups.isEmpty,
+            "Ni participación ni modo de grupo deben iniciar Multi"
+        )
+        expect(fixture.controller.canSetGlobalMultiFlashEnabled(true))
+        fixture.controller.setGlobalMultiFlashEnabled(true)
+        fixture.controller.setMultiFlashPower(configuredMulti.power)
+        fixture.controller.setMultiFlashCount(configuredMulti.count)
+        fixture.controller.setMultiFlashHertz(configuredMulti.hertz)
+
+        expect(fixture.controller.groupDraft(.c).draft.operatingMode == .multi)
+        expect(
+            fixture.controller.groupDraft(.b).draft.operatingMode == .multi,
+            "Entrar a MULTI debe incluir todos los grupos activos compatibles"
+        )
+        expect(fixture.controller.groupDraft(.b).lastKnownActiveMode == .manual)
+        expect(fixture.controller.groupDraft(.b).draftRestoresAfterMulti)
+        expect(fixture.controller.groupDraft(.c).draftRestoresAfterMulti)
+        expect(fixture.controller.multiFlashGroups == [.b, .c])
+        expect(fixture.controller.multiFlashDraft == configuredMulti)
+        expect(fixture.controller.hasPendingMultiFlashChange)
+
+        let multiStart = fixture.transport.controlWriteCount
+        fixture.controller.applyPendingChanges()
+        expect(
+            fixture.transport.controlWriteCount == multiStart + 1,
+            "Entrar a MULTI debe esperar el A0 antes de entregar A1"
+        )
+        guard let multiGlobal = SafeGodoxProtocol.globalSnapshot(
+            from: fixture.transport.controlPayloads[multiStart]
+        ) else {
+            preconditionFailure("Entrar a MULTI no comenzó con una trama A0 válida")
+        }
+        let expectedMultiGlobal = GlobalRadioSnapshot(
+            beepEnabled: false,
+            modelingLightEnabled: true,
+            relativeAdjustmentByte: 0,
+            multiEnabled: true,
+            multiCount: configuredMulti.countByte,
+            multiHertz: configuredMulti.hertzByte,
+            multiPowerByte: configuredMulti.powerByte,
+            standbyEnabled: false,
+            adjustmentCounter: 0
+        )
+        expect(
+            multiGlobal == expectedMultiGlobal,
+            "A0 debe conservar los campos globales y codificar exactamente la ráfaga MULTI"
+        )
+        expect(fixture.controller.isGlobalControlPending)
+
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+
+        expect(fixture.controller.multiFlashBaseline == configuredMulti)
+        expect(!fixture.controller.hasPendingMultiFlashChange)
+        expect(
+            fixture.transport.controlWriteCount == multiStart + 2,
+            "El A1 de MULTI sólo debe comenzar después del acuse GATT de A0"
+        )
+        let workingScene: [(GodoxGroup, GroupOperatingMode)] = [
+            (.b, .multi), (.c, .multi),
+        ]
+        for (index, expected) in workingScene.enumerated() {
+            guard let written = SafeGodoxProtocol.groupSnapshot(
+                from: fixture.transport.controlPayloads[multiStart + 1 + index]
+            ) else {
+                preconditionFailure("La escena Multi del workspace no produjo A1 válido")
+            }
+            expect(written.0 == expected.0)
+            expect(written.1.operatingMode == expected.1)
+            fixture.transport.emit(.controlWriteStarted)
+            fixture.transport.emit(.controlWriteCompleted)
+            if expected.0 == .b {
+                expect(
+                    fixture.controller.groupDraft(.b).baseline.operatingMode == .manual,
+                    "El acuse GATT de A1 no debe confirmar Multi sin FEC8"
+                )
+            }
+            fixture.transport.emit(.notification(.control, Data([0xF0, 0xA1])))
+        }
+        expect(fixture.controller.phase == .ready)
+        expect(fixture.controller.groupDraft(.b).baseline.operatingMode == .multi)
+        expect(fixture.controller.groupDraft(.c).baseline.operatingMode == .multi)
+        expect(fixture.controller.pendingCount == 0)
+
+        let hertzOnly = 19
+        fixture.controller.setMultiFlashHertz(hertzOnly)
+        expect(fixture.controller.groupDraft(.c).pendingFields.isEmpty)
+        expect(fixture.controller.hasPendingMultiFlashChange)
+
+        let hertzStart = fixture.transport.controlWriteCount
+        fixture.controller.applyPendingChanges()
+        expect(
+            fixture.transport.controlWriteCount == hertzStart + 1,
+            "Cambiar sólo Hz debe producir una única trama A0"
+        )
+        guard let hertzGlobal = SafeGodoxProtocol.globalSnapshot(
+            from: fixture.transport.controlPayloads[hertzStart]
+        ) else {
+            preconditionFailure("El cambio de Hz no produjo A0")
+        }
+        expect(hertzGlobal.multiEnabled)
+        expect(hertzGlobal.multiCount == configuredMulti.countByte)
+        expect(hertzGlobal.multiHertz == UInt8(hertzOnly))
+        expect(hertzGlobal.multiPowerByte == configuredMulti.powerByte)
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        expect(fixture.transport.controlWriteCount == hertzStart + 1)
+        expect(fixture.controller.phase == .ready)
+        expect(fixture.controller.multiFlashBaseline.hertz == hertzOnly)
+        expect(fixture.controller.pendingCount == 0)
+
+        fixture.controller.setMultiFlashParticipation(.b, enabled: false)
+        expect(fixture.controller.groupDraft(.b).draft.operatingMode == .off)
+        expect(fixture.controller.groupDraft(.b).draftRestoresAfterMulti)
+        expect(fixture.controller.groupDraft(.c).draft.operatingMode == .multi)
+
+        expect(!fixture.controller.canSetMultiFlashParticipation(.c, enabled: false))
+        fixture.controller.setMultiFlashParticipation(.c, enabled: false)
+        expect(fixture.controller.groupDraft(.c).draft.operatingMode == .multi)
+        expect(fixture.controller.multiFlashGroups == [.c])
+        expect(fixture.controller.canSetGlobalMultiFlashEnabled(false))
+        fixture.controller.setGlobalMultiFlashEnabled(false)
+        var state = fixture.controller.groupDraft(.c)
+        expect(
+            state.draft.operatingMode == .manual,
+            "El botón global debe cerrar Multi con el grupo en Manual"
+        )
+        expect(fixture.controller.groupDraft(.b).draft.operatingMode == .manual)
+        expect(!fixture.controller.groupDraft(.b).draftRestoresAfterMulti)
+        expect(!state.draftRestoresAfterMulti)
+        expect(state.lastKnownActiveMode == .manual)
+        expect(fixture.controller.multiFlashGroups.isEmpty)
+        expect(fixture.controller.groupConfiguration(.b).isEnabledOnRadio)
+        expect(fixture.controller.groupConfiguration(.c).isEnabledOnRadio)
+
+        let offStart = fixture.transport.controlWriteCount
+        fixture.controller.applyPendingChanges()
+        expect(fixture.transport.controlWriteCount == offStart + 1)
+        guard let disabledGlobal = SafeGodoxProtocol.globalSnapshot(
+            from: fixture.transport.controlPayloads[offStart]
+        ) else {
+            preconditionFailure("Salir del último grupo MULTI no produjo A0")
+        }
+        expect(!disabledGlobal.multiEnabled, "El último grupo fuera de MULTI debe apagar el gate A0")
+        expect(disabledGlobal.multiCount == configuredMulti.countByte)
+        expect(disabledGlobal.multiHertz == UInt8(hertzOnly))
+        expect(disabledGlobal.multiPowerByte == configuredMulti.powerByte)
+
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        expect(fixture.transport.controlWriteCount == offStart + 2)
+        let restoredWorkingScene: [(GodoxGroup, GroupOperatingMode)] = [
+            (.b, .manual), (.c, .manual),
+        ]
+        for (index, expected) in restoredWorkingScene.enumerated() {
+            guard let restoredGroup = SafeGodoxProtocol.groupSnapshot(
+                from: fixture.transport.controlPayloads[offStart + 1 + index]
+            ) else {
+                preconditionFailure("Salir de Multi no restauró el workspace")
+            }
+            expect(restoredGroup.0 == expected.0)
+            expect(restoredGroup.1.operatingMode == expected.1)
+            confirmCurrentGroup(fixture)
+        }
+        state = fixture.controller.groupDraft(.c)
+        expect(state.baseline.operatingMode == .manual)
+        expect(state.lastKnownActiveMode == .manual)
+
+        guard let belowGroupRange = ManualPower.value(decimal: 10),
+              let safeGroupMinimum = ManualPower.value(decimal: 20) else {
+            preconditionFailure("Faltan potencias Multi para probar la normalización")
+        }
+        fixture.controller.setMultiFlashPower(belowGroupRange)
+        let disabledSettingsStart = fixture.transport.controlWriteCount
+        fixture.controller.applyPendingChanges()
+        expect(fixture.transport.controlWriteCount == disabledSettingsStart + 1)
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        expect(fixture.controller.multiFlashBaseline.power == belowGroupRange)
+
+        fixture.controller.setGlobalMultiFlashEnabled(true)
+        state = fixture.controller.groupDraft(.c)
+        expect(state.draft.operatingMode == .multi)
+        expect(state.lastKnownActiveMode == .manual)
+        expect(fixture.controller.multiFlashGroups == [.b, .c])
+        expect(
+            fixture.controller.multiFlashDraft.power == safeGroupMinimum,
+            "Reactivar MULTI debe normalizar la potencia global al rango común"
+        )
+
+        let restoreStart = fixture.transport.controlWriteCount
+        fixture.controller.applyPendingChanges()
+        guard let restoredGlobal = SafeGodoxProtocol.globalSnapshot(
+            from: fixture.transport.controlPayloads[restoreStart]
+        ) else {
+            preconditionFailure("Restaurar MULTI no volvió a habilitar A0")
+        }
+        expect(restoredGlobal.multiEnabled)
+        expect(restoredGlobal.multiPowerByte == safeGroupMinimum.encodedByte)
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        for (index, expected) in workingScene.enumerated() {
+            guard let restoredGroup = SafeGodoxProtocol.groupSnapshot(
+                from: fixture.transport.controlPayloads[restoreStart + 1 + index]
+            ) else {
+                preconditionFailure("Restaurar MULTI no produjo la escena del workspace")
+            }
+            expect(restoredGroup.0 == expected.0)
+            expect(restoredGroup.1.operatingMode == expected.1)
+            confirmCurrentGroup(fixture)
+        }
+        expect(fixture.controller.phase == .ready)
+        expect(fixture.controller.groupDraft(.b).baseline.operatingMode == .multi)
+        expect(fixture.controller.groupDraft(.c).baseline.operatingMode == .multi)
+        expect(fixture.controller.pendingCount == 0)
+
+        fixture.controller.setMultiFlashParticipation(.b, enabled: false)
+        expect(fixture.controller.groupDraft(.b).draft.operatingMode == .off)
+        expect(fixture.controller.groupDraft(.b).draftRestoresAfterMulti)
+        expect(fixture.controller.multiFlashGroups == [.c])
+
+        fixture.controller.beginWorkspaceConfiguration()
+        expect(fixture.controller.completeWorkspaceConfiguration(
+            profileID: TransmitterProfile.observedGDBH.id,
+            selectedGroups: [.b],
+            assignedFlashModelIDs: [.b: ["ad600pro-ii"]]
+        ))
+        expect(fixture.controller.multiFlashGroups.isEmpty)
+        expect(
+            fixture.controller.hasPendingMultiFlashChange,
+            "Quitar el último grupo MULTI debe dejar pendiente el gate global A0"
+        )
+        expect(fixture.controller.pendingGroups == [.b])
+        expect(fixture.controller.pendingCount == 2)
+        expect(
+            fixture.controller.canDiscardPendingChanges,
+            "Restaurar un grupo retenido sí debe producir un borrador descartable"
+        )
+
+        let removedStart = fixture.transport.controlWriteCount
+        fixture.controller.applyPendingChanges()
+        expect(fixture.transport.controlWriteCount == removedStart + 1)
+        guard let removedGlobal = SafeGodoxProtocol.globalSnapshot(
+            from: fixture.transport.controlPayloads[removedStart]
+        ) else {
+            preconditionFailure("Quitar el último grupo MULTI no produjo A0")
+        }
+        expect(!removedGlobal.multiEnabled)
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        guard let restoredRetainedGroup = SafeGodoxProtocol.groupSnapshot(
+            from: fixture.transport.controlPayloads[removedStart + 1]
+        ) else {
+            preconditionFailure("Quitar el último grupo Multi no restauró el grupo retenido")
+        }
+        expect(restoredRetainedGroup.0 == .b)
+        expect(restoredRetainedGroup.1.operatingMode == .manual)
+        confirmCurrentGroup(fixture)
+        expect(fixture.controller.phase == .ready)
+        expect(fixture.controller.pendingCount == 0)
+    }
+
+    private static func checkMultiFlashUnderlyingModeAndGlobalSelection() {
+        let deliveryMemory = MemoryChangeDeliveryStorage()
+        let preferences = deliveryMemory.makePreferences()
+        preferences.save(.manual)
+        let fixture = makeFixture(changeDeliveryPreferences: preferences)
+        completeDefaultWorkspace(fixture)
+        prepareConfiguredReadyConnection(fixture)
+
+        fixture.controller.setDraftRadioEnabled(.b, enabled: false)
+        fixture.controller.setDraftOperatingMode(.c, mode: .autoTTL)
+        fixture.controller.applyPendingChanges()
+        confirmCurrentGroup(fixture)
+        confirmCurrentGroup(fixture)
+        expect(fixture.controller.groupDraft(.b).baseline.operatingMode == .off)
+        expect(fixture.controller.groupDraft(.c).baseline.operatingMode == .autoTTL)
+
+        let enterStart = fixture.transport.controlWriteCount
+        expect(!fixture.controller.canSetMultiFlashParticipation(.c, enabled: true))
+        expect(fixture.controller.canSetGlobalMultiFlashEnabled(true))
+        fixture.controller.setGlobalMultiFlashEnabled(true)
+        expect(fixture.controller.groupDraft(.b).draft.operatingMode == .off)
+        expect(!fixture.controller.groupConfiguration(.b).isEnabledOnRadio)
+        expect(fixture.controller.groupDraft(.c).lastKnownActiveMode == .autoTTL)
+        fixture.controller.applyPendingChanges()
+        expect(
+            SafeGodoxProtocol.globalSnapshot(
+                from: fixture.transport.controlPayloads[enterStart]
+            )?.multiEnabled == true
+        )
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        let ttlOriginFrame = fixture.transport.controlPayloads[enterStart + 1]
+        expect(ttlOriginFrame[4] == GroupOperatingMode.multi.rawValue)
+        expect(
+            ttlOriginFrame[5] == 0x32,
+            "MULTI originado en TTL debe conservar el sentinel A1 0x32"
+        )
+        confirmCurrentGroup(fixture)
+
+        expect(fixture.controller.canSetMultiFlashParticipation(.b, enabled: true))
+        fixture.controller.setMultiFlashParticipation(.b, enabled: true)
+        expect(fixture.controller.groupDraft(.b).draft.operatingMode == .multi)
+        expect(
+            !fixture.controller.groupDraft(.b).draftRestoresAfterMulti,
+            "Un grupo originalmente Off debe volver a Off al cerrar Multi"
+        )
+        expect(
+            fixture.controller.workingGroups.allSatisfy {
+                let mode = fixture.controller.groupDraft($0).draft.operatingMode
+                return mode == .multi || mode == .off
+            },
+            "Con A0 Multi activo sólo deben existir grupos Multi/Off"
+        )
+        fixture.controller.applyPendingChanges()
+        confirmCurrentGroup(fixture)
+        expect(Set(fixture.controller.multiFlashGroups) == Set([.b, .c]))
+
+        expect(fixture.controller.canSetMultiFlashParticipation(.b, enabled: false))
+        fixture.controller.setMultiFlashParticipation(.b, enabled: false)
+        expect(fixture.controller.groupDraft(.b).draft.operatingMode == .off)
+        expect(fixture.controller.groupDraft(.c).draft.operatingMode == .multi)
+        expect(fixture.controller.multiFlashGroups == [.c])
+
+        fixture.controller.setMultiFlashParticipation(.b, enabled: true)
+        expect(Set(fixture.controller.multiFlashGroups) == Set([.b, .c]))
+
+        fixture.controller.setMultiFlashParticipation(.b, enabled: false)
+        expect(fixture.controller.groupDraft(.b).draft.operatingMode == .off)
+        expect(fixture.controller.groupDraft(.c).draft.operatingMode == .multi)
+
+        expect(!fixture.controller.canSetMultiFlashParticipation(.c, enabled: false))
+        fixture.controller.setMultiFlashParticipation(.c, enabled: false)
+        expect(fixture.controller.groupDraft(.c).draft.operatingMode == .multi)
+        expect(fixture.controller.groupDraft(.b).draft.operatingMode == .off)
+        expect(fixture.controller.multiFlashGroups == [.c])
+
+        fixture.controller.setDraftOperatingMode(.c, mode: .manual)
+        expect(
+            fixture.controller.groupDraft(.c).draft.operatingMode == .multi,
+            "El selector de grupo tampoco debe cerrar Multi"
+        )
+        fixture.controller.setGlobalMultiFlashEnabled(false)
+        expect(fixture.controller.groupDraft(.b).draft.operatingMode == .manual)
+        expect(fixture.controller.groupDraft(.c).draft.operatingMode == .manual)
+        expect(fixture.controller.groupDraft(.b).draft.compensationByte == 0)
+        expect(fixture.controller.groupDraft(.c).draft.compensationByte == 0)
+        expect(!fixture.controller.groupDraft(.c).draftRestoresAfterMulti)
+        expect(!fixture.controller.groupDraft(.b).draftRestoresAfterMulti)
+        expect(fixture.controller.groupConfiguration(.b).isEnabledOnRadio)
+        expect(fixture.controller.groupConfiguration(.c).isEnabledOnRadio)
+        expect(fixture.controller.multiFlashGroups.isEmpty)
+    }
+
+    private static func checkMultiFlashGlobalExitForcesManualScene() {
+        let deliveryMemory = MemoryChangeDeliveryStorage()
+        let preferences = deliveryMemory.makePreferences()
+        preferences.save(.manual)
+        let fixture = makeFixture(changeDeliveryPreferences: preferences)
+        completeDefaultWorkspace(fixture)
+        prepareConfiguredReadyConnection(fixture)
+
+        fixture.controller.setDraftOperatingMode(.c, mode: .autoTTL)
+        fixture.controller.applyPendingChanges()
+        confirmCurrentGroup(fixture)
+        expect(fixture.controller.groupDraft(.c).baseline.operatingMode == .autoTTL)
+        let retainedBPower = fixture.controller.groupDraft(.b).draft.power
+        let retainedCPower = fixture.controller.groupDraft(.c).draft.power
+
+        fixture.controller.setGlobalMultiFlashEnabled(true)
+        fixture.controller.applyPendingChanges()
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        confirmCurrentGroup(fixture)
+        confirmCurrentGroup(fixture)
+        expect(fixture.controller.groupDraft(.b).baseline.operatingMode == .multi)
+        expect(fixture.controller.groupDraft(.c).baseline.operatingMode == .multi)
+
+        fixture.controller.setMultiFlashParticipation(.b, enabled: false)
+        expect(fixture.controller.groupDraft(.b).draft.operatingMode == .off)
+        expect(fixture.controller.groupDraft(.b).draftRestoresAfterMulti)
+        expect(fixture.controller.groupDraft(.c).draft.operatingMode == .multi)
+
+        fixture.controller.setGlobalMultiFlashEnabled(false)
+        expect(
+            fixture.controller.groupDraft(.b).draft.operatingMode == .manual,
+            "Cerrar Multi global debe activar en Manual hasta un participante retirado"
+        )
+        expect(
+            fixture.controller.groupDraft(.c).draft.operatingMode == .manual,
+            "Cerrar Multi global debe convertir también un origen TTL a Manual"
+        )
+        expect(fixture.controller.groupDraft(.b).draft.power == retainedBPower)
+        expect(fixture.controller.groupDraft(.c).draft.power == retainedCPower)
+        expect(fixture.controller.groupDraft(.b).draft.compensationByte == 0)
+        expect(fixture.controller.groupDraft(.c).draft.compensationByte == 0)
+        expect(fixture.controller.multiFlashGroups.isEmpty)
+        expect(!fixture.controller.groupDraft(.b).draftRestoresAfterMulti)
+        expect(!fixture.controller.groupDraft(.c).draftRestoresAfterMulti)
+        expect(fixture.controller.groupConfiguration(.b).isEnabledOnRadio)
+        expect(fixture.controller.groupConfiguration(.c).isEnabledOnRadio)
+    }
+
+    private static func checkMultiFlashBatchRecoveryRestoresWholeScene() {
+        let deliveryMemory = MemoryChangeDeliveryStorage()
+        let preferences = deliveryMemory.makePreferences()
+        preferences.save(.manual)
+        let restorationMemory = MemoryRestorationStorage()
+        let restorationStore = restorationMemory.makeStore()
+        let studioMemory = MemoryStudioLibraryStorage()
+        let fixture = makeFixture(
+            changeDeliveryPreferences: preferences,
+            restorationStore: restorationStore,
+            studioLibraryStore: studioMemory.makeStore()
+        )
+        completeDefaultWorkspace(fixture)
+        prepareConfiguredReadyConnection(fixture)
+
+        fixture.controller.setDraftOperatingMode(.c, mode: .autoTTL)
+        fixture.controller.applyPendingChanges()
+        confirmCurrentGroup(fixture)
+        let originalB = fixture.controller.groupDraft(.b).baseline
+        let originalC = fixture.controller.groupDraft(.c).baseline
+        expect(originalB.operatingMode == .manual)
+        expect(originalC.operatingMode == .autoTTL)
+        guard let originalGlobal = fixture.transport.controlPayloads.compactMap({
+            SafeGodoxProtocol.globalSnapshot(from: $0)
+        }).last else {
+            preconditionFailure("La sincronización inicial no confirmó un A0 para recuperar")
+        }
+        expect(!originalGlobal.multiEnabled)
+        let expectedBatch: [GodoxGroup: GroupRestorationPoint] = [
+            .b: GroupRestorationPoint(
+                deviceID: testDevice.id,
+                snapshot: originalB,
+                globalSnapshot: originalGlobal
+            ),
+            .c: GroupRestorationPoint(
+                deviceID: testDevice.id,
+                snapshot: originalC,
+                globalSnapshot: originalGlobal
+            ),
+        ]
+
+        var persistedWholeBatchBeforeA0 = false
+        fixture.transport.onSendControl = { payload in
+            guard SafeGodoxProtocol.globalSnapshot(from: payload)?.multiEnabled == true else {
+                return
+            }
+            persistedWholeBatchBeforeA0 = restorationStore.load() == .batch(
+                points: expectedBatch
+            )
+        }
+        let enterStart = fixture.transport.controlWriteCount
+        fixture.controller.setGlobalMultiFlashEnabled(true)
+        fixture.controller.applyPendingChanges()
+        fixture.transport.onSendControl = nil
+        expect(
+            persistedWholeBatchBeforeA0,
+            "La escena B/C completa debe persistirse antes del primer write A0"
+        )
+        expect(fixture.transport.controlWriteCount == enterStart + 1)
+        guard let enabledGlobal = SafeGodoxProtocol.globalSnapshot(
+            from: fixture.transport.controlPayloads[enterStart]
+        ) else {
+            preconditionFailure("Entrar a Multi no produjo el A0 inicial")
+        }
+        expect(enabledGlobal.multiEnabled)
+        expect(fixture.controller.restorationPoints == expectedBatch)
+        expect(restorationStore.load() == .batch(points: expectedBatch))
+
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        expect(fixture.transport.controlWriteCount == enterStart + 2)
+        let multiBFrame = fixture.transport.controlPayloads[enterStart + 1]
+        guard let multiB = SafeGodoxProtocol.groupSnapshot(from: multiBFrame) else {
+            preconditionFailure("A0 Multi no liberó el A1 de B")
+        }
+        expect(multiB.0 == .b)
+        expect(multiB.1.operatingMode == .multi)
+        expect(
+            multiBFrame[5] == originalB.power.encodedByte,
+            "B Multi originado en manual debe conservar la potencia manual, no el sentinel TTL"
+        )
+        expect(multiBFrame[5] != 0x32)
+
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        fixture.transport.emit(.notification(.control, Data([0xF0, 0xA1])))
+        expect(fixture.transport.controlWriteCount == enterStart + 3)
+        let multiCFrame = fixture.transport.controlPayloads[enterStart + 2]
+        guard let multiC = SafeGodoxProtocol.groupSnapshot(from: multiCFrame) else {
+            preconditionFailure("Confirmar B no liberó el A1 Multi de C")
+        }
+        expect(multiC.0 == .c)
+        expect(multiC.1.operatingMode == .multi)
+        expect(
+            multiCFrame[5] == 0x32,
+            "C Multi originado en TTL debe usar el sentinel de potencia 0x32"
+        )
+        expect(
+            fixture.controller.restorationPoints == expectedBatch,
+            "Confirmar B no debe recortar el journal de la tanda"
+        )
+        expect(restorationStore.load() == .batch(points: expectedBatch))
+
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.commandFailed(
+            .control,
+            .writeFailed(command: .control, message: "fallo sintético del segundo A1 Multi")
+        ))
+        fixture.scheduler.fire(.disconnectRecovery)
+        expectFailure(fixture.controller.phase, containing: "incierto")
+        expect(fixture.controller.restorationPoints == expectedBatch)
+        expect(restorationStore.load() == .batch(points: expectedBatch))
+
+        let recovered = makeFixture(
+            changeDeliveryPreferences: preferences,
+            restorationStore: restorationStore,
+            studioLibraryStore: studioMemory.makeStore()
+        )
+        expect(recovered.controller.restorationPoints == expectedBatch)
+        expect(!recovered.controller.canEdit(.b))
+        expect(!recovered.controller.canEdit(.c))
+        prepareReadyConnection(recovered)
+        recovered.controller.prepareBaselineRestoration(for: .b)
+        expect(recovered.controller.preparedRestorations == Set([.b, .c]))
+        expect(recovered.controller.pendingGroups == [.b, .c])
+        expect(recovered.controller.canApply)
+
+        let recoveryStart = recovered.transport.controlWriteCount
+        recovered.controller.applyPendingChanges()
+        expect(recovered.transport.controlWriteCount == recoveryStart + 1)
+        guard let restoredGlobal = SafeGodoxProtocol.globalSnapshot(
+            from: recovered.transport.controlPayloads[recoveryStart]
+        ) else {
+            preconditionFailure("La recuperación por lote no comenzó por A0")
+        }
+        expect(
+            restoredGlobal == originalGlobal,
+            "La recuperación debe restablecer exactamente el A0 común anterior"
+        )
+        expect(restorationStore.load() == .batch(points: expectedBatch))
+
+        recovered.transport.emit(.controlWriteStarted)
+        recovered.transport.emit(.controlWriteCompleted)
+        guard let restoredB = SafeGodoxProtocol.groupSnapshot(
+            from: recovered.transport.controlPayloads[recoveryStart + 1]
+        ) else {
+            preconditionFailure("A0 de recuperación no liberó el A1 original de B")
+        }
+        expect(restoredB.0 == .b)
+        expect(restoredB.1 == originalB)
+        expect(recovered.transport.controlPayloads[recoveryStart + 1][5] != 0x32)
+        confirmCurrentGroup(recovered)
+        expect(recovered.controller.restorationPoints == expectedBatch)
+        expect(restorationStore.load() == .batch(points: expectedBatch))
+
+        guard let restoredC = SafeGodoxProtocol.groupSnapshot(
+            from: recovered.transport.controlPayloads[recoveryStart + 2]
+        ) else {
+            preconditionFailure("Confirmar B no liberó el A1 original de C")
+        }
+        expect(restoredC.0 == .c)
+        expect(restoredC.1.operatingMode == originalC.operatingMode)
+        expect(restoredC.1.modeling == originalC.modeling)
+        expect(restoredC.1.beepEnabled == originalC.beepEnabled)
+        expect(restoredC.1.compensationByte == originalC.compensationByte)
+        expect(
+            recovered.transport.controlPayloads[recoveryStart + 2][5] == 0x32,
+            "El A1 TTL no serializa su potencia manual retenida; debe usar el sentinel 0x32"
+        )
+        confirmCurrentGroup(recovered)
+        expect(recovered.controller.phase == .ready)
+        expect(recovered.controller.groupDraft(.b).baseline == originalB)
+        expect(recovered.controller.groupDraft(.c).baseline == originalC)
+        expect(recovered.controller.multiFlashGroups.isEmpty)
+        expect(recovered.controller.pendingCount == 0)
+        expect(recovered.controller.restorationPoints.isEmpty)
+        expect(restorationStore.load() == .none)
+    }
+
+    private static func checkMultiFlashUnsupportedGroups() {
+        let deliveryMemory = MemoryChangeDeliveryStorage()
+        let preferences = deliveryMemory.makePreferences()
+        preferences.save(.manual)
+        let fixture = makeFixture(changeDeliveryPreferences: preferences)
+        let unsupportedGroups: [GodoxGroup] = [
+            .f, .zero, .one, .two, .three, .four, .five, .six, .seven, .eight, .nine,
+        ]
+        var assignedModels = Dictionary(uniqueKeysWithValues: unsupportedGroups.map {
+            ($0, Set(["ad600pro-ii"]))
+        })
+        assignedModels[.b] = ["ad600pro-ii"]
+        expect(fixture.controller.completeWorkspaceConfiguration(
+            profileID: TransmitterProfile.observedGDBH.id,
+            selectedGroups: Set(unsupportedGroups + [.b]),
+            assignedFlashModelIDs: assignedModels
+        ))
+        prepareConfiguredReadyConnection(fixture)
+
+        let writesBeforeAttempts = fixture.transport.controlWriteCount
+        for group in unsupportedGroups {
+            expect(!fixture.controller.supportsMultiFlash(group))
+            expect(!fixture.controller.availableOperatingModes(for: group).contains(.multi))
+
+            fixture.controller.setDraftRadioEnabled(group, enabled: true)
+            expect(fixture.controller.groupDraft(group).draft.operatingMode == .manual)
+            expect(fixture.controller.canChangeOperatingMode(group))
+
+            fixture.controller.setDraftOperatingMode(group, mode: .multi)
+            expect(
+                fixture.controller.groupDraft(group).draft.operatingMode == .manual,
+                "El grupo \(group.label) no debe poder seleccionar MULTI"
+            )
+        }
+        expect(
+            fixture.transport.controlWriteCount == writesBeforeAttempts,
+            "Rechazar MULTI en F/0–9 no debe escribir al radio"
+        )
+        expect(fixture.controller.multiFlashGroups.isEmpty)
+
+        expect(!fixture.controller.canSetMultiFlashParticipation(.b, enabled: true))
+        expect(fixture.controller.canSetGlobalMultiFlashEnabled(true))
+        fixture.controller.setGlobalMultiFlashEnabled(true)
+        expect(fixture.controller.multiFlashGroups == [.b])
+        expect(fixture.controller.groupDraft(.b).draft.operatingMode == .multi)
+        for group in unsupportedGroups {
+            let state = fixture.controller.groupDraft(group)
+            expect(
+                state.draft.operatingMode == .off,
+                "Un grupo activo incompatible debe quedar Off mientras Multi está activo"
+            )
+            expect(state.lastKnownActiveMode == .manual)
+            expect(
+                state.draftRestoresAfterMulti,
+                "Un grupo incompatible apagado por Multi debe conservar su restauración"
+            )
+        }
+
+        expect(!fixture.controller.canSetMultiFlashParticipation(.b, enabled: false))
+        fixture.controller.setGlobalMultiFlashEnabled(false)
+        expect(fixture.controller.multiFlashGroups.isEmpty)
+        expect(fixture.controller.groupDraft(.b).draft.operatingMode == .manual)
+        expect(fixture.controller.groupConfiguration(.b).isEnabledOnRadio)
+        for group in unsupportedGroups {
+            let state = fixture.controller.groupDraft(group)
+            expect(
+                state.draft.operatingMode == .manual,
+                "Apagar Multi global debe dejar Manual los grupos incompatibles"
+            )
+            expect(state.draft.compensationByte == 0)
+            expect(!state.draftRestoresAfterMulti)
+            expect(fixture.controller.groupConfiguration(group).isEnabledOnRadio)
+        }
+
+        fixture.controller.setDraftRadioEnabled(.b, enabled: false)
+        expect(
+            !fixture.controller.canSetGlobalMultiFlashEnabled(true),
+            "Sin ningún grupo activo compatible el botón global debe quedar indisponible"
+        )
+        fixture.controller.setGlobalMultiFlashEnabled(true)
+        expect(fixture.controller.multiFlashGroups.isEmpty)
+    }
+
+    private static func checkVerifiedMultiFlashCountLimit() {
+        let deliveryMemory = MemoryChangeDeliveryStorage()
+        let preferences = deliveryMemory.makePreferences()
+        preferences.save(.manual)
+        let fixture = makeFixture(changeDeliveryPreferences: preferences)
+
+        fixture.controller.beginWorkspaceConfiguration()
+        expect(fixture.controller.completeWorkspaceConfiguration(
+            profileID: TransmitterProfile.observedGDBH.id,
+            selectedGroups: [.b],
+            assignedFlashModelIDs: [.b: ["ad400pro-ii"]]
+        ))
+        prepareConfiguredReadyConnection(fixture)
+
+        fixture.controller.setGlobalMultiFlashEnabled(true)
+        expect(fixture.controller.hasVerifiedMultiFlashCountLimit)
+        expect(!fixture.controller.hasUnverifiedMultiFlashCountLimit)
+
+        guard let oneOver512 = ManualPower.value(decimal: 10),
+              let oneOver4 = ManualPower.value(decimal: 80) else {
+            preconditionFailure("Faltan potencias enteras para probar los límites Multi")
+        }
+
+        fixture.controller.setMultiFlashHertz(1)
+        fixture.controller.setMultiFlashPower(oneOver512)
+        expect(fixture.controller.multiFlashMaximumCount == 100)
+        fixture.controller.setMultiFlashCount(100)
+        expect(fixture.controller.multiFlashDraft.count == 100)
+
+        fixture.controller.setMultiFlashPower(oneOver4)
+        expect(fixture.controller.multiFlashMaximumCount == 7)
+        expect(
+            fixture.controller.multiFlashDraft.count == 7,
+            "Cambiar a 1/4 debe normalizar el conteo a la tabla oficial del AD400Pro II"
+        )
+
+        fixture.controller.setMultiFlashHertz(100)
+        expect(fixture.controller.multiFlashMaximumCount == 2)
+        expect(fixture.controller.multiFlashCountRange == 1...2)
+        expect(fixture.controller.multiFlashDraft.count == 2)
+
+        fixture.controller.setMultiFlashCount(3)
+        expect(
+            fixture.controller.multiFlashDraft.count == 2,
+            "Un conteo por encima del límite verificado debe rechazarse"
+        )
+
+        fixture.controller.setMultiFlashHertz(55)
+        expect(fixture.controller.multiFlashMaximumCount == 2)
+        expect(fixture.controller.hasConservativeMultiFlashCountLimit)
+        expect(!fixture.controller.hasVerifiedMultiFlashCountLimit)
+        expect(!fixture.controller.hasUnverifiedMultiFlashCountLimit)
+    }
+
+    private static func checkMultiFlashModelChangeKeepsSafePendingDraft() {
+        let deliveryMemory = MemoryChangeDeliveryStorage()
+        let preferences = deliveryMemory.makePreferences()
+        preferences.save(.manual)
+        let fixture = makeFixture(changeDeliveryPreferences: preferences)
+
+        fixture.controller.beginWorkspaceConfiguration()
+        expect(fixture.controller.completeWorkspaceConfiguration(
+            profileID: TransmitterProfile.observedGDBH.id,
+            selectedGroups: [.b],
+            assignedFlashModelIDs: [.b: ["generic-512"]]
+        ))
+        prepareConfiguredReadyConnection(fixture)
+
+        guard let oneOver4 = ManualPower.value(decimal: 80) else {
+            preconditionFailure("Falta 1/4 para probar el cambio de matriz Multi")
+        }
+        fixture.controller.setGlobalMultiFlashEnabled(true)
+        fixture.controller.setMultiFlashPower(oneOver4)
+        fixture.controller.setMultiFlashHertz(100)
+        fixture.controller.setMultiFlashCount(100)
+        expect(fixture.controller.multiFlashDraft.count == 100)
+
+        fixture.controller.applyPendingChanges()
+        confirmCurrentGroup(fixture)
+        expect(fixture.controller.multiFlashBaseline.count == 100)
+        expect(fixture.controller.pendingCount == 0)
+        expect(fixture.controller.canSendTest)
+
+        fixture.controller.setFlashModel("ad400pro-ii", assigned: true, to: .b)
+        expect(fixture.controller.multiFlashMaximumCount == 2)
+        expect(fixture.controller.multiFlashDraft.count == 2)
+        expect(fixture.controller.multiFlashBaseline.count == 100)
+        expect(fixture.controller.hasPendingMultiFlashChange)
+        expect(!fixture.controller.canDiscardPendingChanges)
+        expect(!fixture.controller.canSendTest)
+
+        fixture.controller.discardPendingChanges()
+        expect(
+            fixture.controller.multiFlashDraft.count == 2,
+            "Descartar no debe restaurar un conteo incompatible con los modelos actuales"
+        )
+        expect(fixture.controller.hasPendingMultiFlashChange)
+        expect(!fixture.controller.canSendTest)
+
+        fixture.controller.applyPendingChanges()
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        expect(fixture.controller.multiFlashBaseline.count == 2)
+        expect(fixture.controller.pendingCount == 0)
+        expect(fixture.controller.canSendTest)
+    }
+
+    private static func checkStoredMultiFlashLimitMigrationPersists() {
+        let memory = MemoryStudioLibraryStorage()
+        let store = memory.makeStore()
+        guard let oneOver4 = ManualPower.value(decimal: 80),
+              let unsafeMulti = MultiFlashSettings(
+                  power: oneOver4,
+                  count: 100,
+                  hertz: 100
+              ),
+              let storedGroup = StudioWorkspaceGroup(
+                  snapshot: ManualGroupSnapshot(
+                      power: oneOver4,
+                      modeling: .off,
+                      operatingMode: .multi
+                  ),
+                  assignedFlashModelIDs: ["ad400pro-ii"],
+                  lastKnownActiveMode: .manual
+              ),
+              let workspace = StudioWorkspace(
+                  onboardingCompleted: true,
+                  profileID: TransmitterProfile.observedGDBH.id,
+                  workingGroups: [.b],
+                  visibleGroups: [.b],
+                  groupConfigurations: [.b: storedGroup],
+                  multiFlashSettings: unsafeMulti
+              ),
+              let library = StudioLibrary(workspace: workspace, presets: []) else {
+            preconditionFailure("No se pudo construir el workspace Multi legado")
+        }
+        expect(store.save(library))
+
+        let migrated = makeFixture(studioLibraryStore: store)
+        expect(migrated.controller.multiFlashDraft.count == 2)
+        expect(migrated.controller.multiFlashBaseline.count == 2)
+        expect(!migrated.controller.hasPendingMultiFlashChange)
+
+        guard case .record(let persisted) = memory.makeStore().load() else {
+            preconditionFailure("La migración Multi segura no se guardó")
+        }
+        expect(persisted.workspace.multiFlashSettings.count == 2)
+
+        let restarted = makeFixture(studioLibraryStore: memory.makeStore())
+        expect(restarted.controller.multiFlashDraft.count == 2)
+        expect(restarted.controller.multiFlashBaseline.count == 2)
     }
 
     /// Regression seam for the user-visible Beep toggle. The radio exposes the
@@ -729,22 +1582,17 @@ enum GodoxSessionRecoveryCheck {
 
         fixture.scheduler.fire(.valueSynchronizationSettle)
 
-        expect(fixture.transport.controlWriteCount == 1)
         expect(
-            fixture.transport.controlPayloads.last.flatMap {
-                SafeGodoxProtocol.globalSnapshot(from: $0)
-            } != nil
+            fixture.transport.controlWriteCount == 0,
+            "La sincronización no debe transmitir A0 si no puede persistir toda la escena"
         )
-        fixture.transport.emit(.controlWriteStarted)
-        fixture.transport.emit(.controlWriteCompleted)
-        expect(fixture.transport.controlWriteCount == 1)
         expect(fixture.controller.phase == .disconnecting)
         expect(!fixture.controller.showsControlWorkspace)
         expect(fixture.controller.restorationPoints.isEmpty)
         expect(fixture.transport.disconnectCount == 1)
 
         fixture.scheduler.fire(.disconnectRecovery)
-        expectFailure(fixture.controller.phase, containing: "no se transmitió")
+        expectFailure(fixture.controller.phase, containing: "sincronización global inicial")
     }
 
     private static func checkPresetLoadAndSynchronization() {
@@ -1155,7 +2003,7 @@ enum GodoxSessionRecoveryCheck {
         fixture.controller.applyPendingChanges()
         expect(fixture.controller.phase == .applying)
         expect(!fixture.controller.canConfigureWorkspace)
-        expect(Set(fixture.controller.restorationPoints.keys) == [.b])
+        expect(Set(fixture.controller.restorationPoints.keys) == [.b, .c])
         fixture.controller.beginWorkspaceConfiguration()
         expect(!fixture.controller.isReconfiguringWorkspace)
         confirmCurrentGroup(fixture)
@@ -1954,10 +2802,10 @@ enum GodoxSessionRecoveryCheck {
         }
         let originalB = fixture.controller.groupDraft(.b).baseline
         let originalC = fixture.controller.groupDraft(.c).baseline
-        let expectedBRestoration = GroupRestorationPoint(
-            deviceID: testDevice.id,
-            snapshot: originalB
-        )
+        let expectedRestorations: [GodoxGroup: GroupRestorationPoint] = [
+            .b: GroupRestorationPoint(deviceID: testDevice.id, snapshot: originalB),
+            .c: GroupRestorationPoint(deviceID: testDevice.id, snapshot: originalC),
+        ]
         fixture.controller.setDraftModeling(.b, modeling: .fixed(percent: 25))
         fixture.controller.setDraftPower(.c, power: changedC)
         fixture.scheduler.fire(.automaticApply)
@@ -1965,7 +2813,7 @@ enum GodoxSessionRecoveryCheck {
         expect(
             SafeGodoxProtocol.groupSnapshot(from: fixture.transport.controlPayloads[0])?.0 == .b
         )
-        expect(restorationStore.load() == .record(group: .b, point: expectedBRestoration))
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
         fixture.transport.emit(.controlWriteStarted)
 
         var synchronousHeartbeatFailures = 0
@@ -1992,10 +2840,8 @@ enum GodoxSessionRecoveryCheck {
         expect(fixture.controller.phase == .applying)
         expect(fixture.controller.applySequenceStatus?.activeGroup == .b)
         expect(fixture.controller.applySequenceStatus?.remainingGroups == [.c])
-        expect(fixture.controller.restorationPoints.count == 1)
-        expect(fixture.controller.restorationPoints[.b]?.snapshot == originalB)
-        expect(fixture.controller.restorationPoints[.c] == nil)
-        expect(restorationStore.load() == .record(group: .b, point: expectedBRestoration))
+        expect(fixture.controller.restorationPoints == expectedRestorations)
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
         expect(fixture.scheduler.activeCount(.heartbeat) == 0)
         expect(
             !fixture.scheduler.fireNext(.heartbeat) && !fixture.scheduler.fireNext(.heartbeat),
@@ -2025,8 +2871,8 @@ enum GodoxSessionRecoveryCheck {
         expect(fixture.controller.phase == .applying)
         expect(fixture.controller.applySequenceStatus?.activeGroup == .c)
         expect(fixture.controller.applySequenceStatus?.remainingGroups.isEmpty == true)
-        expect(fixture.controller.restorationPoints[.b] == nil)
-        expect(fixture.controller.restorationPoints[.c]?.snapshot == originalC)
+        expect(fixture.controller.restorationPoints == expectedRestorations)
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
 
         fixture.transport.emit(.controlWriteStarted)
         fixture.transport.emit(.controlWriteCompleted)
@@ -2034,6 +2880,8 @@ enum GodoxSessionRecoveryCheck {
         expect(fixture.controller.phase == .ready)
         expect(fixture.controller.pendingCount == 0)
         expect(fixture.controller.applySequenceStatus == nil)
+        expect(fixture.controller.restorationPoints.isEmpty)
+        expect(restorationStore.load() == .none)
     }
 
     private static func checkHeartbeatTimeoutStopsAutomaticBatch() {
@@ -2052,17 +2900,18 @@ enum GodoxSessionRecoveryCheck {
             preconditionFailure("Falta la potencia canónica para probar el timeout de heartbeat")
         }
         let originalB = fixture.controller.groupDraft(.b).baseline
-        let expectedRestoration = GroupRestorationPoint(
-            deviceID: testDevice.id,
-            snapshot: originalB
-        )
+        let originalC = fixture.controller.groupDraft(.c).baseline
+        let expectedRestorations: [GodoxGroup: GroupRestorationPoint] = [
+            .b: GroupRestorationPoint(deviceID: testDevice.id, snapshot: originalB),
+            .c: GroupRestorationPoint(deviceID: testDevice.id, snapshot: originalC),
+        ]
         fixture.controller.setDraftModeling(.b, modeling: .fixed(percent: 25))
         fixture.controller.setDraftPower(.c, power: changedC)
         fixture.scheduler.fire(.automaticApply)
         expect(fixture.transport.controlPayloads.count == 1)
         expect(fixture.controller.applySequenceStatus?.activeGroup == .b)
         expect(fixture.controller.applySequenceStatus?.remainingGroups == [.c])
-        expect(restorationStore.load() == .record(group: .b, point: expectedRestoration))
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
 
         fixture.transport.emit(.notification(
             .control,
@@ -2082,10 +2931,8 @@ enum GodoxSessionRecoveryCheck {
         expect(fixture.scheduler.activeCount(.heartbeat) == 0)
         expect(fixture.controller.applySequenceStatus == nil)
         expect(fixture.transport.controlPayloads.count == 2)
-        expect(fixture.controller.restorationPoints.count == 1)
-        expect(fixture.controller.restorationPoints[.b]?.snapshot == originalB)
-        expect(fixture.controller.restorationPoints[.c] == nil)
-        expect(restorationStore.load() == .record(group: .b, point: expectedRestoration))
+        expect(fixture.controller.restorationPoints == expectedRestorations)
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
 
         fixture.scheduler.fire(.disconnectRecovery)
         expectFailure(fixture.controller.phase, containing: "heartbeat")
@@ -2094,9 +2941,8 @@ enum GodoxSessionRecoveryCheck {
             "C nunca debe salir después de que expire el heartbeat"
         )
         expect(fixture.controller.applySequenceStatus == nil)
-        expect(fixture.controller.restorationPoints[.b]?.snapshot == originalB)
-        expect(fixture.controller.restorationPoints[.c] == nil)
-        expect(restorationStore.load() == .record(group: .b, point: expectedRestoration))
+        expect(fixture.controller.restorationPoints == expectedRestorations)
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
     }
 
     private static func checkControlFailureStopsAutomaticBatch() {
@@ -2115,10 +2961,11 @@ enum GodoxSessionRecoveryCheck {
             preconditionFailure("Falta la potencia canónica para probar el fallo de la tanda")
         }
         let originalB = fixture.controller.groupDraft(.b).baseline
-        let expectedRestoration = GroupRestorationPoint(
-            deviceID: testDevice.id,
-            snapshot: originalB
-        )
+        let originalC = fixture.controller.groupDraft(.c).baseline
+        let expectedRestorations: [GodoxGroup: GroupRestorationPoint] = [
+            .b: GroupRestorationPoint(deviceID: testDevice.id, snapshot: originalB),
+            .c: GroupRestorationPoint(deviceID: testDevice.id, snapshot: originalC),
+        ]
 
         fixture.controller.setDraftModeling(.b, modeling: .fixed(percent: 25))
         fixture.controller.setDraftPower(.c, power: changedC)
@@ -2131,7 +2978,7 @@ enum GodoxSessionRecoveryCheck {
         )
         expect(fixture.controller.applySequenceStatus?.activeGroup == .b)
         expect(fixture.controller.applySequenceStatus?.remainingGroups == [.c])
-        expect(restorationStore.load() == .record(group: .b, point: expectedRestoration))
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
 
         fixture.transport.emit(.controlWriteStarted)
         fixture.transport.emit(.commandFailed(
@@ -2143,10 +2990,8 @@ enum GodoxSessionRecoveryCheck {
         expect(fixture.controller.applySequenceStatus == nil)
         expect(fixture.controller.phase == .disconnecting)
         expect(fixture.scheduler.activeCount(.automaticApply) == 0)
-        expect(fixture.controller.restorationPoints.count == 1)
-        expect(fixture.controller.restorationPoints[.b]?.snapshot == originalB)
-        expect(fixture.controller.restorationPoints[.c] == nil)
-        expect(restorationStore.load() == .record(group: .b, point: expectedRestoration))
+        expect(fixture.controller.restorationPoints == expectedRestorations)
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
 
         fixture.scheduler.fire(.disconnectRecovery)
         expectFailure(fixture.controller.phase, containing: "incierto")
@@ -2155,9 +3000,8 @@ enum GodoxSessionRecoveryCheck {
             "C nunca debe enviarse después de fallar B, ni al vencer la recuperación"
         )
         expect(fixture.controller.applySequenceStatus == nil)
-        expect(fixture.controller.restorationPoints[.b]?.snapshot == originalB)
-        expect(fixture.controller.restorationPoints[.c] == nil)
-        expect(restorationStore.load() == .record(group: .b, point: expectedRestoration))
+        expect(fixture.controller.restorationPoints == expectedRestorations)
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
     }
 
     private static func checkLateControlNotificationsAreIgnoredDuringInvalidation() {
@@ -2230,10 +3074,11 @@ enum GodoxSessionRecoveryCheck {
             preconditionFailure("Falta la potencia canónica para probar el timeout FEC8")
         }
         let originalB = fixture.controller.groupDraft(.b).baseline
-        let expectedRestoration = GroupRestorationPoint(
-            deviceID: testDevice.id,
-            snapshot: originalB
-        )
+        let originalC = fixture.controller.groupDraft(.c).baseline
+        let expectedRestorations: [GodoxGroup: GroupRestorationPoint] = [
+            .b: GroupRestorationPoint(deviceID: testDevice.id, snapshot: originalB),
+            .c: GroupRestorationPoint(deviceID: testDevice.id, snapshot: originalC),
+        ]
 
         fixture.controller.setDraftModeling(.b, modeling: .fixed(percent: 25))
         fixture.controller.setDraftPower(.c, power: changedC)
@@ -2248,7 +3093,7 @@ enum GodoxSessionRecoveryCheck {
         expect(fixture.controller.phase == .applying)
         expect(fixture.controller.applySequenceStatus?.activeGroup == .b)
         expect(fixture.controller.applySequenceStatus?.remainingGroups == [.c])
-        expect(restorationStore.load() == .record(group: .b, point: expectedRestoration))
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
 
         // El timeout de respuesta del radio usa un Task real de dos segundos.
         // Suspender el main actor permite que venza sin introducir hooks en Sources.
@@ -2258,10 +3103,8 @@ enum GodoxSessionRecoveryCheck {
         expect(fixture.transport.disconnectCount == 1)
         expect(fixture.transport.controlPayloads.count == 1)
         expect(fixture.controller.applySequenceStatus == nil)
-        expect(fixture.controller.restorationPoints.count == 1)
-        expect(fixture.controller.restorationPoints[.b]?.snapshot == originalB)
-        expect(fixture.controller.restorationPoints[.c] == nil)
-        expect(restorationStore.load() == .record(group: .b, point: expectedRestoration))
+        expect(fixture.controller.restorationPoints == expectedRestorations)
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
 
         fixture.scheduler.fire(.disconnectRecovery)
         expectFailure(fixture.controller.phase, containing: "FEC8")
@@ -2270,9 +3113,8 @@ enum GodoxSessionRecoveryCheck {
             "C nunca debe enviarse cuando B recibió GATT pero agotó su FEC8"
         )
         expect(fixture.controller.applySequenceStatus == nil)
-        expect(fixture.controller.restorationPoints[.b]?.snapshot == originalB)
-        expect(fixture.controller.restorationPoints[.c] == nil)
-        expect(restorationStore.load() == .record(group: .b, point: expectedRestoration))
+        expect(fixture.controller.restorationPoints == expectedRestorations)
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
     }
 
     private static func checkRestorationPersistenceFailurePreventsAutomaticBatch() {
@@ -2332,6 +3174,11 @@ enum GodoxSessionRecoveryCheck {
             preconditionFailure("Falta la potencia canónica para probar el automático tras recuperar")
         }
         let originalB = fixture.controller.groupDraft(.b).baseline
+        let originalC = fixture.controller.groupDraft(.c).baseline
+        let expectedRestorations: [GodoxGroup: GroupRestorationPoint] = [
+            .b: GroupRestorationPoint(deviceID: testDevice.id, snapshot: originalB),
+            .c: GroupRestorationPoint(deviceID: testDevice.id, snapshot: originalC),
+        ]
         fixture.controller.setDraftModeling(.b, modeling: .fixed(percent: 25))
         fixture.controller.setDraftPower(.c, power: changedC)
         fixture.scheduler.fire(.automaticApply)
@@ -2344,7 +3191,8 @@ enum GodoxSessionRecoveryCheck {
         ))
         fixture.scheduler.fire(.disconnectRecovery)
         expectFailure(fixture.controller.phase, containing: "incierto")
-        expect(fixture.controller.restorationPoints[.b]?.snapshot == originalB)
+        expect(fixture.controller.restorationPoints == expectedRestorations)
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
         expect(fixture.controller.pendingGroups == [.b, .c])
 
         prepareReadyConnection(fixture)
@@ -2354,8 +3202,17 @@ enum GodoxSessionRecoveryCheck {
         expect(fixture.controller.canApply)
         fixture.controller.applyPendingChanges()
         expect(fixture.transport.controlPayloads.count == 2)
+        expect(
+            SafeGodoxProtocol.globalSnapshot(
+                from: fixture.transport.controlPayloads[1]
+            ) != nil,
+            "La recuperación debe restablecer A0 antes de reenviar A1"
+        )
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        expect(fixture.transport.controlPayloads.count == 3)
         guard let restoration = SafeGodoxProtocol.groupSnapshot(
-            from: fixture.transport.controlPayloads[1]
+            from: fixture.transport.controlPayloads[2]
         ) else {
             preconditionFailure("No se pudo decodificar la recuperación de B")
         }
@@ -2367,25 +3224,24 @@ enum GodoxSessionRecoveryCheck {
             .control,
             Data([0xF0, 0xE0, 0x00, 0x00, 0x00, 0x00])
         ))
-        expect(fixture.transport.controlPayloads.count == 3)
-        expect(fixture.transport.controlPayloads[2] == Data([0xF0, 0xE0]))
+        expect(fixture.transport.controlPayloads.count == 4)
+        expect(fixture.transport.controlPayloads[3] == Data([0xF0, 0xE0]))
         expect(fixture.scheduler.activeCount(.heartbeat) == 1)
         fixture.transport.emit(.controlWriteCompleted)
         fixture.transport.emit(.notification(.control, Data([0xF0, 0xA1])))
 
-        expect(fixture.controller.phase == .ready)
-        expect(fixture.controller.restorationPoints.isEmpty)
-        expect(restorationStore.load() == .none)
-        expect(fixture.controller.pendingGroups == [.c])
+        expect(fixture.controller.phase == .applying)
+        expect(fixture.controller.restorationPoints == expectedRestorations)
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
         expect(
             !fixture.controller.isAutomaticApplyScheduled,
-            "C no debe programarse mientras el heartbeat siga pendiente"
+            "El segundo A1 de recuperación debe esperar mientras el heartbeat siga pendiente"
         )
         expect(fixture.scheduler.activeCount(.automaticApply) == 0)
         expect(!fixture.controller.canApply)
         expect(
-            fixture.transport.controlPayloads.count == 3,
-            "C debe esperar tanto la recuperación como el heartbeat pendiente"
+            fixture.transport.controlPayloads.count == 4,
+            "El A1 original de C debe esperar al heartbeat pendiente"
         )
 
         fixture.transport.emit(.controlWriteStarted)
@@ -2398,31 +3254,23 @@ enum GodoxSessionRecoveryCheck {
             fixture.transport.emit(.controlWriteCompleted)
         }
 
-        expect(fixture.controller.phase == .ready)
-        expect(fixture.controller.pendingGroups == [.c])
-        expect(fixture.controller.isAutomaticApplyScheduled)
+        expect(fixture.controller.phase == .applying)
         expect(fixture.scheduler.activeCount(.heartbeat) == 0)
-        expect(
-            fixture.scheduler.activeCount(.automaticApply) == 1,
-            "Resolver el heartbeat debe armar un único debounce para C"
-        )
-        expect(fixture.transport.controlPayloads.count == 3)
+        expect(fixture.scheduler.activeCount(.automaticApply) == 0)
+        expect(fixture.transport.controlPayloads.count == 5)
         expect(
             !fixture.scheduler.fireNext(.heartbeat),
             "El callback del heartbeat debe cancelar su deadline"
         )
-        expect(fixture.controller.phase == .ready)
-        expect(fixture.transport.controlPayloads.count == 3)
-
-        fixture.scheduler.fire(.automaticApply)
-        expect(fixture.transport.controlPayloads.count == 4)
-        guard let resumed = SafeGodoxProtocol.groupSnapshot(
-            from: fixture.transport.controlPayloads[3]
+        guard let restoredC = SafeGodoxProtocol.groupSnapshot(
+            from: fixture.transport.controlPayloads[4]
         ) else {
-            preconditionFailure("No se pudo decodificar C tras reanudar automático")
+            preconditionFailure("No se pudo decodificar la recuperación original de C")
         }
-        expect(resumed.0 == .c)
-        expect(resumed.1.power == changedC)
+        expect(restoredC.0 == .c)
+        expect(restoredC.1 == originalC)
+        expect(fixture.controller.restorationPoints == expectedRestorations)
+        expect(restorationStore.load() == .batch(points: expectedRestorations))
 
         fixture.transport.emit(.controlWriteStarted)
         fixture.transport.emit(.controlWriteCompleted)
@@ -2430,6 +3278,8 @@ enum GodoxSessionRecoveryCheck {
         expect(fixture.controller.phase == .ready)
         expect(fixture.controller.pendingCount == 0)
         expect(fixture.controller.applySequenceStatus == nil)
+        expect(fixture.controller.restorationPoints.isEmpty)
+        expect(restorationStore.load() == .none)
     }
 
     private static func checkReadySessionAppliesNormalChanges() {
@@ -2451,9 +3301,8 @@ enum GodoxSessionRecoveryCheck {
         )
         var persistedBeforeControlWrite = false
         fixture.transport.onSendControl = { _ in
-            persistedBeforeControlWrite = restorationStore.load() == .record(
-                group: .c,
-                point: originalCPoint
+            persistedBeforeControlWrite = restorationStore.load() == .batch(
+                points: [.c: originalCPoint]
             )
         }
         fixture.controller.setDraftPower(.c, power: lowerC)
@@ -2477,7 +3326,7 @@ enum GodoxSessionRecoveryCheck {
         )
         expect(fixture.controller.phase == .applying)
         expect(fixture.controller.restorationPoints[.c]?.snapshot == originalC)
-        expect(restorationStore.load() == .record(group: .c, point: originalCPoint))
+        expect(restorationStore.load() == .batch(points: [.c: originalCPoint]))
         expect(!fixture.controller.canEdit(.c))
         expect(!fixture.controller.canDisconnect)
 
@@ -2489,7 +3338,7 @@ enum GodoxSessionRecoveryCheck {
         )
         expect(fixture.controller.groupDraft(.c).baseline == originalC)
         expect(fixture.controller.restorationPoints[.c]?.snapshot == originalC)
-        expect(restorationStore.load() == .record(group: .c, point: originalCPoint))
+        expect(restorationStore.load() == .batch(points: [.c: originalCPoint]))
         expect(
             fixture.controller.activity.last?.message.contains("antes del acuse GATT") == true
         )
@@ -2577,7 +3426,7 @@ enum GodoxSessionRecoveryCheck {
 
         fixture.controller.setDraftPower(.c, power: lowerC)
         fixture.controller.applyPendingChanges()
-        expect(restorationStore.load() == .record(group: .c, point: originalCPoint))
+        expect(restorationStore.load() == .batch(points: [.c: originalCPoint]))
         fixture.transport.emit(.controlWriteStarted)
         fixture.transport.emit(.commandFailed(
             .control,
@@ -2586,7 +3435,7 @@ enum GodoxSessionRecoveryCheck {
 
         expect(fixture.controller.phase == .disconnecting)
         expect(fixture.controller.restorationPoints[.c]?.snapshot == originalC)
-        expect(restorationStore.load() == .record(group: .c, point: originalCPoint))
+        expect(restorationStore.load() == .batch(points: [.c: originalCPoint]))
         expect(fixture.transport.disconnectCount == 1)
 
         fixture.scheduler.fire(.disconnectRecovery)
@@ -2635,13 +3484,19 @@ enum GodoxSessionRecoveryCheck {
             "El radio original debe admitir únicamente la recuperación exacta persistida"
         )
         recovered.controller.applyPendingChanges()
+        guard let recoveryGlobalFrame = recovered.transport.controlPayloads.last,
+              SafeGodoxProtocol.globalSnapshot(from: recoveryGlobalFrame) != nil else {
+            preconditionFailure("La recuperación no comenzó por A0")
+        }
+        recovered.transport.emit(.controlWriteStarted)
+        recovered.transport.emit(.controlWriteCompleted)
         guard let recoveryFrame = recovered.transport.controlPayloads.last,
               let decodedRecovery = SafeGodoxProtocol.groupSnapshot(from: recoveryFrame) else {
             preconditionFailure("No se pudo decodificar la trama de recuperación")
         }
         expect(decodedRecovery.0 == .c)
         expect(decodedRecovery.1 == originalC)
-        expect(restorationStore.load() == .record(group: .c, point: originalCPoint))
+        expect(restorationStore.load() == .batch(points: [.c: originalCPoint]))
 
         recovered.transport.emit(.controlWriteStarted)
         recovered.transport.emit(.controlWriteCompleted)
@@ -3057,6 +3912,30 @@ enum GodoxSessionRecoveryCheck {
         // real ni inicializa CoreBluetooth, pero recorre el mismo state machine.
         fixture.transport.emit(.commandSent(.sync))
         expect(fixture.controller.phase == .ready)
+    }
+
+    private static func prepareConfiguredReadyConnection(
+        _ fixture: (
+            controller: GodoxSessionController,
+            transport: FakeGodoxSessionTransport,
+            scheduler: ManualSessionDeadlineScheduler
+        )
+    ) {
+        expect(fixture.controller.hasCompletedOnboarding)
+        prepareConnection(fixture)
+        fixture.transport.emit(.stateChanged(.ready(testDevice)))
+        fixture.transport.emit(.readyForAuthentication)
+        expect(fixture.controller.phase == .authenticating)
+
+        fixture.transport.emit(.notification(.authentication, validAuthenticationResponse()))
+        fixture.transport.emit(.commandSent(.sync))
+        expect(fixture.controller.phase == .synchronizing)
+        fixture.scheduler.fire(.valueSynchronizationSettle)
+        for _ in fixture.controller.workingGroups {
+            confirmCurrentGroup(fixture)
+        }
+        expect(fixture.controller.phase == .ready)
+        expect(fixture.controller.pendingCount == 0)
     }
 
     private static func makeFixture(

@@ -8,12 +8,27 @@ import Foundation
 struct StudioWorkspaceGroup: Equatable {
     let snapshot: ManualGroupSnapshot
     let assignedFlashModelIDs: Set<String>
+    /// Modo que debe conservarse debajo de Multi o mientras el grupo está Off.
+    /// Godox usa esta distinción para decidir el byte de potencia A1 al entrar
+    /// en Multi desde M o desde TTL.
+    let lastKnownActiveMode: GroupOperatingMode?
+    let restoresAfterMulti: Bool
 
     init?(
         snapshot: ManualGroupSnapshot,
-        assignedFlashModelIDs: Set<String>
+        assignedFlashModelIDs: Set<String>,
+        lastKnownActiveMode: GroupOperatingMode? = nil,
+        restoresAfterMulti: Bool? = nil
     ) {
-        guard StudioLibraryValidation.isValid(snapshot: snapshot) else { return nil }
+        let resolvedRestoresAfterMulti = restoresAfterMulti ??
+            (snapshot.operatingMode == .multi)
+        guard StudioLibraryValidation.isValid(snapshot: snapshot),
+              StudioLibraryValidation.isValid(
+                  lastKnownActiveMode: lastKnownActiveMode,
+                  for: snapshot
+              ),
+              !resolvedRestoresAfterMulti || snapshot.operatingMode == .multi ||
+                snapshot.operatingMode == .off else { return nil }
 
         var normalizedModelIDs: Set<String> = []
         for modelID in assignedFlashModelIDs {
@@ -24,6 +39,11 @@ struct StudioWorkspaceGroup: Equatable {
 
         self.snapshot = snapshot
         self.assignedFlashModelIDs = normalizedModelIDs
+        self.lastKnownActiveMode = StudioLibraryValidation.resolvedLastKnownActiveMode(
+            lastKnownActiveMode,
+            for: snapshot
+        )
+        self.restoresAfterMulti = resolvedRestoresAfterMulti
     }
 }
 
@@ -40,13 +60,15 @@ struct StudioWorkspace: Equatable {
     let workingGroups: [GodoxGroup]
     let visibleGroups: [GodoxGroup]
     let groupConfigurations: [GodoxGroup: StudioWorkspaceGroup]
+    let multiFlashSettings: MultiFlashSettings
 
     init?(
         onboardingCompleted: Bool,
         profileID: String,
         workingGroups: [GodoxGroup],
         visibleGroups: [GodoxGroup],
-        groupConfigurations: [GodoxGroup: StudioWorkspaceGroup]
+        groupConfigurations: [GodoxGroup: StudioWorkspaceGroup],
+        multiFlashSettings: MultiFlashSettings = .default
     ) {
         let normalizedProfileID = StudioLibraryValidation.normalized(profileID)
         guard !normalizedProfileID.isEmpty,
@@ -58,7 +80,14 @@ struct StudioWorkspace: Equatable {
         let workingSet = Set(workingGroups)
         let visibleSet = Set(visibleGroups)
         guard visibleSet.isSubset(of: workingSet),
-              Set(groupConfigurations.keys) == workingSet else {
+              Set(groupConfigurations.keys) == workingSet,
+              StudioLibraryValidation.hasValidMultiModeCombination(
+                  workingGroups.compactMap { groupConfigurations[$0]?.snapshot }
+              ),
+              !groupConfigurations.values.contains(where: { $0.restoresAfterMulti }) ||
+                groupConfigurations.values.contains(where: {
+                    $0.snapshot.operatingMode == .multi
+                }) else {
             return nil
         }
         if onboardingCompleted && (workingGroups.isEmpty || visibleGroups.isEmpty) {
@@ -70,10 +99,12 @@ struct StudioWorkspace: Equatable {
         self.workingGroups = workingGroups
         self.visibleGroups = visibleGroups
         self.groupConfigurations = groupConfigurations
+        self.multiFlashSettings = multiFlashSettings
     }
 }
 
-/// A named, device-independent collection of desired A1 values.
+/// A named, device-independent collection of desired A1 values and the global
+/// Multi settings required to reproduce those group modes.
 ///
 /// A preset deliberately contains no radio identifier or credential. Its UUID
 /// identifies only this local preset. Loading a preset therefore requires the
@@ -86,6 +117,9 @@ struct StudioPreset: Equatable, Identifiable {
     let profileID: String
     let groups: [GodoxGroup]
     let states: [GodoxGroup: ManualGroupSnapshot]
+    let lastKnownActiveModes: [GodoxGroup: GroupOperatingMode]
+    let groupsRestoredAfterMulti: Set<GodoxGroup>
+    let multiFlashSettings: MultiFlashSettings
 
     init?(
         id: UUID = UUID(),
@@ -94,11 +128,17 @@ struct StudioPreset: Equatable, Identifiable {
         updatedAt: Date? = nil,
         profileID: String,
         groups: [GodoxGroup],
-        states: [GodoxGroup: ManualGroupSnapshot]
+        states: [GodoxGroup: ManualGroupSnapshot],
+        lastKnownActiveModes: [GodoxGroup: GroupOperatingMode] = [:],
+        groupsRestoredAfterMulti: Set<GodoxGroup>? = nil,
+        multiFlashSettings: MultiFlashSettings = .default
     ) {
         let normalizedName = StudioLibraryValidation.normalized(name)
         let normalizedProfileID = StudioLibraryValidation.normalized(profileID)
         let resolvedUpdatedAt = updatedAt ?? createdAt
+        let resolvedGroupsRestoredAfterMulti = groupsRestoredAfterMulti ?? Set(
+            groups.filter { states[$0]?.operatingMode == .multi }
+        )
         guard !normalizedName.isEmpty,
               !normalizedProfileID.isEmpty,
               createdAt.timeIntervalSince1970.isFinite,
@@ -109,7 +149,25 @@ struct StudioPreset: Equatable, Identifiable {
               Set(states.keys) == Set(groups),
               states.values.allSatisfy({
                   StudioLibraryValidation.isValid(snapshot: $0)
-              }) else {
+              }),
+              Set(lastKnownActiveModes.keys).isSubset(of: Set(groups)),
+              resolvedGroupsRestoredAfterMulti.isSubset(of: Set(groups)),
+              resolvedGroupsRestoredAfterMulti.allSatisfy({
+                  states[$0]?.operatingMode == .multi ||
+                    states[$0]?.operatingMode == .off
+              }),
+              lastKnownActiveModes.allSatisfy({ group, mode in
+                  guard let snapshot = states[group] else { return false }
+                  return StudioLibraryValidation.isValid(
+                      lastKnownActiveMode: mode,
+                      for: snapshot
+                  )
+              }),
+              StudioLibraryValidation.hasValidMultiModeCombination(
+                  groups.compactMap { states[$0] }
+              ),
+              resolvedGroupsRestoredAfterMulti.isEmpty ||
+                states.values.contains(where: { $0.operatingMode == .multi }) else {
             return nil
         }
 
@@ -120,6 +178,16 @@ struct StudioPreset: Equatable, Identifiable {
         self.profileID = normalizedProfileID
         self.groups = groups
         self.states = states
+        self.lastKnownActiveModes = Dictionary(uniqueKeysWithValues: groups.compactMap { group in
+            guard let snapshot = states[group],
+                  let mode = StudioLibraryValidation.resolvedLastKnownActiveMode(
+                      lastKnownActiveModes[group],
+                      for: snapshot
+                  ) else { return nil }
+            return (group, mode)
+        })
+        self.groupsRestoredAfterMulti = resolvedGroupsRestoredAfterMulti
+        self.multiFlashSettings = multiFlashSettings
     }
 }
 
@@ -163,12 +231,15 @@ struct StudioLibraryStore {
         let workingGroups: [UInt8]
         let visibleGroups: [UInt8]
         let groupStates: [PersistedWorkspaceGroup]
+        let multiFlashSettings: PersistedMultiFlashSettings?
     }
 
     private struct PersistedWorkspaceGroup: Codable {
         let group: UInt8
         let assignedFlashModelIDs: [String]
         let state: PersistedA1State
+        let lastKnownActiveModeByte: UInt8?
+        let restoresAfterMulti: Bool?
     }
 
     private struct PersistedPreset: Codable {
@@ -179,11 +250,36 @@ struct StudioLibraryStore {
         let profileID: String
         let groups: [UInt8]
         let states: [PersistedPresetState]
+        let multiFlashSettings: PersistedMultiFlashSettings?
     }
 
     private struct PersistedPresetState: Codable {
         let group: UInt8
         let state: PersistedA1State
+        let lastKnownActiveModeByte: UInt8?
+        let restoresAfterMulti: Bool?
+    }
+
+    /// Optional inside the v1 envelope so records written before Multi editing
+    /// continue to decode. New saves always include this complete value.
+    private struct PersistedMultiFlashSettings: Codable {
+        let countByte: UInt8
+        let hertzByte: UInt8
+        let powerByte: UInt8
+
+        init(settings: MultiFlashSettings) {
+            countByte = settings.countByte
+            hertzByte = settings.hertzByte
+            powerByte = settings.powerByte
+        }
+
+        func settings() -> MultiFlashSettings? {
+            MultiFlashSettings(
+                countByte: countByte,
+                hertzByte: hertzByte,
+                powerByte: powerByte
+            )
+        }
     }
 
     /// Primitive representation of the six mutable A1 bytes. No current domain
@@ -283,7 +379,10 @@ struct StudioLibraryStore {
 
     private static func workspace(from persisted: PersistedWorkspace) -> StudioWorkspace? {
         guard let workingGroups = decodedGroups(persisted.workingGroups),
-              let visibleGroups = decodedGroups(persisted.visibleGroups) else {
+              let visibleGroups = decodedGroups(persisted.visibleGroups),
+              let multiFlashSettings = decodedMultiFlashSettings(
+                  persisted.multiFlashSettings
+              ) else {
             return nil
         }
 
@@ -292,9 +391,16 @@ struct StudioLibraryStore {
             guard let group = GodoxGroup(rawValue: record.group),
                   configurations[group] == nil,
                   let snapshot = record.state.snapshot(),
+                  let lastKnownActiveMode = decodedLastKnownActiveMode(
+                      record.lastKnownActiveModeByte,
+                      for: snapshot
+                  ),
                   let configuration = StudioWorkspaceGroup(
                       snapshot: snapshot,
-                      assignedFlashModelIDs: Set(record.assignedFlashModelIDs)
+                      assignedFlashModelIDs: Set(record.assignedFlashModelIDs),
+                      lastKnownActiveMode: lastKnownActiveMode,
+                      restoresAfterMulti: record.restoresAfterMulti ??
+                        (snapshot.operatingMode == .multi)
                   ) else {
                 return nil
             }
@@ -306,7 +412,8 @@ struct StudioLibraryStore {
             profileID: persisted.profileID,
             workingGroups: workingGroups,
             visibleGroups: visibleGroups,
-            groupConfigurations: configurations
+            groupConfigurations: configurations,
+            multiFlashSettings: multiFlashSettings
         )
     }
 
@@ -314,18 +421,33 @@ struct StudioLibraryStore {
         guard let id = UUID(uuidString: persisted.id),
               let groups = decodedGroups(persisted.groups),
               persisted.createdAt.isFinite,
-              persisted.updatedAt.isFinite else {
+              persisted.updatedAt.isFinite,
+              let multiFlashSettings = decodedMultiFlashSettings(
+                  persisted.multiFlashSettings
+              ) else {
             return nil
         }
 
         var states: [GodoxGroup: ManualGroupSnapshot] = [:]
+        var lastKnownActiveModes: [GodoxGroup: GroupOperatingMode] = [:]
+        var groupsRestoredAfterMulti: Set<GodoxGroup> = []
         for record in persisted.states {
             guard let group = GodoxGroup(rawValue: record.group),
                   states[group] == nil,
-                  let snapshot = record.state.snapshot() else {
+                  let snapshot = record.state.snapshot(),
+                  let lastKnownActiveMode = decodedLastKnownActiveMode(
+                      record.lastKnownActiveModeByte,
+                      for: snapshot
+                  ) else {
                 return nil
             }
             states[group] = snapshot
+            if let lastKnownActiveMode {
+                lastKnownActiveModes[group] = lastKnownActiveMode
+            }
+            if record.restoresAfterMulti ?? (snapshot.operatingMode == .multi) {
+                groupsRestoredAfterMulti.insert(group)
+            }
         }
 
         return StudioPreset(
@@ -335,7 +457,10 @@ struct StudioLibraryStore {
             updatedAt: Date(timeIntervalSince1970: persisted.updatedAt),
             profileID: persisted.profileID,
             groups: groups,
-            states: states
+            states: states,
+            lastKnownActiveModes: lastKnownActiveModes,
+            groupsRestoredAfterMulti: groupsRestoredAfterMulti,
+            multiFlashSettings: multiFlashSettings
         )
     }
 
@@ -367,7 +492,8 @@ struct StudioLibraryStore {
             profileID: workspace.profileID,
             workingGroups: workspace.workingGroups,
             visibleGroups: workspace.visibleGroups,
-            groupConfigurations: workspace.groupConfigurations
+            groupConfigurations: workspace.groupConfigurations,
+            multiFlashSettings: workspace.multiFlashSettings
         ) else {
             return nil
         }
@@ -381,7 +507,9 @@ struct StudioLibraryStore {
             groupStates.append(PersistedWorkspaceGroup(
                 group: group.rawValue,
                 assignedFlashModelIDs: configuration.assignedFlashModelIDs.sorted(),
-                state: state
+                state: state,
+                lastKnownActiveModeByte: configuration.lastKnownActiveMode?.rawValue,
+                restoresAfterMulti: configuration.restoresAfterMulti
             ))
         }
 
@@ -390,7 +518,10 @@ struct StudioLibraryStore {
             profileID: verified.profileID,
             workingGroups: verified.workingGroups.map(\.rawValue),
             visibleGroups: verified.visibleGroups.map(\.rawValue),
-            groupStates: groupStates
+            groupStates: groupStates,
+            multiFlashSettings: PersistedMultiFlashSettings(
+                settings: verified.multiFlashSettings
+            )
         )
     }
 
@@ -402,7 +533,10 @@ struct StudioLibraryStore {
             updatedAt: preset.updatedAt,
             profileID: preset.profileID,
             groups: preset.groups,
-            states: preset.states
+            states: preset.states,
+            lastKnownActiveModes: preset.lastKnownActiveModes,
+            groupsRestoredAfterMulti: preset.groupsRestoredAfterMulti,
+            multiFlashSettings: preset.multiFlashSettings
         ) else {
             return nil
         }
@@ -413,7 +547,12 @@ struct StudioLibraryStore {
                   let state = PersistedA1State(snapshot: snapshot) else {
                 return nil
             }
-            states.append(PersistedPresetState(group: group.rawValue, state: state))
+            states.append(PersistedPresetState(
+                group: group.rawValue,
+                state: state,
+                lastKnownActiveModeByte: verified.lastKnownActiveModes[group]?.rawValue,
+                restoresAfterMulti: verified.groupsRestoredAfterMulti.contains(group)
+            ))
         }
 
         return PersistedPreset(
@@ -423,8 +562,40 @@ struct StudioLibraryStore {
             updatedAt: verified.updatedAt.timeIntervalSince1970,
             profileID: verified.profileID,
             groups: verified.groups.map(\.rawValue),
-            states: states
+            states: states,
+            multiFlashSettings: PersistedMultiFlashSettings(
+                settings: verified.multiFlashSettings
+            )
         )
+    }
+
+    private static func decodedMultiFlashSettings(
+        _ persisted: PersistedMultiFlashSettings?
+    ) -> MultiFlashSettings? {
+        guard let persisted else { return .default }
+        return persisted.settings()
+    }
+
+    /// `nil` en registros v1 antiguos se resuelve desde el propio A1 cuando
+    /// éste todavía expresa M/TTL. Para Multi/Off queda ausente y el controller
+    /// adopta M como fallback conservador.
+    private static func decodedLastKnownActiveMode(
+        _ rawValue: UInt8?,
+        for snapshot: ManualGroupSnapshot
+    ) -> GroupOperatingMode?? {
+        guard let rawValue else {
+            return .some(
+                StudioLibraryValidation.resolvedLastKnownActiveMode(nil, for: snapshot)
+            )
+        }
+        guard let mode = GroupOperatingMode(rawValue: rawValue),
+              StudioLibraryValidation.isValid(
+                  lastKnownActiveMode: mode,
+                  for: snapshot
+              ) else {
+            return nil
+        }
+        return .some(mode)
     }
 
     private static func decodedGroups(_ rawValues: [UInt8]) -> [GodoxGroup]? {
@@ -449,5 +620,43 @@ private enum StudioLibraryValidation {
     static func isValid(snapshot: ManualGroupSnapshot) -> Bool {
         ManualPower.value(decimal: snapshot.power.decimalValue) != nil &&
             snapshot.modelingState.isValidForWrite
+    }
+
+    static func hasValidMultiModeCombination(
+        _ snapshots: [ManualGroupSnapshot]
+    ) -> Bool {
+        guard snapshots.contains(where: { $0.operatingMode == .multi }) else {
+            return true
+        }
+        return snapshots.allSatisfy {
+            $0.operatingMode == .multi || $0.operatingMode == .off
+        }
+    }
+
+    static func isValid(
+        lastKnownActiveMode: GroupOperatingMode?,
+        for snapshot: ManualGroupSnapshot
+    ) -> Bool {
+        guard let lastKnownActiveMode else { return true }
+        guard lastKnownActiveMode == .manual || lastKnownActiveMode == .autoTTL else {
+            return false
+        }
+        if snapshot.operatingMode == .manual || snapshot.operatingMode == .autoTTL {
+            return lastKnownActiveMode == snapshot.operatingMode
+        }
+        return true
+    }
+
+    static func resolvedLastKnownActiveMode(
+        _ mode: GroupOperatingMode?,
+        for snapshot: ManualGroupSnapshot
+    ) -> GroupOperatingMode? {
+        if let mode { return mode }
+        switch snapshot.operatingMode {
+        case .manual, .autoTTL:
+            return snapshot.operatingMode
+        case .multi, .off:
+            return nil
+        }
     }
 }

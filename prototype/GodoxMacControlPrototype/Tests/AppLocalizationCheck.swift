@@ -9,6 +9,7 @@ enum AppLocalizationCheck {
         checkResourceParity(english: english, spanish: spanish)
         checkRuntimeCatalogCoverage(english: english, spanish: spanish)
         checkWorkspaceConfigurationCopy(english: english, spanish: spanish)
+        checkMultiCopy(english: english, spanish: spanish)
         checkBluetoothMessages(english: english, spanish: spanish)
         checkControllerMessages(english: english, spanish: spanish)
         checkPreferences()
@@ -153,6 +154,152 @@ enum AppLocalizationCheck {
         )
     }
 
+    private static func checkMultiCopy(
+        english: [String: String],
+        spanish: [String: String]
+    ) {
+        assertLocalized(
+            "Destellos Multi",
+            english: "Multi flashes",
+            spanish: "Destellos Multi",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Al iniciar Multi, todos los grupos activos compatibles entran juntos; los grupos que ya estaban Off siguen disponibles para añadirlos.",
+            english: "Starting Multi includes all active compatible groups together; groups that were already Off remain available to add.",
+            spanish: "Al iniciar Multi, todos los grupos activos compatibles entran juntos; los grupos que ya estaban Off siguen disponibles para añadirlos.",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Activar Multi",
+            english: "Turn Multi on",
+            spanish: "Activar Multi",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Desactivar Multi",
+            english: "Turn Multi off",
+            spanish: "Desactivar Multi",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "MULTI · GLOBAL",
+            english: "MULTI · GLOBAL",
+            spanish: "MULTI · GLOBAL",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "GRUPO %@ DESACTIVADO",
+            english: "GROUP %@ DISABLED",
+            spanish: "GRUPO %@ DESACTIVADO",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Activar en Multi",
+            english: "Add to Multi",
+            spanish: "Activar en Multi",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Empieza con potencia y conteo bajos. El resultado real depende del modelo, reciclado y temperatura; Multi no es compatible con HSS.",
+            english: "Start with low power and flash count. Actual output depends on the model, recycle time, and temperature; Multi is not compatible with HSS.",
+            spanish: "Empieza con potencia y conteo bajos. El resultado real depende del modelo, reciclado y temperatura; Multi no es compatible con HSS.",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Estrobo sólo envía A1 a los grupos del workspace; antes de Test, confirma en el transmisor que los demás estén Off.",
+            english: "Estrobo only sends A1 to workspace groups; before Test, confirm on the trigger that all other groups are Off.",
+            spanish: "Estrobo sólo envía A1 a los grupos del workspace; antes de Test, confirma en el transmisor que los demás estén Off.",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Obturación mínima orientativa · ≥ %.3f s",
+            english: "Suggested minimum shutter time · ≥ %.3f s",
+            spanish: "Obturación mínima orientativa · ≥ %.3f s",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Multi se ajustó al rango común 1/64 +0.0",
+            english: "Multi was adjusted to the shared range 1/64 +0.0",
+            spanish: "Multi se ajustó al rango común 1/64 +0.0",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "El grupo F no admite Multi en este perfil",
+            english: "Group F does not support Multi in this profile",
+            spanish: "El grupo F no admite Multi en este perfil",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Multi global se activó en los grupos B, C",
+            english: "Global Multi was activated on groups B, C",
+            spanish: "Multi global se activó en los grupos B, C",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Multi global se desactivó; todos los grupos volvieron a Manual",
+            english: "Global Multi was disabled; all groups returned to Manual",
+            spanish: "Multi global se desactivó; todos los grupos volvieron a Manual",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Multi es global; se apagaron los grupos B, D",
+            english: "Multi is global; groups B, D were turned off",
+            spanish: "Multi es global; se apagaron los grupos B, D",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Multi global se desactivó; se restauró la escena previa en B, D",
+            english: "Global Multi was disabled; the previous scene was restored on B, D",
+            spanish: "Multi global se desactivó; se restauró la escena previa en B, D",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Multi global se desactivó",
+            english: "Global Multi was disabled",
+            spanish: "Multi global se desactivó",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Multi global se desactivó y se restauró la escena previa",
+            english: "Global Multi was disabled and the previous scene was restored",
+            spanish: "Multi global se desactivó y se restauró la escena previa",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "No se pudo restaurar la escena previa de C",
+            english: "The previous scene could not be restored on C",
+            spanish: "No se pudo restaurar la escena previa de C",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Ajuste seguro preparado para recuperar C; falta pulsar Aplicar",
+            english: "Safe setting prepared to restore C; press Apply to continue",
+            spanish: "Ajuste seguro preparado para recuperar C; falta pulsar Aplicar",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+    }
+
     private static func checkControllerMessages(
         english: [String: String],
         spanish: [String: String]
@@ -161,6 +308,27 @@ enum AppLocalizationCheck {
             "Hay un ajuste anterior de B por recuperar; conecta el radio original antes de continuar",
             english: "A previous B setting must be restored; connect the original trigger before continuing",
             spanish: "Hay un ajuste anterior de B por recuperar; conecta el radio original antes de continuar",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Hay una escena anterior por recuperar (B, C); conecta el radio original antes de continuar",
+            english: "A previous scene for B, C must be restored; connect the original trigger before continuing",
+            spanish: "Hay una escena anterior por recuperar (B, C); conecta el radio original antes de continuar",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Escena segura preparada para recuperar B, C; falta pulsar Aplicar",
+            english: "Safe scene prepared to restore B, C; press Apply to continue",
+            spanish: "Escena segura preparada para recuperar B, C; falta pulsar Aplicar",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "El radio confirmó la escena, pero no se pudo cerrar su recuperación local",
+            english: "The trigger confirmed the scene, but its local recovery could not be completed",
+            spanish: "El radio confirmó la escena, pero no se pudo cerrar su recuperación local",
             englishTranslations: english,
             spanishTranslations: spanish
         )

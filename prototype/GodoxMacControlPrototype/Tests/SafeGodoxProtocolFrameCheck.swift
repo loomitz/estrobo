@@ -6,6 +6,8 @@ import SwiftUI
 enum SafeGodoxProtocolFrameCheck {
     static func main() throws {
         try checkPowerScales()
+        checkMultiFlashSettings()
+        checkMultiFlashModelLimits()
         checkGroupVisualIdentities()
         try checkExactFrames()
         try checkExactGlobalFrames()
@@ -102,6 +104,128 @@ enum SafeGodoxProtocolFrameCheck {
         expect(ManualPower.value(atSliderIndex: 24, minimumDenominator: 256) == power(100))
         expect(ManualPower.value(atSliderIndex: -1, minimumDenominator: 256) == nil)
         expect(ManualPower.value(atSliderIndex: 25, minimumDenominator: 256) == nil)
+    }
+
+    private static func checkMultiFlashSettings() {
+        let defaults = MultiFlashSettings.default
+        expect(defaults.power == power(50))
+        expect(defaults.power.label == "1/32 +0.0")
+        expect(defaults.count == 10)
+        expect(defaults.hertz == 10)
+        expect(defaults.countByte == 0x0A)
+        expect(defaults.hertzByte == 0x0A)
+        expect(defaults.powerByte == 0x32)
+        expect(defaults.estimatedDurationSeconds == 1)
+        expect(defaults.minimumExposureSeconds == 1)
+        expect(
+            MultiFlashSettings.supportedPowers.map(\.decimalValue) ==
+                [10, 20, 30, 40, 50, 60, 70, 80]
+        )
+
+        guard let minimum = MultiFlashSettings(power: power(10), count: 1, hertz: 1),
+              let maximum = MultiFlashSettings(power: power(80), count: 100, hertz: 100),
+              let decoded = MultiFlashSettings(
+                  countByte: maximum.countByte,
+                  hertzByte: maximum.hertzByte,
+                  powerByte: maximum.powerByte
+              ) else {
+            preconditionFailure("Los límites Multi válidos deben poder construirse")
+        }
+        expect(minimum.powerByte == 0x5A)
+        expect(maximum.powerByte == 0x14)
+        expect(decoded == maximum)
+        expect(Set([decoded, maximum]).count == 1)
+        expect(maximum.estimatedDurationSeconds == 1)
+        let repeatingDuration = MultiFlashSettings(power: power(50), count: 1, hertz: 3)
+        expect(repeatingDuration?.minimumExposureSeconds == 0.334)
+        expect((repeatingDuration?.minimumExposureSeconds ?? 0) >= (1.0 / 3.0))
+
+        expect(MultiFlashSettings(power: power(50), count: 0, hertz: 10) == nil)
+        expect(MultiFlashSettings(power: power(50), count: 101, hertz: 10) == nil)
+        expect(MultiFlashSettings(power: power(50), count: 10, hertz: 0) == nil)
+        expect(MultiFlashSettings(power: power(50), count: 10, hertz: 101) == nil)
+        expect(MultiFlashSettings(power: power(13), count: 10, hertz: 10) == nil)
+        expect(MultiFlashSettings(power: power(90), count: 10, hertz: 10) == nil)
+        expect(MultiFlashSettings(countByte: 0, hertzByte: 10, powerByte: 0x32) == nil)
+        expect(MultiFlashSettings(countByte: 10, hertzByte: 101, powerByte: 0x32) == nil)
+        expect(MultiFlashSettings(countByte: 10, hertzByte: 10, powerByte: 0x57) == nil)
+        expect(MultiFlashSettings(countByte: 10, hertzByte: 10, powerByte: 0x00) == nil)
+    }
+
+    private static func checkMultiFlashModelLimits() {
+        let profile = MultiFlashLimitProfile.ad400ProII
+        let publishedBands: [(ClosedRange<Int>, [Int])] = [
+            (1...1, [7, 14, 30, 60, 90, 100, 100, 100]),
+            (2...2, [6, 14, 30, 60, 90, 100, 100, 100]),
+            (3...3, [5, 12, 30, 60, 90, 100, 100, 100]),
+            (4...4, [4, 10, 20, 50, 80, 100, 100, 100]),
+            (5...5, [3, 8, 20, 50, 80, 100, 100, 100]),
+            (6...7, [3, 6, 20, 40, 70, 90, 90, 90]),
+            (8...9, [3, 5, 10, 30, 60, 80, 80, 80]),
+            (10...10, [2, 4, 8, 20, 50, 70, 70, 70]),
+            (11...11, [2, 4, 8, 20, 40, 70, 70, 70]),
+            (12...14, [2, 4, 8, 20, 40, 60, 60, 60]),
+            (15...19, [2, 4, 8, 18, 35, 50, 50, 50]),
+            (20...50, [2, 4, 8, 16, 30, 40, 40, 40]),
+            (60...100, [2, 4, 8, 12, 20, 40, 40, 40]),
+        ]
+        let powers = [80, 70, 60, 50, 40, 30, 20, 10].map(power)
+        for (band, expectedLimits) in publishedBands {
+            for hertz in Set([band.lowerBound, band.upperBound]) {
+                for (power, expected) in zip(powers, expectedLimits) {
+                    expect(profile.maximumFlashCount(power: power, hertz: hertz) == expected)
+                    expect(profile.hasManufacturerPublishedLimit(power: power, hertz: hertz))
+                }
+            }
+        }
+
+        // The manufacturer table omits 51–59 Hz. Estrobo applies the safer
+        // following row while keeping the UI evidence explicitly conservative.
+        expect(profile.maximumFlashCount(power: power(50), hertz: 55) == 12)
+        expect(!profile.hasManufacturerPublishedLimit(power: power(50), hertz: 55))
+        expect(profile.maximumFlashCount(power: power(80), hertz: 51) == 2)
+        expect(!profile.hasManufacturerPublishedLimit(power: power(80), hertz: 59))
+        expect(profile.maximumFlashCount(power: power(50), hertz: 0) == nil)
+        expect(profile.maximumFlashCount(power: power(50), hertz: 101) == nil)
+        expect(!profile.hasManufacturerPublishedLimit(power: power(50), hertz: 101))
+        expect(profile.maximumFlashCount(power: power(53), hertz: 10) == nil)
+        expect(!profile.hasManufacturerPublishedLimit(power: power(53), hertz: 10))
+
+        let verified = ResolvedGroupCapability.resolve(
+            configuration: GroupConfiguration(
+                assignedFlashModelIDs: ["ad400pro-ii"],
+                isVisibleLocally: true,
+                isEnabledOnRadio: true,
+                hasCompleteBaseline: true
+            ),
+            profile: .observedGDBH
+        )
+        expect(verified.multiLimitProfiles == [.ad400ProII])
+        expect(!verified.hasUnverifiedMultiLimits)
+
+        let unverified = ResolvedGroupCapability.resolve(
+            configuration: GroupConfiguration(
+                assignedFlashModelIDs: ["generic-128"],
+                isVisibleLocally: true,
+                isEnabledOnRadio: true,
+                hasCompleteBaseline: true
+            ),
+            profile: .observedGDBH
+        )
+        expect(unverified.multiLimitProfiles.isEmpty)
+        expect(unverified.hasUnverifiedMultiLimits)
+
+        let mixed = ResolvedGroupCapability.resolve(
+            configuration: GroupConfiguration(
+                assignedFlashModelIDs: ["ad400pro-ii", "generic-128"],
+                isVisibleLocally: true,
+                isEnabledOnRadio: true,
+                hasCompleteBaseline: true
+            ),
+            profile: .observedGDBH
+        )
+        expect(mixed.multiLimitProfiles == [.ad400ProII])
+        expect(mixed.hasUnverifiedMultiLimits)
     }
 
     private static func checkGroupVisualIdentities() {
@@ -255,6 +379,35 @@ enum SafeGodoxProtocolFrameCheck {
         expect(decodedTTL?.1.compensationByte == 0)
         expect(cTTL.power == ManualPower.value(decimal: 27))
 
+        let cMulti = snapshot(
+            power: 40,
+            modeling: .off,
+            mode: .multi
+        )
+        let cMultiFromManualFrame: [UInt8] = [
+            0xF0, 0xA1, 0x07, 0x0C, 0x02, 0x3C, 0x00, 0x00, 0x00, 0x00, 0xD5,
+        ]
+        try assertFrame(
+            group: .c,
+            snapshot: cMulti,
+            expected: cMultiFromManualFrame,
+            underlyingMultiMode: .manual
+        )
+        let decodedMulti = SafeGodoxProtocol.groupSnapshot(from: Data(cMultiFromManualFrame))
+        expect(decodedMulti?.0 == .c)
+        expect(decodedMulti?.1.operatingMode == .multi)
+        expect(decodedMulti?.1.power == cMulti.power)
+
+        let cMultiFromTTLFrame: [UInt8] = [
+            0xF0, 0xA1, 0x07, 0x0C, 0x02, 0x32, 0x00, 0x00, 0x00, 0x00, 0x77,
+        ]
+        try assertFrame(
+            group: .c,
+            snapshot: cMulti,
+            expected: cMultiFromTTLFrame,
+            underlyingMultiMode: .autoTTL
+        )
+
         expect(SafeGodoxProtocol.isGroupAcknowledgement(Data([0xF0, 0xA1])))
         expect(SafeGodoxProtocol.isGroupAcknowledgement(Data(cFrame)))
         expect(!SafeGodoxProtocol.isGroupAcknowledgement(Data([0xF0, 0xA0])))
@@ -270,6 +423,19 @@ enum SafeGodoxProtocolFrameCheck {
             group: .a,
             snapshot: offSnapshot,
             expected: [0xF0, 0xA1, 0x07, 0x0A, 0x03, 0x5A, 0x00, 0x00, 0x00, 0x00, 0xE1]
+        )
+        try assertFrame(
+            group: .c,
+            snapshot: snapshot(
+                power: 40,
+                modeling: .off,
+                mode: .off,
+                compensation: 0
+            ),
+            expected: [
+                0xF0, 0xA1, 0x07, 0x0C, 0x03, 0x32, 0x00, 0x00, 0x00, 0x00, 0x40,
+            ],
+            underlyingMultiMode: .autoTTL
         )
     }
 
@@ -388,6 +554,26 @@ enum SafeGodoxProtocolFrameCheck {
         badMultiPower[13] = SafeGodoxProtocol.crc8(Array(badMultiPower.dropLast()))
         expect(SafeGodoxProtocol.globalSnapshot(from: Data(badMultiPower)) == nil)
 
+        // El codec A0 conserva su tolerancia histórica. Los límites editables
+        // pertenecen a MultiFlashSettings y no deben impedir decodificar un A0
+        // observado con valores que la UI nunca ofrecería.
+        var rawCompatibleFrame = completeFrame
+        rawCompatibleFrame[8] = 0
+        rawCompatibleFrame[9] = 0xFF
+        rawCompatibleFrame[10] = 100
+        rawCompatibleFrame[13] = SafeGodoxProtocol.crc8(
+            Array(rawCompatibleFrame.dropLast())
+        )
+        let rawCompatibleSnapshot = SafeGodoxProtocol.globalSnapshot(
+            from: Data(rawCompatibleFrame)
+        )
+        expect(rawCompatibleSnapshot?.multiCount == 0)
+        expect(rawCompatibleSnapshot?.multiHertz == 0xFF)
+        expect(rawCompatibleSnapshot?.multiPowerByte == 100)
+        expect(
+            MultiFlashSettings(countByte: 0, hertzByte: 0xFF, powerByte: 100) == nil
+        )
+
         let invalidMultiPower = GlobalRadioSnapshot(
             beepEnabled: false,
             modelingLightEnabled: false,
@@ -497,11 +683,27 @@ enum SafeGodoxProtocolFrameCheck {
         let otherDevice = UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!
         let baseline = snapshot(power: 20, modeling: .off)
         let changed = snapshot(power: 23, modeling: .off)
+        let globalBaseline = GlobalRadioSnapshot(
+            beepEnabled: true,
+            modelingLightEnabled: false,
+            relativeAdjustmentByte: 0x02,
+            multiEnabled: true,
+            multiCount: 0x07,
+            multiHertz: 0x0B,
+            multiPowerByte: 0x3C,
+            standbyEnabled: false,
+            adjustmentCounter: 0x04
+        )
         var safety = PhysicalOperationSafetyState()
 
         expect(safety.allowsNewEdits)
         expect(safety.permitsConnection(to: originalDevice))
-        expect(safety.begin(group: .b, deviceID: originalDevice, baseline: baseline))
+        expect(safety.begin(
+            group: .b,
+            deviceID: originalDevice,
+            baseline: baseline,
+            globalSnapshot: globalBaseline
+        ))
         expect(!safety.allowsNewEdits)
         expect(!safety.permitsConnection(to: otherDevice))
         expect(!safety.begin(group: .c, deviceID: originalDevice, baseline: baseline))
@@ -511,6 +713,9 @@ enum SafeGodoxProtocolFrameCheck {
             snapshot: changed
         ))
         expect(safety.restorationPoints[.b]?.snapshot == baseline)
+        expect(safety.restorationPoints[.b]?.globalSnapshot == globalBaseline)
+        expect(safety.restorationPoints[.b]?.multiUnderlyingMode == nil)
+        expect(safety.restorationPoints[.b]?.restoresAfterMulti == false)
         expect(safety.prepareRestoration(for: .b) == baseline)
         expect(safety.preparedRestorations == [.b])
         expect(!safety.completeRestoration(
@@ -528,13 +733,71 @@ enum SafeGodoxProtocolFrameCheck {
         expect(safety.preparedRestorations.isEmpty)
 
         var unsent = PhysicalOperationSafetyState()
-        expect(unsent.begin(group: .c, deviceID: originalDevice, baseline: baseline))
-        expect(unsent.cancelUnsentOperation(
+        expect(unsent.begin(
+            group: .c,
+            deviceID: originalDevice,
+            baseline: baseline,
+            globalSnapshot: globalBaseline
+        ))
+        expect(!unsent.cancelUnsentOperation(
             group: .c,
             deviceID: originalDevice,
             baseline: baseline
         ))
+        expect(unsent.cancelUnsentOperation(
+            group: .c,
+            deviceID: originalDevice,
+            baseline: baseline,
+            globalSnapshot: globalBaseline
+        ))
         expect(unsent.allowsNewEdits)
+
+        let ttlBaseline = snapshot(
+            power: 20,
+            modeling: .off,
+            mode: .autoTTL
+        )
+        let offBaseline = snapshot(
+            power: 20,
+            modeling: .off,
+            mode: .off
+        )
+        for (invalidBaseline, underlyingMode) in [
+            (baseline, GroupOperatingMode.manual),
+            (ttlBaseline, GroupOperatingMode.autoTTL),
+        ] {
+            var invalidUnderlyingMode = PhysicalOperationSafetyState()
+            expect(!invalidUnderlyingMode.begin(
+                group: .c,
+                deviceID: originalDevice,
+                baseline: invalidBaseline,
+                globalSnapshot: globalBaseline,
+                multiUnderlyingMode: underlyingMode
+            ))
+            expect(invalidUnderlyingMode.allowsNewEdits)
+        }
+
+        var rememberedOffMode = PhysicalOperationSafetyState()
+        expect(rememberedOffMode.begin(
+            group: .c,
+            deviceID: originalDevice,
+            baseline: offBaseline,
+            multiUnderlyingMode: .manual
+        ))
+        expect(rememberedOffMode.restorationPoints[.c]?.multiUnderlyingMode == .manual)
+        expect(rememberedOffMode.completeSuccessfulOperation(
+            group: .c,
+            deviceID: originalDevice
+        ))
+
+        var unsupportedUnderlyingMode = PhysicalOperationSafetyState()
+        expect(!unsupportedUnderlyingMode.begin(
+            group: .c,
+            deviceID: originalDevice,
+            baseline: baseline,
+            multiUnderlyingMode: .multi
+        ))
+        expect(unsupportedUnderlyingMode.allowsNewEdits)
 
         var confirmedWrite = PhysicalOperationSafetyState()
         expect(confirmedWrite.begin(group: .b, deviceID: originalDevice, baseline: baseline))
@@ -547,6 +810,92 @@ enum SafeGodoxProtocolFrameCheck {
             deviceID: originalDevice
         ))
         expect(confirmedWrite.allowsNewEdits)
+
+        let batchPoints: [GodoxGroup: GroupRestorationPoint] = [
+            .b: GroupRestorationPoint(
+                deviceID: originalDevice,
+                snapshot: baseline,
+                globalSnapshot: globalBaseline
+            ),
+            .c: GroupRestorationPoint(
+                deviceID: originalDevice,
+                snapshot: changed,
+                globalSnapshot: globalBaseline
+            ),
+        ]
+        var batchRecovery = PhysicalOperationSafetyState()
+        expect(!batchRecovery.begin(points: [:]))
+        expect(batchRecovery.begin(points: batchPoints))
+        expect(batchRecovery.begin(points: batchPoints))
+        expect(batchRecovery.restorationPoints == batchPoints)
+        expect(batchRecovery.prepareRestoration(for: .c) == changed)
+        expect(batchRecovery.preparedRestorations == Set(batchPoints.keys))
+        expect(batchRecovery.permitsOnlyExactRestoration(
+            group: .b,
+            deviceID: originalDevice,
+            snapshot: baseline
+        ))
+        expect(batchRecovery.permitsOnlyExactRestoration(
+            group: .c,
+            deviceID: originalDevice,
+            snapshot: changed
+        ))
+        expect(!batchRecovery.completeRestoration(
+            group: .c,
+            deviceID: originalDevice,
+            snapshot: changed
+        ))
+        expect(!batchRecovery.completeSuccessfulOperation(
+            group: .b,
+            deviceID: originalDevice
+        ))
+        expect(batchRecovery.restorationPoints == batchPoints)
+        expect(!batchRecovery.completeRestoration(deviceID: otherDevice))
+        expect(batchRecovery.completeRestoration(deviceID: originalDevice))
+        expect(batchRecovery.allowsNewEdits)
+
+        var batchCancellation = PhysicalOperationSafetyState()
+        expect(batchCancellation.begin(points: batchPoints))
+        expect(!batchCancellation.cancelUnsentOperation(
+            group: .b,
+            deviceID: originalDevice,
+            baseline: baseline,
+            globalSnapshot: globalBaseline
+        ))
+        expect(batchCancellation.restorationPoints == batchPoints)
+        expect(batchCancellation.cancelUnsentOperation(points: batchPoints))
+        expect(batchCancellation.allowsNewEdits)
+
+        var batchSuccess = PhysicalOperationSafetyState()
+        expect(batchSuccess.begin(points: batchPoints))
+        expect(!batchSuccess.completeSuccessfulOperation(
+            group: .b,
+            deviceID: originalDevice
+        ))
+        expect(batchSuccess.restorationPoints == batchPoints)
+        expect(!batchSuccess.completeSuccessfulOperation(deviceID: otherDevice))
+        expect(batchSuccess.completeSuccessfulOperation(deviceID: originalDevice))
+        expect(batchSuccess.allowsNewEdits)
+
+        var mismatchedDevicePoints = batchPoints
+        mismatchedDevicePoints[.c] = GroupRestorationPoint(
+            deviceID: otherDevice,
+            snapshot: changed,
+            globalSnapshot: globalBaseline
+        )
+        var invalidBatch = PhysicalOperationSafetyState()
+        expect(!invalidBatch.begin(points: mismatchedDevicePoints))
+
+        var otherGlobal = globalBaseline
+        otherGlobal.beepEnabled.toggle()
+        var mismatchedGlobalPoints = batchPoints
+        mismatchedGlobalPoints[.c] = GroupRestorationPoint(
+            deviceID: originalDevice,
+            snapshot: changed,
+            globalSnapshot: otherGlobal
+        )
+        expect(!invalidBatch.begin(points: mismatchedGlobalPoints))
+        expect(invalidBatch.allowsNewEdits)
     }
 
     private static func checkPendingRestorationStore() {
@@ -570,6 +919,26 @@ enum SafeGodoxProtocolFrameCheck {
                 return true
             }
         )
+        func modifyingFirstPersistedPoint(
+            in data: Data,
+            _ mutation: (inout [String: Any]) -> Void
+        ) -> Data {
+            var root = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
+            var points = root["points"] as! [[String: Any]]
+            mutation(&points[0])
+            root["points"] = points
+            return try! JSONSerialization.data(withJSONObject: root)
+        }
+        func modifyingPersistedPoints(
+            in data: Data,
+            _ mutation: (inout [[String: Any]]) -> Void
+        ) -> Data {
+            var root = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
+            var points = root["points"] as! [[String: Any]]
+            mutation(&points)
+            root["points"] = points
+            return try! JSONSerialization.data(withJSONObject: root)
+        }
         let deviceID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
         let point = GroupRestorationPoint(
             deviceID: deviceID,
@@ -584,6 +953,12 @@ enum SafeGodoxProtocolFrameCheck {
 
         expect(store.load() == .none)
         expect(store.save(group: .c, point: point))
+        expect(store.load() == .batch(points: [.c: point]))
+
+        let legacyV1 = """
+        {"version":1,"group":12,"deviceID":"11111111-2222-3333-4444-555555555555","modeByte":1,"powerByte":77,"modelingIntensityByte":25,"beepByte":1,"modelingModeByte":2,"compensationByte":129}
+        """.data(using: .utf8)!
+        memory.objects["restoration-test"] = legacyV1
         expect(store.load() == .record(group: .c, point: point))
 
         let ttlPoint = GroupRestorationPoint(
@@ -596,11 +971,242 @@ enum SafeGodoxProtocolFrameCheck {
             )
         )
         expect(store.save(group: .c, point: ttlPoint))
-        expect(store.load() == .record(group: .c, point: ttlPoint))
+        expect(store.load() == .batch(points: [.c: ttlPoint]))
+
+        let offPoint = GroupRestorationPoint(
+            deviceID: deviceID,
+            snapshot: snapshot(
+                power: 27,
+                modeling: .off,
+                mode: .off,
+                compensation: 0
+            )
+        )
+        expect(store.save(group: .c, point: offPoint))
+        expect(store.load() == .batch(points: [.c: offPoint]))
+
+        let rememberedOffPoint = GroupRestorationPoint(
+            deviceID: deviceID,
+            snapshot: offPoint.snapshot,
+            multiUnderlyingMode: .autoTTL
+        )
+        expect(store.save(group: .c, point: rememberedOffPoint))
+        expect(store.load() == .batch(points: [.c: rememberedOffPoint]))
+
+        let globalSnapshot = GlobalRadioSnapshot(
+            beepEnabled: true,
+            modelingLightEnabled: true,
+            relativeAdjustmentByte: 0x02,
+            multiEnabled: true,
+            multiCount: 0x07,
+            multiHertz: 0x0B,
+            multiPowerByte: 0x3C,
+            standbyEnabled: false,
+            adjustmentCounter: 0x04
+        )
+        let multiPoint = GroupRestorationPoint(
+            deviceID: deviceID,
+            snapshot: snapshot(
+                power: 50,
+                modeling: .off,
+                mode: .multi,
+                compensation: 0
+            ),
+            globalSnapshot: globalSnapshot,
+            multiUnderlyingMode: .autoTTL
+        )
+        expect(store.save(group: .c, point: multiPoint))
+        expect(store.load() == .batch(points: [.c: multiPoint]))
+
+        let validMultiData = memory.objects["restoration-test"] as! Data
+
+        memory.objects["restoration-test"] = modifyingFirstPersistedPoint(
+            in: validMultiData
+        ) { point in
+            point.removeValue(forKey: "globalSnapshot")
+        }
+        expect(store.load() == .invalid)
+
+        memory.objects["restoration-test"] = modifyingFirstPersistedPoint(
+            in: validMultiData
+        ) { point in
+            var global = point["globalSnapshot"] as! [String: Any]
+            global["multiEnabled"] = false
+            point["globalSnapshot"] = global
+        }
+        expect(store.load() == .invalid)
+
+        memory.objects["restoration-test"] = modifyingFirstPersistedPoint(
+            in: validMultiData
+        ) { point in
+            point.removeValue(forKey: "multiUnderlyingModeByte")
+        }
+        expect(store.load() == .invalid)
+
+        memory.objects["restoration-test"] = modifyingFirstPersistedPoint(
+            in: validMultiData
+        ) { point in
+            var global = point["globalSnapshot"] as! [String: Any]
+            global["multiCount"] = 0
+            point["globalSnapshot"] = global
+        }
+        expect(store.load() == .invalid)
+
+        memory.objects["restoration-test"] = modifyingFirstPersistedPoint(
+            in: validMultiData
+        ) { point in
+            point["multiUnderlyingModeByte"] = Int(GroupOperatingMode.multi.rawValue)
+        }
+        expect(store.load() == .invalid)
+
+        memory.objects["restoration-test"] = modifyingFirstPersistedPoint(
+            in: validMultiData
+        ) { point in
+            var global = point["globalSnapshot"] as! [String: Any]
+            global["multiPowerByte"] = 101
+            point["globalSnapshot"] = global
+        }
+        expect(store.load() == .invalid)
+        memory.objects["restoration-test"] = validMultiData
+
+        let manualGlobalPoint = GroupRestorationPoint(
+            deviceID: deviceID,
+            snapshot: point.snapshot,
+            globalSnapshot: globalSnapshot
+        )
+        let batchPoints: [GodoxGroup: GroupRestorationPoint] = [
+            .b: multiPoint,
+            .c: manualGlobalPoint,
+        ]
+        expect(store.save(points: batchPoints))
+        expect(store.load() == .batch(points: batchPoints))
+        let validBatchData = memory.objects["restoration-test"] as! Data
+        let validBatchJSON = try! JSONSerialization.jsonObject(
+            with: validBatchData
+        ) as! [String: Any]
+        expect(validBatchJSON["version"] as? Int == 2)
+        expect((validBatchJSON["points"] as? [[String: Any]])?.count == 2)
+
+        memory.objects["restoration-test"] = modifyingPersistedPoints(
+            in: validBatchData
+        ) { points in
+            points[1]["group"] = points[0]["group"]
+        }
+        expect(store.load() == .invalid)
+
+        memory.objects["restoration-test"] = modifyingPersistedPoints(
+            in: validBatchData
+        ) { points in
+            points[1]["deviceID"] = "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"
+        }
+        expect(store.load() == .invalid)
+
+        memory.objects["restoration-test"] = modifyingPersistedPoints(
+            in: validBatchData
+        ) { points in
+            var otherGlobal = points[1]["globalSnapshot"] as! [String: Any]
+            otherGlobal["beepEnabled"] = false
+            points[1]["globalSnapshot"] = otherGlobal
+        }
+        expect(store.load() == .invalid)
+
+        memory.objects["restoration-test"] = modifyingPersistedPoints(
+            in: validBatchData
+        ) { points in
+            points[1]["multiUnderlyingModeByte"] =
+                Int(GroupOperatingMode.manual.rawValue)
+        }
+        expect(store.load() == .invalid)
+
+        memory.objects["restoration-test"] = modifyingPersistedPoints(
+            in: validBatchData
+        ) { points in
+            points.removeAll()
+        }
+        expect(store.load() == .invalid)
+
+        let otherDevicePoint = GroupRestorationPoint(
+            deviceID: UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!,
+            snapshot: manualGlobalPoint.snapshot,
+            globalSnapshot: globalSnapshot
+        )
+        expect(!store.save(points: [
+            .b: multiPoint,
+            .c: otherDevicePoint,
+        ]))
+        var otherGlobalSnapshot = globalSnapshot
+        otherGlobalSnapshot.beepEnabled = false
+        let otherGlobalPoint = GroupRestorationPoint(
+            deviceID: deviceID,
+            snapshot: manualGlobalPoint.snapshot,
+            globalSnapshot: otherGlobalSnapshot
+        )
+        expect(!store.save(points: [
+            .b: multiPoint,
+            .c: otherGlobalPoint,
+        ]))
+        expect(!store.save(points: [:]))
+        expect(store.load() == .invalid)
+        memory.objects["restoration-test"] = validBatchData
+        expect(store.load() == .batch(points: batchPoints))
+
+        let restoresAfterMultiPoint = GroupRestorationPoint(
+            deviceID: deviceID,
+            snapshot: snapshot(
+                power: 23,
+                modeling: .fixed(percent: 25),
+                beep: true,
+                mode: .off,
+                compensation: 0x81
+            ),
+            globalSnapshot: globalSnapshot,
+            multiUnderlyingMode: .manual,
+            restoresAfterMulti: true
+        )
+        expect(store.save(group: .c, point: restoresAfterMultiPoint))
+        expect(store.load() == .batch(points: [.c: restoresAfterMultiPoint]))
+        guard case .batch(let restoredPoints) = store.load(),
+              let restoredAfterMultiPoint = restoredPoints[.c] else {
+            preconditionFailure("El flag restoresAfterMulti no completó su round-trip")
+        }
+        expect(restoredAfterMultiPoint.restoresAfterMulti)
+
+        let invalidRestoresAfterMultiPoint = GroupRestorationPoint(
+            deviceID: deviceID,
+            snapshot: point.snapshot,
+            globalSnapshot: globalSnapshot,
+            multiUnderlyingMode: .manual,
+            restoresAfterMulti: true
+        )
+        expect(!store.save(group: .c, point: invalidRestoresAfterMultiPoint))
+        expect(store.load() == .batch(points: [.c: restoresAfterMultiPoint]))
+
+        expect(store.save(group: .c, point: multiPoint))
+        expect(store.load() == .batch(points: [.c: multiPoint]))
+
+        let invalidNormalUnderlyingPoint = GroupRestorationPoint(
+            deviceID: deviceID,
+            snapshot: point.snapshot,
+            globalSnapshot: globalSnapshot,
+            multiUnderlyingMode: .manual
+        )
+        expect(!store.save(group: .c, point: invalidNormalUnderlyingPoint))
+        expect(store.load() == .batch(points: [.c: multiPoint]))
+
+        var invalidGlobalForSave = globalSnapshot
+        invalidGlobalForSave.multiPowerByte = 101
+        let invalidGlobalPoint = GroupRestorationPoint(
+            deviceID: deviceID,
+            snapshot: multiPoint.snapshot,
+            globalSnapshot: invalidGlobalForSave,
+            multiUnderlyingMode: .manual
+        )
+        expect(!store.save(group: .c, point: invalidGlobalPoint))
+        expect(store.load() == .batch(points: [.c: multiPoint]))
 
         memory.acceptsRemoval = false
         expect(!store.clear())
-        expect(store.load() == .record(group: .c, point: ttlPoint))
+        expect(store.load() == .batch(points: [.c: multiPoint]))
         memory.acceptsRemoval = true
         expect(store.clear())
         expect(store.load() == .none)
@@ -853,9 +1459,14 @@ enum SafeGodoxProtocolFrameCheck {
     private static func assertFrame(
         group: GodoxGroup,
         snapshot: ManualGroupSnapshot,
-        expected: [UInt8]
+        expected: [UInt8],
+        underlyingMultiMode: GroupOperatingMode? = nil
     ) throws {
-        let frame = try SafeGodoxProtocol.manualGroupFrame(group: group, snapshot: snapshot)
+        let frame = try SafeGodoxProtocol.manualGroupFrame(
+            group: group,
+            snapshot: snapshot,
+            underlyingMultiMode: underlyingMultiMode
+        )
         expect([UInt8](frame) == expected)
         expect(SafeGodoxProtocol.crc8(Array(expected.dropLast())) == expected.last)
     }

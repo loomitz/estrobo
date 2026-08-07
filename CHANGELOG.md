@@ -4,7 +4,41 @@ Todos los cambios relevantes de Estrobo se documentan aquí. Mientras el proyect
 
 ## Sin publicar
 
-- Ningún cambio registrado después del primer candidato beta.
+### Añadido
+
+- Modo Multi global para grupos `A–E`, con potencia en pasos completos hasta `1/4`, `1–100` destellos, `1–100 Hz` y exposición mínima estimada redondeada hacia arriba a milésimas.
+- Persistencia retrocompatible de Multi en espacios de trabajo y presets.
+- Secuencia segura A0 → A1, cambios Multi A0-only y restauración fail-closed mediante un journal atómico de A0 + todos los A1 afectados, cubiertos por pruebas deterministas.
+
+### Cambiado
+
+- El botón Multi junto a Beep activa o desactiva el sistema y muestra u oculta la consola inline; no abre menú. Canales, Inspector y Matriz eliminan Multi del selector por grupo: los participantes muestran **MULTI · GLOBAL** y los no participantes aparecen desactivados mediante un overlay.
+- Multi usa A0 global y una escena A1 exclusiva limitada al workspace: al entrar convierte juntos todos los grupos activos compatibles y mantiene Off a los no participantes. Al salir, todos los grupos del workspace quedan activos en Manual; no se restaura la escena M/TTL/Off previa ni se envía A1 fuera del workspace.
+- A0 conserva la potencia Multi efectiva; cada A1 mantiene la potencia Manual de origen o usa `0x32` si venía de TTL.
+- Una tanda ya no elimina la recuperación al confirmar un grupo intermedio: conserva la escena completa hasta el último GATT + `FEC8` y puede restaurarla íntegra después de reiniciar.
+- Test identifica una secuencia Multi sin presentar la entrega Bluetooth como confirmación óptica.
+
+## 0.1.0-beta.2 — 2026-08-06
+
+Primer candidato destinado a publicación pública. `beta.1` permaneció como draft interno y su tag no se movió para conservar procedencia.
+
+### Cambiado
+
+- README canónico en inglés con traducción completa al español y selector recíproco de idioma.
+- Portada del README renovada con el icono de Estrobo, descripción más clara e instrucciones seguras para instalar la beta no firmada con Apple Developer ID.
+- Compatibilidad aclarada: Estrobo se conecta a disparadores de flash Godox compatibles con Bluetooth integrado y activado, no directamente a flashes o receptores.
+- Matriz física documentada: Godox X3Pro con flashes Godox AD400Pro II; otras combinaciones candidatas siguen pendientes de verificación física.
+- El modo Multi queda documentado como una función planeada para una versión futura.
+- El handshake `Psub`/`PWOK` sigue siendo obligatorio; el Código del radio se documenta como PIN local de bajo valor.
+- Secuencia Mermaid de Bluetooth corregida para renderizar en GitHub.
+- Limpieza del workflow de firma reforzada para retirar del runner la confianza temporal del certificado incluso al fallar o cancelar.
+
+### Distribución
+
+- Versión `0.1.0`, build `2`, tag previsto `v0.1.0-beta.2`.
+- Artefacto universal `arm64` + `x86_64`, firma autosignada estable, checksums, manifiesto y attestation generados por el workflow protegido.
+
+Consulta las [notas en inglés](docs/releases/v0.1.0-beta.2.md) o la [traducción al español](docs/releases/v0.1.0-beta.2.es.md).
 
 ## 0.1.0-beta.1 — 2026-08-06
 

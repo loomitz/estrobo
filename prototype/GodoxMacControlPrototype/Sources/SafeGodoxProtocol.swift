@@ -126,6 +126,61 @@ struct ManualPower: Hashable, Identifiable {
     }
 }
 
+/// Ajustes globales de una ráfaga Multi que Estrobo puede editar con seguridad.
+///
+/// El A0 crudo sigue siendo tolerante para conservar compatibilidad con valores
+/// observados fuera de la UI. Este tipo representa únicamente el subconjunto que
+/// la aplicación permite crear, persistir y enviar desde sus controles.
+struct MultiFlashSettings: Equatable, Hashable {
+    static let countRange = 1...100
+    // Godox Flash currently exposes 1...100 Hz across its portable Multi UI.
+    // Some transmitters document higher wire values, but those remain outside
+    // this editable subset until a matching flash/profile is verified.
+    static let hertzRange = 1...100
+    static let supportedPowers: [ManualPower] = stride(from: 10, through: 80, by: 10)
+        .compactMap(ManualPower.value(decimal:))
+
+    static let `default`: MultiFlashSettings = {
+        guard let power = ManualPower.value(decimal: 50),
+              let settings = MultiFlashSettings(power: power, count: 10, hertz: 10) else {
+            preconditionFailure("Los defaults Multi deben pertenecer al dominio editable")
+        }
+        return settings
+    }()
+
+    let power: ManualPower
+    let count: Int
+    let hertz: Int
+
+    init?(power: ManualPower, count: Int, hertz: Int) {
+        guard Self.supportedPowers.contains(power),
+              Self.countRange.contains(count),
+              Self.hertzRange.contains(hertz) else {
+            return nil
+        }
+        self.power = power
+        self.count = count
+        self.hertz = hertz
+    }
+
+    init?(countByte: UInt8, hertzByte: UInt8, powerByte: UInt8) {
+        guard let power = ManualPower.value(decimal: 100 - Int(powerByte)) else {
+            return nil
+        }
+        self.init(power: power, count: Int(countByte), hertz: Int(hertzByte))
+    }
+
+    var countByte: UInt8 { UInt8(count) }
+    var hertzByte: UInt8 { UInt8(hertz) }
+    var powerByte: UInt8 { power.encodedByte }
+    var estimatedDurationSeconds: Double { Double(count) / Double(hertz) }
+    /// Límite orientativo mostrado al usuario. Siempre redondea hacia arriba
+    /// para no sugerir una obturación menor que `destellos / Hz`.
+    var minimumExposureSeconds: Double {
+        ceil(estimatedDurationSeconds * 1_000) / 1_000
+    }
+}
+
 enum ModelingLight: Hashable, Identifiable {
     case off
     case proportional
@@ -428,7 +483,8 @@ enum SafeGodoxProtocol {
     static func manualGroupFrame(
         group: GodoxGroup,
         snapshot: ManualGroupSnapshot,
-        minimumManualDenominator: Int = 512
+        minimumManualDenominator: Int = 512,
+        underlyingMultiMode: GroupOperatingMode? = nil
     ) throws -> Data {
         guard ManualPower.value(decimal: snapshot.power.decimalValue) != nil else {
             throw SafeGodoxProtocolError.invalidPower
@@ -450,9 +506,13 @@ enum SafeGodoxProtocol {
         }
 
         // Godox Flash conserva la potencia M fuera de la trama al entrar a
-        // Auto/TTL, pero A1 usa siempre 0x32 en el campo de potencia. Mantener
-        // `snapshot.power` intacto permite restaurar M sin inventar otro valor.
-        let transmittedPowerByte: UInt8 = snapshot.operatingMode == .autoTTL
+        // Auto/TTL, pero A1 usa siempre 0x32 en el campo de potencia. MULTI
+        // conserva ese origen incluso cuando el grupo queda temporalmente Off:
+        // desde TTL usa 0x32; desde M conserva la potencia.
+        let usesTTLSentinel = snapshot.operatingMode == .autoTTL
+            || ((snapshot.operatingMode == .multi || snapshot.operatingMode == .off)
+                && underlyingMultiMode == .autoTTL)
+        let transmittedPowerByte: UInt8 = usesTTLSentinel
             ? 0x32
             : snapshot.power.encodedByte
 
