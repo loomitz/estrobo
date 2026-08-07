@@ -28,6 +28,7 @@ jobs:
       version: ${{ steps.release.outputs.version }}
       build_number: ${{ steps.release.outputs.build_number }}
       commit: ${{ steps.release.outputs.commit }}
+      tag_object: ${{ steps.release.outputs.tag_object }}
       release_file: ${{ steps.release.outputs.release_file }}
     steps:
       # actions/checkout v7.0.1, pinned to its verified commit.
@@ -62,6 +63,7 @@ jobs:
             exit 1
           fi
 
+          tag_object="$(git rev-parse "refs/tags/$TAG")"
           commit="$(git rev-parse "refs/tags/$TAG^{commit}")"
           git fetch --no-tags origin \
             +refs/heads/main:refs/remotes/origin/main
@@ -70,25 +72,17 @@ jobs:
             exit 1
           fi
 
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            non_workflow_changes="$(
-              git diff --name-only "$commit" "$GITHUB_SHA" -- \
-                . \
-                ':(exclude).github/workflows/release-beta.yml' \
-                ':(exclude)scripts/verify-macos-release.sh' \
-                ':(exclude)scripts/package-macos-release.sh' \
-                ':(exclude)prototype/GodoxMacControlPrototype/Tests/InteractiveEditingCheck.swift'
-            )"
-            if [[ -n "$non_workflow_changes" ]]; then
-              echo "Protected main contains non-release-tooling changes after $TAG:" >&2
-              printf '%s\n' "$non_workflow_changes" >&2
-              exit 1
-            fi
-          fi
-
+          # Manual rebuilds take their workflow definition from protected main,
+          # while every source-bearing job checks out this exact tagged commit.
           plist="prototype/GodoxMacControlPrototype/Info.plist"
-          version="$(plutil -extract CFBundleShortVersionString raw -o - "$plist")"
-          build_number="$(plutil -extract CFBundleVersion raw -o - "$plist")"
+          version="$(
+            git show "$commit:$plist" |
+              plutil -extract CFBundleShortVersionString raw -o - -- -
+          )"
+          build_number="$(
+            git show "$commit:$plist" |
+              plutil -extract CFBundleVersion raw -o - -- -
+          )"
           expected_tag="v${version}-beta.${build_number}"
           if [[ "$TAG" != "$expected_tag" ]]; then
             echo "Tag $TAG does not match plist version/build $expected_tag" >&2
@@ -96,7 +90,8 @@ jobs:
           fi
 
           release_file="docs/releases/${TAG}.md"
-          if [[ ! -s "$release_file" ]]; then
+          if ! git cat-file -e "$commit:$release_file" || \
+            [[ "$(git cat-file -s "$commit:$release_file")" -eq 0 ]]; then
             echo "Missing release notes: $release_file" >&2
             exit 1
           fi
@@ -106,6 +101,7 @@ jobs:
             echo "version=$version"
             echo "build_number=$build_number"
             echo "commit=$commit"
+            echo "tag_object=$tag_object"
             echo "release_file=$release_file"
           } >>"$GITHUB_OUTPUT"
 
@@ -156,7 +152,7 @@ jobs:
       - validate
       - native
     runs-on: macos-15
-    timeout-minutes: 35
+    timeout-minutes: 40
     permissions:
       contents: read
     env:
@@ -288,9 +284,36 @@ jobs:
       - name: Remove temporary signing material
         if: ${{ always() }}
         shell: bash
-        timeout-minutes: 2
+        timeout-minutes: 4
         run: |
           cleanup_status=0
+          lookup_system_certificate() {
+            local lookup_output
+            local lookup_status
+            set +e
+            lookup_output="$(sudo -n security find-certificate \
+              -a \
+              -Z \
+              -c "Estrobo Public Beta Signing" \
+              /Library/Keychains/System.keychain 2>&1)"
+            lookup_status=$?
+            set -e
+            case "$lookup_status" in
+              0)
+                printf '%s\n' "$lookup_output"
+                ;;
+              44)
+                return 1
+                ;;
+              *)
+                printf 'System keychain lookup failed (%s): %s\n' \
+                  "$lookup_status" \
+                  "$lookup_output" >&2
+                return 2
+                ;;
+            esac
+          }
+
           signing_identity="$(openssl x509 \
             -inform DER \
             -in release/signing/estrobo-beta-signing.cer \
@@ -298,44 +321,59 @@ jobs:
             -fingerprint \
             -sha1 | tr -d ':' | awk -F= '{ print toupper($2) }')"
           if [[ "$signing_identity" =~ ^[0-9A-F]{40}$ ]]; then
-            certificate_present=0
-            if ! system_certificates="$(sudo -n security find-certificate \
-              -a \
-              -Z \
-              /Library/Keychains/System.keychain 2>/dev/null)"; then
-              cleanup_status=1
-              certificate_present=1
-            elif grep -Fiq "$signing_identity" <<<"$system_certificates"; then
-              certificate_present=1
-            fi
-            if [[ "${TRUSTED_CERT_CLEANUP_REQUIRED:-0}" == "1" || "$certificate_present" == "1" ]]; then
+            if [[ "${TRUSTED_CERT_CLEANUP_REQUIRED:-0}" == "1" ]]; then
+              echo "Removing temporary Estrobo admin trust"
               sudo -n security remove-trusted-cert \
                 -d \
                 release/signing/estrobo-beta-signing.cer \
-                >/dev/null 2>&1 || cleanup_status=1
-              sudo -n security delete-certificate \
-                -Z "$signing_identity" \
-                /Library/Keychains/System.keychain \
-                >/dev/null 2>&1 || cleanup_status=1
+                >/dev/null || cleanup_status=1
             fi
-            if ! remaining_certificates="$(sudo -n security find-certificate \
-              -a \
-              -Z \
-              /Library/Keychains/System.keychain 2>/dev/null)"; then
-              cleanup_status=1
-            elif grep -Fiq "$signing_identity" <<<"$remaining_certificates"; then
-              cleanup_status=1
+
+            system_certificate=""
+            if system_certificate="$(lookup_system_certificate)"; then
+              if grep -Fiq "$signing_identity" <<<"$system_certificate"; then
+                echo "Deleting temporary Estrobo certificate"
+                sudo -n security delete-certificate \
+                  -Z "$signing_identity" \
+                  /Library/Keychains/System.keychain \
+                  >/dev/null || cleanup_status=1
+              fi
+            else
+              lookup_status=$?
+              if [[ "$lookup_status" -ne 1 ]]; then
+                cleanup_status=1
+              fi
+            fi
+
+            remaining_certificate=""
+            if remaining_certificate="$(lookup_system_certificate)"; then
+              if grep -Fiq "$signing_identity" <<<"$remaining_certificate"; then
+                echo "The temporary Estrobo certificate remains in the system keychain" >&2
+                cleanup_status=1
+              fi
+            else
+              lookup_status=$?
+              if [[ "$lookup_status" -ne 1 ]]; then
+                cleanup_status=1
+              fi
             fi
           else
+            echo "Could not derive the Estrobo signing certificate identity" >&2
             cleanup_status=1
           fi
+
+          echo "Removing ephemeral private signing material"
           /bin/rm -f -- \
             "$SIGNING_P12" \
             "$RUNNER_TEMP/imported-signing.pem" \
             "$RUNNER_TEMP/imported-signing.cer" || cleanup_status=1
           if [[ -e "$SIGNING_KEYCHAIN" ]]; then
+            echo "Deleting ephemeral signing keychain"
             security delete-keychain "$SIGNING_KEYCHAIN" \
-              >/dev/null 2>&1 || cleanup_status=1
+              >/dev/null || cleanup_status=1
+          fi
+          if [[ "$cleanup_status" -ne 0 ]]; then
+            echo "Temporary signing cleanup did not complete safely" >&2
           fi
           exit "$cleanup_status"
 
@@ -365,13 +403,14 @@ jobs:
       VERSION: ${{ needs.validate.outputs.version }}
       BUILD_NUMBER: ${{ needs.validate.outputs.build_number }}
       RELEASE_COMMIT: ${{ needs.validate.outputs.commit }}
+      RELEASE_TAG_OBJECT: ${{ needs.validate.outputs.tag_object }}
       RELEASE_FILE: ${{ needs.validate.outputs.release_file }}
     steps:
       # actions/checkout v7.0.1, pinned to its verified commit.
       - name: Check out tagged commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || needs.validate.outputs.commit }}
+          ref: ${{ needs.validate.outputs.commit }}
           persist-credentials: false
 
       # actions/download-artifact v8.0.1, pinned to its verified commit.
@@ -438,7 +477,7 @@ jobs:
                 commit: $workflowCommit,
                 event: $event
               },
-              guard: "Protected main differs from the release commit only in audited release tooling and the interaction test harness"
+              guard: "Protected main supplies the workflow definition; build, signing, verification, packaging, and release-note inputs are checked out from the annotated release commit"
             }' >"$RUNNER_TEMP/manual-rebuild-predicate.json"
 
       # Manual rebuilds cannot use the dispatch ref as source provenance for
@@ -462,6 +501,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          remote_tag_refs="$(git ls-remote --exit-code \
+            "https://github.com/${GITHUB_REPOSITORY}.git" \
+            "refs/tags/$TAG" \
+            "refs/tags/$TAG^{}")"
+          remote_tag_object="$(awk -v ref="refs/tags/$TAG" \
+            '$2 == ref { print $1 }' <<<"$remote_tag_refs")"
+          remote_commit="$(awk -v ref="refs/tags/$TAG^{}" \
+            '$2 == ref { print $1 }' <<<"$remote_tag_refs")"
+          if [[ "$remote_tag_object" != "$RELEASE_TAG_OBJECT" || \
+            "$remote_commit" != "$RELEASE_COMMIT" ]]; then
+            echo "Refusing release mutation because $TAG changed after validation" >&2
+            exit 1
+          fi
+
           if gh release view "$TAG" >/dev/null 2>&1; then
             draft="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq .draft)"
             if [[ "$draft" != "true" ]]; then
@@ -521,8 +574,24 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.validate.outputs.tag }}
+          RELEASE_COMMIT: ${{ needs.validate.outputs.commit }}
+          RELEASE_TAG_OBJECT: ${{ needs.validate.outputs.tag_object }}
         run: |
           set -euo pipefail
+          remote_tag_refs="$(git ls-remote --exit-code \
+            "https://github.com/${GITHUB_REPOSITORY}.git" \
+            "refs/tags/$TAG" \
+            "refs/tags/$TAG^{}")"
+          remote_tag_object="$(awk -v ref="refs/tags/$TAG" \
+            '$2 == ref { print $1 }' <<<"$remote_tag_refs")"
+          remote_commit="$(awk -v ref="refs/tags/$TAG^{}" \
+            '$2 == ref { print $1 }' <<<"$remote_tag_refs")"
+          if [[ "$remote_tag_object" != "$RELEASE_TAG_OBJECT" || \
+            "$remote_commit" != "$RELEASE_COMMIT" ]]; then
+            echo "Refusing publication because $TAG changed after validation" >&2
+            exit 1
+          fi
+
           draft="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq .draft)"
           [[ "$draft" == "true" ]]
           gh release edit "$TAG" --draft=false --prerelease
