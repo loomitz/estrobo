@@ -190,6 +190,10 @@ jobs:
           umask 077
           : "${SIGNING_P12_BASE64:?Missing ESTROBO_SIGNING_P12_BASE64}"
           : "${SIGNING_P12_PASSWORD:?Missing ESTROBO_SIGNING_P12_PASSWORD}"
+          if [[ "${RUNNER_ENVIRONMENT:-}" != "github-hosted" ]]; then
+            echo "Stable beta signing is restricted to an ephemeral GitHub-hosted runner" >&2
+            exit 1
+          fi
 
           keychain_password="$(openssl rand -hex 32)"
           echo "::add-mask::$keychain_password"
@@ -207,7 +211,6 @@ jobs:
           # Trust exists only on the ephemeral build host so macOS recognizes
           # the imported private key as a code-signing identity. Participants
           # never install or trust this certificate.
-          echo "TRUSTED_CERT_CLEANUP_REQUIRED=1" >>"$GITHUB_ENV"
           sudo -n security add-trusted-cert \
             -d \
             -r trustRoot \
@@ -286,82 +289,12 @@ jobs:
         shell: bash
         timeout-minutes: 4
         run: |
+          set -u
           cleanup_status=0
-          lookup_system_certificate() {
-            local lookup_output
-            local lookup_status
-            set +e
-            lookup_output="$(sudo -n security find-certificate \
-              -a \
-              -Z \
-              -c "Estrobo Public Beta Signing" \
-              /Library/Keychains/System.keychain 2>&1)"
-            lookup_status=$?
-            set -e
-            case "$lookup_status" in
-              0)
-                printf '%s\n' "$lookup_output"
-                ;;
-              44)
-                return 1
-                ;;
-              *)
-                printf 'System keychain lookup failed (%s): %s\n' \
-                  "$lookup_status" \
-                  "$lookup_output" >&2
-                return 2
-                ;;
-            esac
-          }
-
-          signing_identity="$(openssl x509 \
-            -inform DER \
-            -in release/signing/estrobo-beta-signing.cer \
-            -noout \
-            -fingerprint \
-            -sha1 | tr -d ':' | awk -F= '{ print toupper($2) }')"
-          if [[ "$signing_identity" =~ ^[0-9A-F]{40}$ ]]; then
-            if [[ "${TRUSTED_CERT_CLEANUP_REQUIRED:-0}" == "1" ]]; then
-              echo "Removing temporary Estrobo admin trust"
-              sudo -n security remove-trusted-cert \
-                -d \
-                release/signing/estrobo-beta-signing.cer \
-                >/dev/null || cleanup_status=1
-            fi
-
-            system_certificate=""
-            if system_certificate="$(lookup_system_certificate)"; then
-              if grep -Fiq "$signing_identity" <<<"$system_certificate"; then
-                echo "Deleting temporary Estrobo certificate"
-                sudo -n security delete-certificate \
-                  -Z "$signing_identity" \
-                  /Library/Keychains/System.keychain \
-                  >/dev/null || cleanup_status=1
-              fi
-            else
-              lookup_status=$?
-              if [[ "$lookup_status" -ne 1 ]]; then
-                cleanup_status=1
-              fi
-            fi
-
-            remaining_certificate=""
-            if remaining_certificate="$(lookup_system_certificate)"; then
-              if grep -Fiq "$signing_identity" <<<"$remaining_certificate"; then
-                echo "The temporary Estrobo certificate remains in the system keychain" >&2
-                cleanup_status=1
-              fi
-            else
-              lookup_status=$?
-              if [[ "$lookup_status" -ne 1 ]]; then
-                cleanup_status=1
-              fi
-            fi
-          else
-            echo "Could not derive the Estrobo signing certificate identity" >&2
-            cleanup_status=1
-          fi
-
+          # Removing admin trust hangs in SecurityAgent on GitHub's macOS 15
+          # image. The public certificate and its trust remain isolated to this
+          # GitHub-hosted runner until the VM is destroyed. Private material is
+          # still removed synchronously and verified absent before upload.
           echo "Removing ephemeral private signing material"
           /bin/rm -f -- \
             "$SIGNING_P12" \
@@ -372,6 +305,16 @@ jobs:
             security delete-keychain "$SIGNING_KEYCHAIN" \
               >/dev/null || cleanup_status=1
           fi
+          for sensitive_path in \
+            "$SIGNING_P12" \
+            "$RUNNER_TEMP/imported-signing.pem" \
+            "$RUNNER_TEMP/imported-signing.cer" \
+            "$SIGNING_KEYCHAIN"; do
+            if [[ -e "$sensitive_path" ]]; then
+              echo "Temporary signing material remains: $sensitive_path" >&2
+              cleanup_status=1
+            fi
+          done
           if [[ "$cleanup_status" -ne 0 ]]; then
             echo "Temporary signing cleanup did not complete safely" >&2
           fi
