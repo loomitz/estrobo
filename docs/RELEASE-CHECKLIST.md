@@ -40,6 +40,12 @@ make mac-prototype-package
 - [ ] Tokens concurrentes, final idempotente, regreso a baseline, Descartar, Manual, teclado/VoiceOver y cierre/cambio de vista pasan.
 - [ ] Opt-in de recordar radio apagado, persistencia sólo tras `PWOK` + Sync, Olvidar, validación y payload `Psub` compatible pasan.
 - [ ] Selección con nombre/RSSI/sufijo UUID y nombres duplicados queda cubierta.
+- [ ] El botón Multi junto a Beep es la única vía de activación/desactivación, no abre dropdown ni popover y muestra la consola inline únicamente mientras Multi está activo.
+- [ ] Activar Multi convierte juntos los grupos activos compatibles; los no participantes quedan Off y aparecen desactivados mediante overlay sin aceptar edición de potencia/modelado.
+- [ ] Los controles de participación agregan o quitan grupos compatibles, pero no pueden quitar el último; apagar desde el botón devuelve todos los grupos del workspace activos en Manual, sin restaurar TTL u Off previos.
+- [ ] Multi cubre el dominio base `1–100`, potencia en pasos completos hasta `1/4`, persistencia retrocompatible, A0-only, orden A0 → A1 y alcance limitado al workspace.
+- [ ] Las filas publicadas de la tabla potencia × frecuencia del AD400Pro II limitan y normalizan el conteo (incluidos `1/512` + `1 Hz` → `100`, `1/4` + `1 Hz` → `7` y `1/4` + `100 Hz` → `2`); `51–59 Hz` usa conservadoramente la fila `60–100 Hz` y aparece como tramo no publicado. Los demás modelos permanecen explícitamente no verificados y un conjunto mixto se marca como verificación parcial.
+- [ ] La interfaz y el dominio de Multi excluyen HSS.
 
 ## 4. Build universal y firma
 
@@ -122,6 +128,10 @@ Realízalo únicamente con una persona responsable del equipo y un baseline reve
 - [ ] Sync inicial confirma A0 por GATT y todos los A1 configurados por GATT + `FEC8` antes de **Listo**.
 - [ ] Un cambio reversible de potencia se observa y se restaura.
 - [ ] Modelado, Beep, Standby, Auto/TTL o Test sólo se marcan compatibles si el efecto físico se observó para ese modelo/firmware.
+- [ ] Multi se prueba primero con la potencia común más baja, 2 destellos y 2 Hz, en un entorno ópticamente seguro y con tiempo de exposición suficiente.
+- [ ] Con AD400Pro II, el máximo mostrado cambia de acuerdo con las filas publicadas de potencia × frecuencia y nunca permite un conteo superior; `51–59 Hz` aparece como «conservador · no publicado». Cambiar la matriz de modelos normaliza el conteo, impide descartar hacia un baseline incompatible y mantiene Test bloqueado hasta aplicar el ajuste seguro. Con cualquier otro modelo aparece el estado «no verificado»; una mezcla con AD400Pro II aparece como «verificado parcial».
+- [ ] Multi no ofrece HSS y la consola indica «sin HSS» durante la prueba.
+- [ ] La ráfaga Multi observada coincide con el conteo/frecuencia solicitados; después el botón global apaga Multi, todos los grupos de trabajo quedan activos en Manual y se verifica que ningún grupo externo al workspace recibió A1. Si no puede observarse, Multi permanece «no validado» para esa matriz.
 - [ ] Mantener un slider más de 700 ms no genera payloads; sólo sale el valor final después de soltar.
 - [ ] Desconexión y reconexión al mismo radio funcionan; otra app puede recuperar después el enlace.
 - [ ] Un escenario de resultado incierto recupera el snapshot seguro antes de permitir nuevas escrituras.

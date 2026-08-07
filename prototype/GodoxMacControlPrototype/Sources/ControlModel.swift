@@ -193,24 +193,33 @@ struct GroupDraft: Equatable {
     var baseline: ManualGroupSnapshot
     var draft: ManualGroupSnapshot
     var confirmation: GroupConfirmation = .unread
+    var baselineLastKnownActiveMode: GroupOperatingMode?
     var lastKnownActiveMode: GroupOperatingMode?
+    var baselineRestoresAfterMulti: Bool
+    var draftRestoresAfterMulti: Bool
 
     init(
         baseline: ManualGroupSnapshot,
         draft: ManualGroupSnapshot,
         confirmation: GroupConfirmation = .unread,
-        lastKnownActiveMode: GroupOperatingMode? = nil
+        lastKnownActiveMode: GroupOperatingMode? = nil,
+        restoresAfterMulti: Bool = false
     ) {
         self.baseline = baseline
         self.draft = draft
         self.confirmation = confirmation
-        if let lastKnownActiveMode {
+        if lastKnownActiveMode == .manual || lastKnownActiveMode == .autoTTL {
+            baselineLastKnownActiveMode = lastKnownActiveMode
             self.lastKnownActiveMode = lastKnownActiveMode
-        } else if baseline.operatingMode != .off {
+        } else if baseline.operatingMode == .manual || baseline.operatingMode == .autoTTL {
+            baselineLastKnownActiveMode = baseline.operatingMode
             self.lastKnownActiveMode = baseline.operatingMode
         } else {
+            baselineLastKnownActiveMode = nil
             self.lastKnownActiveMode = nil
         }
+        baselineRestoresAfterMulti = restoresAfterMulti
+        draftRestoresAfterMulti = restoresAfterMulti
     }
 
     var hasPendingChange: Bool { baseline != draft }
@@ -231,15 +240,89 @@ struct GroupDraft: Equatable {
 
     mutating func discard() {
         draft = baseline
-        if baseline.operatingMode != .off {
-            lastKnownActiveMode = baseline.operatingMode
-        }
+        draftRestoresAfterMulti = baselineRestoresAfterMulti
+        lastKnownActiveMode = baselineLastKnownActiveMode
     }
 }
 
 struct GroupRestorationPoint: Equatable {
     let deviceID: UUID
     let snapshot: ManualGroupSnapshot
+    let globalSnapshot: GlobalRadioSnapshot?
+    let multiUnderlyingMode: GroupOperatingMode?
+    let restoresAfterMulti: Bool
+
+    init(
+        deviceID: UUID,
+        snapshot: ManualGroupSnapshot,
+        globalSnapshot: GlobalRadioSnapshot? = nil,
+        multiUnderlyingMode: GroupOperatingMode? = nil,
+        restoresAfterMulti: Bool = false
+    ) {
+        self.deviceID = deviceID
+        self.snapshot = snapshot
+        self.globalSnapshot = globalSnapshot
+        self.multiUnderlyingMode = multiUnderlyingMode
+        self.restoresAfterMulti = restoresAfterMulti
+    }
+
+    static func isValidMultiUnderlyingMode(_ mode: GroupOperatingMode?) -> Bool {
+        mode == nil || mode == .manual || mode == .autoTTL
+    }
+
+    /// MULTI ocupa dos órdenes del protocolo (A0 global y A1 por grupo). Un
+    /// diario que sólo conserve la mitad de ese par no puede restaurarse sin
+    /// inventar estado, por lo que se rechaza antes de cualquier escritura.
+    static func isCoherent(
+        snapshot: ManualGroupSnapshot,
+        globalSnapshot: GlobalRadioSnapshot?,
+        multiUnderlyingMode: GroupOperatingMode?,
+        restoresAfterMulti: Bool
+    ) -> Bool {
+        guard isValidMultiUnderlyingMode(multiUnderlyingMode) else { return false }
+
+        let carriesMultiGroupState = snapshot.operatingMode == .multi ||
+            restoresAfterMulti
+        if carriesMultiGroupState {
+            guard snapshot.operatingMode == .multi || snapshot.operatingMode == .off,
+                  globalSnapshot?.multiEnabled == true,
+                  multiUnderlyingMode == .manual || multiUnderlyingMode == .autoTTL,
+                  let globalSnapshot,
+                  MultiFlashSettings(
+                      countByte: globalSnapshot.multiCount,
+                      hertzByte: globalSnapshot.multiHertz,
+                      powerByte: globalSnapshot.multiPowerByte
+                  ) != nil else {
+                return false
+            }
+        } else if multiUnderlyingMode != nil && snapshot.operatingMode != .off {
+            return false
+        }
+        return true
+    }
+
+    static func isCoherent(_ point: GroupRestorationPoint) -> Bool {
+        isCoherent(
+            snapshot: point.snapshot,
+            globalSnapshot: point.globalSnapshot,
+            multiUnderlyingMode: point.multiUnderlyingMode,
+            restoresAfterMulti: point.restoresAfterMulti
+        )
+    }
+
+    /// Una operación física puede abarcar varios A1, pero todos pertenecen al
+    /// mismo radio y al mismo A0. Rechazar la tanda completa evita conservar un
+    /// journal parcial o mezclar snapshots que no se pueden restaurar juntos.
+    static func isCoherentBatch(
+        _ points: [GodoxGroup: GroupRestorationPoint]
+    ) -> Bool {
+        guard let firstPoint = points.values.first else { return false }
+        return points.values.allSatisfy { point in
+            point.deviceID == firstPoint.deviceID &&
+                point.globalSnapshot == firstPoint.globalSnapshot &&
+                isCoherent(point)
+        }
+    }
 }
 
 struct PhysicalOperationSafetyState: Equatable {
@@ -257,36 +340,67 @@ struct PhysicalOperationSafetyState: Equatable {
     mutating func begin(
         group: GodoxGroup,
         deviceID: UUID,
-        baseline: ManualGroupSnapshot
+        baseline: ManualGroupSnapshot,
+        globalSnapshot: GlobalRadioSnapshot? = nil,
+        multiUnderlyingMode: GroupOperatingMode? = nil,
+        restoresAfterMulti: Bool = false
     ) -> Bool {
-        let point = GroupRestorationPoint(deviceID: deviceID, snapshot: baseline)
+        let point = GroupRestorationPoint(
+            deviceID: deviceID,
+            snapshot: baseline,
+            globalSnapshot: globalSnapshot,
+            multiUnderlyingMode: multiUnderlyingMode,
+            restoresAfterMulti: restoresAfterMulti
+        )
+        return begin(points: [group: point])
+    }
+
+    mutating func begin(
+        points: [GodoxGroup: GroupRestorationPoint]
+    ) -> Bool {
+        guard GroupRestorationPoint.isCoherentBatch(points) else { return false }
         if restorationPoints.isEmpty {
-            restorationPoints[group] = point
+            restorationPoints = points
+            preparedRestorations.removeAll()
             return true
         }
-        return restorationPoints.count == 1 && restorationPoints[group] == point
+        return restorationPoints == points
     }
 
     mutating func prepareRestoration(for group: GodoxGroup) -> ManualGroupSnapshot? {
         guard let point = restorationPoints[group] else { return nil }
-        preparedRestorations.insert(group)
+        preparedRestorations = Set(restorationPoints.keys)
         return point.snapshot
     }
 
     mutating func cancelUnsentOperation(
         group: GodoxGroup,
         deviceID: UUID,
-        baseline: ManualGroupSnapshot
+        baseline: ManualGroupSnapshot,
+        globalSnapshot: GlobalRadioSnapshot? = nil,
+        multiUnderlyingMode: GroupOperatingMode? = nil,
+        restoresAfterMulti: Bool = false
     ) -> Bool {
-        guard restorationPoints.count == 1,
-              restorationPoints[group] == GroupRestorationPoint(
-                  deviceID: deviceID,
-                  snapshot: baseline
-              ),
+        cancelUnsentOperation(points: [
+            group: GroupRestorationPoint(
+                deviceID: deviceID,
+                snapshot: baseline,
+                globalSnapshot: globalSnapshot,
+                multiUnderlyingMode: multiUnderlyingMode,
+                restoresAfterMulti: restoresAfterMulti
+            ),
+        ])
+    }
+
+    mutating func cancelUnsentOperation(
+        points: [GodoxGroup: GroupRestorationPoint]
+    ) -> Bool {
+        guard GroupRestorationPoint.isCoherentBatch(points),
+              restorationPoints == points,
               preparedRestorations.isEmpty else {
             return false
         }
-        restorationPoints[group] = nil
+        restorationPoints.removeAll()
         return true
     }
 
@@ -296,7 +410,6 @@ struct PhysicalOperationSafetyState: Equatable {
         snapshot: ManualGroupSnapshot
     ) -> Bool {
         guard !restorationPoints.isEmpty,
-              restorationPoints.count == 1,
               let point = restorationPoints[group] else {
             return false
         }
@@ -308,7 +421,8 @@ struct PhysicalOperationSafetyState: Equatable {
         deviceID: UUID,
         snapshot: ManualGroupSnapshot
     ) -> Bool {
-        guard permitsOnlyExactRestoration(
+        guard restorationPoints.count == 1,
+              permitsOnlyExactRestoration(
             group: group,
             deviceID: deviceID,
             snapshot: snapshot
@@ -317,6 +431,21 @@ struct PhysicalOperationSafetyState: Equatable {
         }
         restorationPoints[group] = nil
         preparedRestorations.remove(group)
+        return true
+    }
+
+    /// Cierra la recuperación sólo después de que todos los A1 del journal se
+    /// prepararon. La verificación exacta de cada A1 se realiza por grupo con
+    /// `permitsOnlyExactRestoration` antes de confirmar la tanda.
+    mutating func completeRestoration(deviceID: UUID) -> Bool {
+        let groups = Set(restorationPoints.keys)
+        guard !groups.isEmpty,
+              preparedRestorations == groups,
+              restorationPoints.values.allSatisfy({ $0.deviceID == deviceID }) else {
+            return false
+        }
+        restorationPoints.removeAll()
+        preparedRestorations.removeAll()
         return true
     }
 
@@ -331,8 +460,21 @@ struct PhysicalOperationSafetyState: Equatable {
               restorationPoints[group]?.deviceID == deviceID else {
             return false
         }
-        restorationPoints[group] = nil
-        preparedRestorations.remove(group)
+        restorationPoints.removeAll()
+        preparedRestorations.removeAll()
+        return true
+    }
+
+    /// Cierra atómicamente el journal después de confirmar todos los writes de
+    /// la nueva tanda. Un journal ya preparado pertenece al flujo de recovery.
+    mutating func completeSuccessfulOperation(deviceID: UUID) -> Bool {
+        guard !restorationPoints.isEmpty,
+              preparedRestorations.isEmpty,
+              restorationPoints.values.allSatisfy({ $0.deviceID == deviceID }) else {
+            return false
+        }
+        restorationPoints.removeAll()
+        preparedRestorations.removeAll()
         return true
     }
 }

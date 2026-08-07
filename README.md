@@ -57,6 +57,8 @@ This is the only hardware matrix used for physical testing so far; the exact cam
 
 The warning is expected, but it does not prove that every file is safe. Always verify the checksum and release source. Do not disable Gatekeeper, remove the quarantine attribute, or manually trust the project's self-signed certificate.
 
+> **Unreleased source status:** Multi described below is available only when building the current source checkout. It is not included in the downloadable `0.1.0-beta.2` prerelease.
+
 ## Quick start
 
 1. Turn on the transmitter and close any other app connected to it.
@@ -66,6 +68,7 @@ The warning is expected, but it does not prove that every file is safe. Always v
 5. The option to remember it starts off. If enabled, Estrobo stores it locally and unencrypted only after completing `PWOK` and synchronization; it never sends it over the Internet. **Forget** removes the saved radio and code.
 6. The BLE handshake is still required. Once it completes, Estrobo acts as the source of truth and deliberately overwrites global A0 and every configured group's A1. The transmitter's previous state does not matter.
 7. In **Automatic**, a change is sent 700 ms after the last adjustment. Dragging does not transmit intermediate values: the delay starts when you release the control. You can also choose **On Apply** and use **Send now** or **Discard**.
+8. In a development build from the current source, press **MULTI** beside Beep to turn Global Multi on or off; it opens no menu. Turning it on displays the inline console and atomically places every active compatible group in Multi. Non-participating groups remain Off and appear disabled behind an overlay; compatible groups can be added again there or from the console. The last participant can only be closed with the global button. Turning **MULTI** off makes every workspace group—including groups previously Off or TTL—active in Manual; the previous M/TTL/Off scene is not restored. Groups outside the workspace do not receive A1. Multi excludes HSS; use **Test** only after reviewing the active groups and the displayed model limit.
 
 Read [Automatic synchronization](docs/AUTOMATIC-SYNC.md) before connecting hardware.
 
@@ -89,11 +92,14 @@ The app displays **Simulated radio** explicitly. It never enables this mode as a
 ## What is included
 
 - Groups `0–9` and `A–F`, depending on the profile; Manual power in 1/3 EV Godox steps and a safe common range for the models assigned to each group.
-- M and Auto/TTL, Off, modeling light off/proportional/fixed, global Beep, global Standby, and explicit Test.
+- Per-group M, Auto/TTL, and Off; the **MULTI** button beside Beep is the only way to turn Global Multi on or off and shows its inline console while active. It provides full-stop power up to `1/4`, flash-count/frequency controls, and `A–E` participation. Starting Multi atomically includes all active compatible groups while non-participants stay Off and appear disabled. Turning it off returns every working group to active Manual. Groups outside the workspace do not receive A1.
+- A0 carries the effective Multi power, count, and Hz. A Multi A1 retains the stored Manual power when the group came from M, or uses `0x32` when it came from TTL; neither A1 value replaces the global Multi power. The estimated minimum exposure is `flash count ÷ Hz`, rounded upward to `0.001 s`.
+- Multi's editable base domain is `1–100` flashes and `1–100 Hz`, but its effective flash-count maximum can be lower. For an assigned AD400Pro II, Estrobo enforces the manufacturer's published power × frequency rows and normalizes the count when power or Hz lowers that ceiling. Because the manual jumps from `20–50 Hz` to `60–100 Hz`, Estrobo conservatively applies the latter ceiling at `51–59 Hz` and labels that gap as unpublished rather than verified. Other flash models never inherit the AD400Pro II table: the console marks their limit as unverified, or partially verified when verified and unverified models participate together. HSS is excluded.
+- Modeling light off/proportional/fixed, global Beep, global Standby, and explicit Test.
 - Global power adjustment that preserves the relationship between groups.
 - Channels, Inspector, and Matrix views; local presets; Spanish and English; light and dark appearance.
 - Automatic delivery with a 700 ms debounce or **On Apply** mode.
-- Fail-closed recovery when the outcome of a write is uncertain.
+- Fail-closed recovery with an atomic scene journal: it retains A0 plus every affected A1, resends them in order, and keeps the batch until every group confirms GATT + `FEC8`.
 
 <details>
 <summary><strong>See workspace configuration</strong></summary>
@@ -106,13 +112,14 @@ The app displays **Simulated radio** explicitly. It never enables this mode as a
 
 - There is no complete radio → app readback. **Sync does not import values; it overwrites them.**
 - `FEC8` does not identify the group, return values, or prove the optical result.
-- Test confirms at most delivery to CoreBluetooth; a person must observe the flash.
-- Multi editing is not available in this beta. Channel changes, non-neutral TTL compensation, Radio Code changes, firmware, and OAD are also unavailable.
+- Test confirms at most delivery to CoreBluetooth; a person must observe the flash or Multi sequence. Bluetooth does not confirm how many flashes fired.
+- The AD400Pro II software ceiling is verified against the manufacturer's published power × frequency rows; `51–59 Hz` remains an explicitly labeled conservative inference because that interval is absent from the table. Neither status proves the optical result. Multi remains optically unverified until a person observes the requested sequence. Limits for every other flash model are explicitly unverified, and the actual result can also depend on recycle time, temperature, and shutter time. HSS is unsupported in this flow.
+- Channel changes, non-neutral TTL compensation, Radio Code changes, firmware, and OAD remain unavailable.
 - Physical compatibility varies by transmitter, flash, and firmware. A BLE name or UUID does not prove the radio's model or authenticity.
 
 ## Planned
 
-Multi mode is planned for a future release. Compatibility coverage will also expand as more trigger, flash, and firmware combinations are physically validated.
+Compatibility coverage will expand as Multi and more trigger, flash, and firmware combinations are physically validated.
 
 ## Documentation and community
 

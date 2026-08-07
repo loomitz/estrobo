@@ -57,6 +57,8 @@ Esta es la única matriz de hardware utilizada en pruebas físicas hasta ahora; 
 
 La advertencia es esperada, pero no prueba que cualquier archivo sea seguro: verifica siempre el checksum y el origen del release. No desactives Gatekeeper, retires la cuarentena ni marques manualmente como confiable la autofirma del proyecto.
 
+> **Estado de la fuente sin publicar:** Multi, descrito más adelante, sólo está disponible al compilar el checkout actual. No forma parte del prerelease descargable `0.1.0-beta.2`.
+
 ## Inicio rápido
 
 1. Enciende el transmisor y cierra cualquier otra app conectada a él.
@@ -66,6 +68,7 @@ La advertencia es esperada, pero no prueba que cualquier archivo sea seguro: ver
 5. La opción para recordarlo comienza apagada. Si la activas, Estrobo lo guarda localmente y sin cifrar sólo después de completar `PWOK` y la sincronización; nunca lo envía a Internet. **Olvidar** elimina radio y código guardados.
 6. El handshake BLE sigue siendo obligatorio. Una vez completado, Estrobo actúa como fuente de verdad y sobrescribe deliberadamente el estado global A0 y los A1 de todos los grupos configurados. No importa el estado previo del transmisor.
 7. En **Automático**, un cambio se envía 700 ms después del último ajuste. Un arrastre no transmite valores intermedios: el plazo comienza al soltar. También puedes elegir **Con botón** y usar **Enviar ahora** o **Descartar**.
+8. En un build de desarrollo de la fuente actual, pulsa **MULTI**, junto a Beep, para activar o desactivar Multi global; no abre ningún menú. Al activarlo se muestra la consola inline y todos los grupos activos compatibles pasan juntos a Multi. Los grupos que no participan quedan Off y aparecen desactivados mediante un overlay; desde ahí o desde la consola puedes volver a añadir los compatibles. El último participante sólo se puede cerrar con el botón global. Al desactivar **MULTI**, todos los grupos del workspace —incluidos los que antes estaban Off o en TTL— quedan activos en Manual; no se restaura la escena M/TTL/Off anterior. Los grupos fuera del workspace no reciben A1. Multi excluye HSS; usa **Test** sólo después de revisar los grupos activos y el límite de modelo mostrado.
 
 Lee [Sincronización automática](docs/AUTOMATIC-SYNC.md) antes de conectar hardware.
 
@@ -89,11 +92,14 @@ La app muestra **Radio simulado** de forma explícita. Nunca activa este modo co
 ## Qué incluye
 
 - Grupos `0–9` y `A–F` según el perfil; potencia Manual en pasos Godox de 1/3 EV y rango común seguro por modelos asignados.
-- M y Auto/TTL, Off, modelado apagado/proporcional/fijo, Beep global, Standby global y Test explícito.
+- M, Auto/TTL y Off por grupo; el botón **MULTI** junto a Beep es la única vía para encender o apagar Multi global y muestra su consola inline mientras está activo. Ofrece potencia en pasos completos hasta `1/4`, controles de destellos/frecuencia y participación de grupos `A–E`. Al iniciar, todos los grupos activos compatibles entran juntos; los no participantes quedan Off y aparecen desactivados. Al apagar, todos los grupos de trabajo vuelven activos en Manual. Los grupos fuera del workspace no reciben A1.
+- A0 lleva la potencia Multi efectiva, el conteo y los Hz. Un A1 Multi conserva la potencia Manual guardada si el grupo venía de M, o usa `0x32` si venía de TTL; ninguno de esos valores A1 sustituye la potencia Multi global. La exposición mínima estimada es `destellos ÷ Hz`, redondeada siempre hacia arriba a `0.001 s`.
+- El dominio editable base de Multi es `1–100` destellos y `1–100 Hz`, pero su máximo efectivo de destellos puede ser menor. Cuando hay un AD400Pro II asignado, Estrobo aplica las filas publicadas por el fabricante de potencia × frecuencia y normaliza el conteo si cambiar la potencia o los Hz reduce ese techo. Como el manual salta de `20–50 Hz` a `60–100 Hz`, Estrobo aplica de forma conservadora este último techo en `51–59 Hz` y marca ese tramo como no publicado, no como verificado. Los demás modelos nunca heredan la tabla del AD400Pro II: la consola marca su límite como no verificado, o parcialmente verificado cuando participan modelos verificados y no verificados. HSS queda excluido.
+- Modelado apagado/proporcional/fijo, Beep global, Standby global y Test explícito.
 - Ajuste de potencia global con relación entre grupos conservada.
 - Vistas Canales, Inspector y Matriz; presets locales; español e inglés; apariencia clara y oscura.
 - Entrega automática con debounce de 700 ms o modo **Con botón**.
-- Recuperación fail-closed cuando el resultado de una escritura queda incierto.
+- Recuperación fail-closed con journal atómico de la escena: conserva A0 y todos los A1 afectados, los reenvía en orden y no borra el lote hasta que cada grupo confirma GATT + `FEC8`.
 
 <details>
 <summary><strong>Ver configuración del espacio de trabajo</strong></summary>
@@ -106,13 +112,14 @@ La app muestra **Radio simulado** de forma explícita. Nunca activa este modo co
 
 - No existe lectura completa radio → app. **Sync no importa valores: los sobrescribe.**
 - `FEC8` no identifica el grupo, no devuelve los valores y no demuestra el resultado óptico.
-- Test confirma como máximo la entrega a CoreBluetooth; la persona debe observar el destello.
-- La edición Multi no está disponible en esta beta. Tampoco están disponibles el cambio de canal, la compensación TTL no neutra, el cambio de código, firmware u OAD.
+- Test confirma como máximo la entrega a CoreBluetooth; la persona debe observar el destello o la secuencia Multi. Bluetooth no confirma cuántos destellos ocurrieron.
+- El techo de software del AD400Pro II está verificado contra las filas publicadas por el fabricante de potencia × frecuencia; `51–59 Hz` permanece marcado como una inferencia conservadora porque ese intervalo no aparece en la tabla. Ninguno de esos estados demuestra por sí solo el resultado óptico. Multi sigue sin validación óptica hasta que una persona observe la secuencia solicitada. Los límites de cualquier otro modelo quedan explícitamente como no verificados, y el resultado real también puede depender del reciclado, la temperatura y el tiempo de obturación. HSS no es compatible con este flujo.
+- No están disponibles el cambio de canal, la compensación TTL no neutra, el cambio de código, firmware u OAD.
 - La compatibilidad física varía por transmisor, flash y firmware. Un nombre BLE o UUID no demuestra el modelo ni la autenticidad del radio.
 
 ## Planeado
 
-El modo Multi está planeado para una versión futura. La cobertura de compatibilidad también crecerá conforme se validen físicamente más combinaciones de disparador, flash y firmware.
+La cobertura de compatibilidad crecerá conforme se validen físicamente Multi y más combinaciones de disparador, flash y firmware.
 
 ## Documentación y comunidad
 

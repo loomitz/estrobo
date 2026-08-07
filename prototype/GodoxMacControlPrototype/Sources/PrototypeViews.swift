@@ -1278,139 +1278,163 @@ struct QuickControlsBar: View {
     var body: some View {
         let canAttemptGlobalAdjustment = !controller.makeGlobalPowerAnchor().isEmpty
 
-        HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(languageStore.language.localized("global.title"))
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .tracking(0.9)
-                    .foregroundStyle(PrototypePalette.primaryText)
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(languageStore.language.localized("global.title"))
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .tracking(0.9)
+                        .foregroundStyle(PrototypePalette.primaryText)
 
-                if let limitFeedback {
-                    limitFeedbackView(limitFeedback)
-                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                    if let limitFeedback {
+                        limitFeedbackView(limitFeedback)
+                            .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                    }
                 }
-            }
-            .frame(width: 154, alignment: .leading)
+                .frame(width: 154, alignment: .leading)
 
-            GlobalStepButton(
-                systemImage: "minus",
-                accessibilityLabel: "Bajar un tercio EV en todos los grupos activos",
-                enabled: canAttemptGlobalAdjustment
-            ) {
-                attemptGlobalStep(direction: -1)
-            }
-
-            VStack(spacing: 6) {
-                Text(offsetLabel)
-                    .font(.system(size: 19, weight: .bold, design: .monospaced))
-                    .foregroundStyle(
-                        globalOffsetSteps == 0
-                            ? PrototypePalette.primaryText
-                            : PrototypePalette.accent
-                    )
-
-                Slider(
-                    value: globalOffsetBinding,
-                    in: -9...9,
-                    step: 1
-                )
-                .tint(PrototypePalette.accent)
-                .disabled(!canAttemptGlobalAdjustment)
-                .background(
-                    InteractivePointerEditMonitor(
-                        isEnabled: canAttemptGlobalAdjustment,
-                        onEditingChanged: globalSliderEditingChanged
-                    )
-                )
-                .accessibilityLabel(languageStore.language.localized(
-                    "global.slider.accessibility"
-                ))
-                .accessibilityValue(offsetLabel)
-                .accessibilityHint(languageStore.language.localized(
-                    "global.slider.help"
-                ))
-                .frame(height: 24)
-
-                HStack {
-                    Text("−3.0 EV")
-                    Spacer()
-                    Text(languageStore.language.localized("AJUSTE RELATIVO · PASOS DE 1/3 EV"))
-                    Spacer()
-                    Text("+3.0 EV")
+                GlobalStepButton(
+                    systemImage: "minus",
+                    accessibilityLabel: "Bajar un tercio EV en todos los grupos activos",
+                    enabled: canAttemptGlobalAdjustment
+                ) {
+                    attemptGlobalStep(direction: -1)
                 }
-                .font(.caption2.weight(.semibold).monospacedDigit())
-                .foregroundStyle(PrototypePalette.secondaryText)
-            }
-            .frame(maxWidth: .infinity)
-            .accessibilityElement(children: .contain)
 
-            GlobalStepButton(
-                systemImage: "plus",
-                accessibilityLabel: "Subir un tercio EV en todos los grupos activos",
-                enabled: canAttemptGlobalAdjustment
-            ) {
-                attemptGlobalStep(direction: 1)
-            }
+                VStack(spacing: 6) {
+                    Text(offsetLabel)
+                        .font(.system(size: 19, weight: .bold, design: .monospaced))
+                        .foregroundStyle(
+                            globalOffsetSteps == 0
+                                ? PrototypePalette.primaryText
+                                : PrototypePalette.accent
+                        )
 
-            Rectangle()
-                .fill(PrototypePalette.divider)
-                .frame(width: 1, height: 54)
-
-            HStack(spacing: 8) {
-                GlobalStateToggle(
-                    title: "Beep",
-                    systemImage: controller.globalBeepEnabled
-                        ? "speaker.wave.2.fill"
-                        : "speaker.slash",
-                    isOn: Binding(
-                        get: { controller.globalBeepEnabled },
-                        set: { controller.setGlobalBeep($0) }
-                    ),
-                    enabled: controller.canToggleGlobalBeep
-                )
-                .help(languageStore.language.localized(
-                    controller.pendingCount > 0
-                        ? "Aplica o descarta los cambios antes de cambiar el beep global."
-                        : "Activa o apaga el beep para todos los grupos de trabajo."
-                ))
-
-                GlobalStateToggle(
-                    title: "Standby",
-                    systemImage: controller.isGlobalStandbyEnabled
-                        ? "pause.fill"
-                        : "pause",
-                    isOn: Binding(
-                        get: { controller.isGlobalStandbyEnabled },
-                        set: { controller.setGlobalStandby($0) }
-                    ),
-                    enabled: controller.canToggleGlobalStandby
-                )
-                .help(languageStore.language.localized(
-                    controller.isGlobalStandbyEnabled
-                        ? "Reanuda todos los grupos sin perder sus ajustes."
-                        : "Pone todos los grupos en espera sin perder sus ajustes."
-                ))
-            }
-
-            Button {
-                controller.sendTestFlash()
-            } label: {
-                Label {
-                    Text(languageStore.language.localized(
-                        controller.isTestPending ? "global.test.sending" : "global.test"
+                    Slider(
+                        value: globalOffsetBinding,
+                        in: -9...9,
+                        step: 1
+                    )
+                    .tint(PrototypePalette.accent)
+                    .disabled(!canAttemptGlobalAdjustment)
+                    .background(
+                        InteractivePointerEditMonitor(
+                            isEnabled: canAttemptGlobalAdjustment,
+                            onEditingChanged: globalSliderEditingChanged
+                        )
+                    )
+                    .accessibilityLabel(languageStore.language.localized(
+                        "global.slider.accessibility"
                     ))
-                } icon: {
-                    Image(systemName: "bolt.fill")
+                    .accessibilityValue(offsetLabel)
+                    .accessibilityHint(languageStore.language.localized(
+                        "global.slider.help"
+                    ))
+                    .frame(height: 24)
+
+                    HStack {
+                        Text("−3.0 EV")
+                        Spacer()
+                        Text(languageStore.language.localized("AJUSTE RELATIVO · PASOS DE 1/3 EV"))
+                        Spacer()
+                        Text("+3.0 EV")
+                    }
+                    .font(.caption2.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(PrototypePalette.secondaryText)
                 }
-                    .frame(minWidth: 96)
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .contain)
+
+                GlobalStepButton(
+                    systemImage: "plus",
+                    accessibilityLabel: "Subir un tercio EV en todos los grupos activos",
+                    enabled: canAttemptGlobalAdjustment
+                ) {
+                    attemptGlobalStep(direction: 1)
+                }
+
+                Rectangle()
+                    .fill(PrototypePalette.divider)
+                    .frame(width: 1, height: 54)
+
+                HStack(spacing: 8) {
+                    GlobalStateToggle(
+                        title: "Beep",
+                        systemImage: controller.globalBeepEnabled
+                            ? "speaker.wave.2.fill"
+                            : "speaker.slash",
+                        isOn: Binding(
+                            get: { controller.globalBeepEnabled },
+                            set: { controller.setGlobalBeep($0) }
+                        ),
+                        enabled: controller.canToggleGlobalBeep
+                    )
+                    .help(languageStore.language.localized(
+                        controller.pendingCount > 0
+                            ? "Aplica o descarta los cambios antes de cambiar el beep global."
+                            : "Activa o apaga el beep para todos los grupos de trabajo."
+                    ))
+
+                    MultiModeButton(
+                        isActive: multiIsActive,
+                        enabled: controller.canSetGlobalMultiFlashEnabled(!multiIsActive)
+                    ) {
+                        controller.setGlobalMultiFlashEnabled(!multiIsActive)
+                    }
+
+                    GlobalStateToggle(
+                        title: "Standby",
+                        systemImage: controller.isGlobalStandbyEnabled
+                            ? "pause.fill"
+                            : "pause",
+                        isOn: Binding(
+                            get: { controller.isGlobalStandbyEnabled },
+                            set: { controller.setGlobalStandby($0) }
+                        ),
+                        enabled: controller.canToggleGlobalStandby
+                    )
+                    .help(languageStore.language.localized(
+                        controller.isGlobalStandbyEnabled
+                            ? "Reanuda todos los grupos sin perder sus ajustes."
+                            : "Pone todos los grupos en espera sin perder sus ajustes."
+                    ))
+                }
+
+                Button {
+                    controller.sendTestFlash()
+                } label: {
+                    Label {
+                        Text(languageStore.language.localized(
+                            controller.isTestPending ? "global.test.sending" : "global.test"
+                        ))
+                    } icon: {
+                        Image(systemName: "bolt.fill")
+                    }
+                        .frame(minWidth: 96)
+                }
+                .buttonStyle(TestButtonStyle())
+                .disabled(!controller.canSendTest)
+                .help(testHelp)
+                .accessibilityLabel("Disparo Test global")
             }
-            .buttonStyle(TestButtonStyle())
-            .disabled(!controller.canSendTest)
-            .help(testHelp)
-            .accessibilityLabel("Disparo Test global")
+            .padding(.horizontal, 28)
+            .padding(.vertical, 16)
+
+            if multiIsActive {
+                Rectangle()
+                    .fill(PrototypePalette.divider)
+                    .frame(height: 1)
+
+                MultiFlashConsole(controller: controller)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .transition(
+                        reduceMotion
+                            ? .identity
+                            : .opacity.combined(with: .move(edge: .top))
+                    )
+            }
         }
-        .padding(.horizontal, 28)
-        .padding(.vertical, 16)
         .background(PrototypePalette.globalSurface)
         .onChange(of: canAttemptGlobalAdjustment) { isAvailable in
             if !isAvailable {
@@ -1420,9 +1444,18 @@ struct QuickControlsBar: View {
         .onDisappear(perform: finishGlobalInteractiveEdit)
     }
 
+    private var multiIsActive: Bool {
+        !controller.multiFlashGroups.isEmpty
+    }
+
     private var testHelp: String {
         if controller.isSimulation {
             return languageStore.language.localized("mock.testHelp")
+        }
+        if !controller.multiFlashGroups.isEmpty, controller.testBlockReason == nil {
+            return languageStore.language.localized(
+                "Ejecuta la secuencia Multi aplicada en los grupos activos; Bluetooth no confirma cuántos destellos ocurrieron"
+            )
         }
         return languageStore.language.localizedMessage(
             controller.testBlockReason
@@ -1624,6 +1657,64 @@ private struct GlobalStateToggle: View {
     }
 }
 
+private struct MultiModeButton: View {
+    let isActive: Bool
+    let enabled: Bool
+    let action: () -> Void
+    @EnvironmentObject private var languageStore: AppLanguageStore
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 3) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: isActive ? "bolt.circle.fill" : "bolt.circle")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+
+                Text(verbatim: "MULTI")
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .tracking(0.35)
+                    .lineLimit(1)
+            }
+            .foregroundStyle(
+                isActive ? PrototypePalette.brandRing : PrototypePalette.primaryText
+            )
+            .frame(width: 58, height: 46)
+            .background(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(isActive ? PrototypePalette.brandTile : PrototypePalette.surface)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .stroke(
+                        isActive ? PrototypePalette.accent : PrototypePalette.dividerStrong,
+                        lineWidth: 1
+                    )
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .help(languageStore.language.localized(
+            isActive
+                ? "Desactiva Multi y devuelve todos los grupos a Manual."
+                : "Activa Multi en todos los grupos compatibles que estén activos."
+        ))
+        .accessibilityLabel(languageStore.language.localized(
+            isActive ? "Desactivar Multi" : "Activar Multi"
+        ))
+        .accessibilityValue(languageStore.language.localized(
+            isActive ? "Multi activo" : "Multi inactivo"
+        ))
+        .accessibilityHint(languageStore.language.localized(
+            isActive
+                ? "Todos los grupos volverán activos en modo Manual."
+                : "Los grupos activos compatibles entrarán juntos a Multi."
+        ))
+        .accessibilityAddTraits(isActive ? .isSelected : [])
+    }
+}
+
 private struct GlobalStateToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         Button {
@@ -1650,6 +1741,554 @@ private struct GlobalStateToggleStyle: ToggleStyle {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+}
+
+@MainActor
+private struct MultiFlashConsole: View {
+    @ObservedObject var controller: GodoxSessionController
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            desktopLayout
+            compactLayout
+        }
+        .padding(13)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(PrototypePalette.surface)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(
+                            controller.hasPendingMultiFlashChange
+                                ? PrototypePalette.warning.opacity(0.58)
+                                : PrototypePalette.dividerStrong,
+                            lineWidth: 1
+                        )
+                }
+        )
+        .accessibilityElement(children: .contain)
+    }
+
+    private var desktopLayout: some View {
+        HStack(spacing: 10) {
+            MultiConsoleIdentity(controller: controller)
+                .frame(width: 100)
+
+            sectionDivider
+
+            MultiConsolePowerRail(controller: controller)
+                .frame(minWidth: 270, idealWidth: 290)
+
+            sectionDivider
+
+            MultiConsoleNumericControl(
+                title: "DESTELLOS",
+                unit: "×",
+                value: controller.multiFlashDraft.count,
+                range: controller.multiFlashCountRange,
+                enabled: controller.canEditMultiFlashSettings,
+                setValue: controller.setMultiFlashCount,
+                controller: controller
+            )
+            .frame(width: 145)
+
+            sectionDivider
+
+            MultiConsoleNumericControl(
+                title: "FRECUENCIA",
+                unit: "Hz",
+                value: controller.multiFlashDraft.hertz,
+                range: MultiFlashSettings.hertzRange,
+                enabled: controller.canEditMultiFlashSettings,
+                setValue: controller.setMultiFlashHertz,
+                controller: controller
+            )
+            .frame(width: 145)
+
+            sectionDivider
+
+            MultiConsoleOutcome(controller: controller)
+                .frame(minWidth: 210, idealWidth: 230)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private var compactLayout: some View {
+        VStack(spacing: 11) {
+            HStack(spacing: 12) {
+                MultiConsoleIdentity(controller: controller)
+                    .frame(width: 112)
+                sectionDivider
+                MultiConsoleOutcome(controller: controller)
+            }
+
+            Rectangle()
+                .fill(PrototypePalette.divider)
+                .frame(height: 1)
+
+            HStack(alignment: .top, spacing: 12) {
+                MultiConsolePowerRail(controller: controller)
+                    .frame(minWidth: 260)
+                sectionDivider
+                MultiConsoleNumericControl(
+                    title: "DESTELLOS",
+                    unit: "×",
+                    value: controller.multiFlashDraft.count,
+                    range: controller.multiFlashCountRange,
+                    enabled: controller.canEditMultiFlashSettings,
+                    setValue: controller.setMultiFlashCount,
+                    controller: controller
+                )
+                .frame(minWidth: 140)
+                MultiConsoleNumericControl(
+                    title: "FRECUENCIA",
+                    unit: "Hz",
+                    value: controller.multiFlashDraft.hertz,
+                    range: MultiFlashSettings.hertzRange,
+                    enabled: controller.canEditMultiFlashSettings,
+                    setValue: controller.setMultiFlashHertz,
+                    controller: controller
+                )
+                .frame(minWidth: 140)
+            }
+        }
+    }
+
+    private var sectionDivider: some View {
+        Rectangle()
+            .fill(PrototypePalette.divider)
+            .frame(width: 1, height: 112)
+    }
+}
+
+@MainActor
+private struct MultiConsoleIdentity: View {
+    @ObservedObject var controller: GodoxSessionController
+    @EnvironmentObject private var languageStore: AppLanguageStore
+
+    var body: some View {
+        VStack(spacing: 5) {
+            Image(systemName: "bolt.circle.fill")
+                .font(.system(size: 25, weight: .semibold))
+                .foregroundStyle(
+                    controller.multiFlashGroups.isEmpty
+                        ? PrototypePalette.secondaryText
+                        : PrototypePalette.primaryText
+                )
+
+            Text(verbatim: "MULTI")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .tracking(0.7)
+                .foregroundStyle(PrototypePalette.primaryText)
+
+            Text(languageStore.language.localized("AJUSTE GLOBAL"))
+                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .tracking(0.55)
+                .foregroundStyle(PrototypePalette.accent)
+
+            Capsule(style: .continuous)
+                .fill(
+                    controller.hasPendingMultiFlashChange
+                        ? PrototypePalette.warning
+                        : PrototypePalette.accent.opacity(0.72)
+                )
+                .frame(width: 22, height: 2)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(languageStore.language.localized("Configuración Multi"))
+        .accessibilityValue(languageStore.language.localized(
+            controller.multiFlashGroups.isEmpty ? "Multi inactivo" : "Multi activo"
+        ))
+    }
+}
+
+@MainActor
+private struct MultiConsolePowerRail: View {
+    @ObservedObject var controller: GodoxSessionController
+    @EnvironmentObject private var languageStore: AppLanguageStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack {
+                Text(languageStore.language.localized("POTENCIA"))
+                    .font(.caption2.weight(.bold))
+                    .tracking(0.75)
+                    .foregroundStyle(PrototypePalette.secondaryText)
+                Spacer()
+                Text(languageStore.language.localized("Pasos enteros · máximo 1/4"))
+                    .font(.system(size: 7, weight: .semibold, design: .rounded))
+                    .foregroundStyle(PrototypePalette.muted)
+            }
+
+            HStack(spacing: 2) {
+                ForEach(controller.allowedMultiFlashPowers) { power in
+                    let isSelected = power == controller.multiFlashDraft.power
+                    Button {
+                        controller.setMultiFlashPower(power)
+                    } label: {
+                        VStack(spacing: 5) {
+                            Text(powerFraction(power))
+                                .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                                .monospacedDigit()
+                                .foregroundStyle(
+                                    isSelected
+                                        ? PrototypePalette.primaryText
+                                        : PrototypePalette.secondaryText
+                                )
+                                .lineLimit(1)
+
+                            Circle()
+                                .fill(
+                                    isSelected
+                                        ? PrototypePalette.accent
+                                        : PrototypePalette.surfaceRaised
+                                )
+                                .frame(width: isSelected ? 13 : 9, height: isSelected ? 13 : 9)
+                                .overlay {
+                                    Circle()
+                                        .stroke(
+                                            isSelected
+                                                ? PrototypePalette.primaryText.opacity(0.72)
+                                                : PrototypePalette.dividerStrong,
+                                            lineWidth: 1
+                                        )
+                                }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!controller.canEditMultiFlashSettings)
+                    .accessibilityLabel(languageStore.language.localizedFormat(
+                        "Potencia Multi %@",
+                        power.label
+                    ))
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+            .background(alignment: .bottom) {
+                Rectangle()
+                    .fill(PrototypePalette.dividerStrong)
+                    .frame(height: 1)
+                    .padding(.horizontal, 14)
+                    .offset(y: -6)
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(powerFraction(controller.multiFlashDraft.power))
+                    .font(.system(size: 30, weight: .medium, design: .monospaced))
+                Text(powerOffset(controller.multiFlashDraft.power))
+                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                Text("EV")
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .foregroundStyle(PrototypePalette.secondaryText)
+                Spacer(minLength: 0)
+            }
+            .monospacedDigit()
+            .foregroundStyle(
+                controller.canEditMultiFlashSettings
+                    ? PrototypePalette.primaryText
+                    : PrototypePalette.muted
+            )
+        }
+    }
+
+    private func powerFraction(_ power: ManualPower) -> String {
+        power.label.split(separator: " ").first.map(String.init) ?? power.label
+    }
+
+    private func powerOffset(_ power: ManualPower) -> String {
+        let components = power.label.split(separator: " ")
+        return components.count > 1 ? String(components[1]) : "+0.0"
+    }
+}
+
+@MainActor
+private struct MultiConsoleNumericControl: View {
+    let title: String
+    let unit: String
+    let value: Int
+    let range: ClosedRange<Int>
+    let enabled: Bool
+    let setValue: (Int) -> Void
+    @ObservedObject var controller: GodoxSessionController
+    @EnvironmentObject private var languageStore: AppLanguageStore
+    @State private var interactiveEditToken: GodoxSessionController.InteractiveEditToken?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(languageStore.language.localized(title))
+                .font(.caption2.weight(.bold))
+                .tracking(0.75)
+                .foregroundStyle(PrototypePalette.secondaryText)
+
+            HStack(spacing: 6) {
+                stepButton(systemImage: "minus", value: max(range.lowerBound, value - 1))
+                    .disabled(!enabled || value <= range.lowerBound)
+
+                Text("\(value)\(unit == "×" ? "×" : "")")
+                    .font(.system(size: 27, weight: .medium, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(enabled ? PrototypePalette.primaryText : PrototypePalette.muted)
+                    .frame(maxWidth: .infinity)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+
+                if unit != "×" {
+                    Text(unit)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PrototypePalette.secondaryText)
+                }
+
+                stepButton(systemImage: "plus", value: min(range.upperBound, value + 1))
+                    .disabled(!enabled || value >= range.upperBound)
+            }
+
+            Slider(
+                value: Binding(
+                    get: { Double(min(max(value, range.lowerBound), range.upperBound)) },
+                    set: { setValue(Int($0.rounded())) }
+                ),
+                in: Double(range.lowerBound)...Double(range.upperBound),
+                step: 1,
+                onEditingChanged: editingChanged
+            )
+            .tint(PrototypePalette.accent)
+            .disabled(!enabled)
+            .accessibilityLabel(languageStore.language.localized(title))
+            .accessibilityValue("\(value) \(unit)")
+
+            HStack {
+                Text("\(range.lowerBound)\(unit)")
+                Spacer()
+                Text("\(range.upperBound)\(unit)")
+            }
+            .font(.system(size: 7, weight: .semibold, design: .monospaced))
+            .foregroundStyle(PrototypePalette.muted)
+        }
+        .onDisappear(perform: finishInteractiveEdit)
+        .onChange(of: enabled) { isEnabled in
+            if !isEnabled { finishInteractiveEdit() }
+        }
+    }
+
+    private func stepButton(systemImage: String, value: Int) -> some View {
+        Button {
+            setValue(value)
+        } label: {
+            Image(systemName: systemImage)
+                .font(.system(size: 11, weight: .semibold))
+                .frame(width: 28, height: 28)
+                .background(stepButtonSurface(enabled: enabled))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title) \(systemImage == "plus" ? "+1" : "−1")")
+    }
+
+    private func editingChanged(_ isEditing: Bool) {
+        if isEditing {
+            if interactiveEditToken == nil {
+                interactiveEditToken = controller.beginInteractiveEdit()
+            }
+        } else {
+            finishInteractiveEdit()
+        }
+    }
+
+    private func finishInteractiveEdit() {
+        guard let token = interactiveEditToken else { return }
+        interactiveEditToken = nil
+        controller.endInteractiveEdit(token)
+    }
+}
+
+@MainActor
+private struct MultiConsoleOutcome: View {
+    @ObservedObject var controller: GodoxSessionController
+    @EnvironmentObject private var languageStore: AppLanguageStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 5) {
+                Image(systemName: "timer")
+                    .font(.caption2.weight(.semibold))
+                Text(languageStore.language.localized("OBTURACIÓN MÍNIMA"))
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .tracking(0.55)
+                Spacer(minLength: 4)
+                Text(String(format: "≥ %.3f s", controller.multiFlashDraft.minimumExposureSeconds))
+                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(PrototypePalette.primaryText)
+            }
+            .foregroundStyle(PrototypePalette.secondaryText)
+
+            Rectangle()
+                .fill(PrototypePalette.divider)
+                .frame(height: 1)
+
+            HStack(alignment: .center, spacing: 6) {
+                Text(languageStore.language.localized("GRUPOS MULTI"))
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .tracking(0.55)
+                    .foregroundStyle(PrototypePalette.secondaryText)
+
+                Spacer(minLength: 2)
+
+                ForEach(multiWorkspaceGroups) { group in
+                    MultiParticipantButton(group: group, controller: controller)
+                }
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Circle()
+                    .fill(restrictionColor)
+                    .frame(width: 6, height: 6)
+                Text(restrictionText)
+                    .font(.system(size: 8, weight: .semibold, design: .rounded))
+                    .foregroundStyle(PrototypePalette.secondaryText)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if controller.hasPendingMultiFlashChange {
+                Text(languageStore.language.localized("PENDIENTE GLOBAL"))
+                    .font(.system(size: 7, weight: .bold, design: .rounded))
+                    .tracking(0.45)
+                    .foregroundStyle(PrototypePalette.warning)
+                    .accessibilityAddTraits(.updatesFrequently)
+            }
+        }
+    }
+
+    private var multiWorkspaceGroups: [GodoxGroup] {
+        controller.workingGroups.filter {
+            controller.transmitterProfile.supportedMultiGroups.contains($0)
+        }
+    }
+
+    private var restrictionColor: Color {
+        controller.hasUnverifiedMultiFlashCountLimit ||
+            controller.hasConservativeMultiFlashCountLimit
+            ? PrototypePalette.warning
+            : PrototypePalette.success
+    }
+
+    private var restrictionText: String {
+        if controller.multiFlashGroups.isEmpty {
+            return languageStore.language.localized(
+                "Añade un grupo compatible para activar la ráfaga."
+            )
+        }
+        if controller.hasConservativeMultiFlashCountLimit {
+            return languageStore.language.localizedFormat(
+                controller.hasUnverifiedMultiFlashCountLimit
+                    ? "Límite conservador parcial · 51–59 Hz no publicado · máximo %lld · sin HSS"
+                    : "Límite conservador · 51–59 Hz no publicado · máximo %lld · sin HSS",
+                controller.multiFlashMaximumCount
+            )
+        }
+        if controller.hasVerifiedMultiFlashCountLimit,
+           controller.hasUnverifiedMultiFlashCountLimit {
+            return languageStore.language.localizedFormat(
+                "Límite verificado parcial · máximo %lld · sin HSS",
+                controller.multiFlashMaximumCount
+            )
+        }
+        if controller.hasVerifiedMultiFlashCountLimit {
+            return languageStore.language.localizedFormat(
+                "Límite verificado · máximo %lld · sin HSS",
+                controller.multiFlashMaximumCount
+            )
+        }
+        return languageStore.language.localized(
+            "Límite por modelo pendiente de validar · sin HSS"
+        )
+    }
+}
+
+@MainActor
+private struct MultiParticipantButton: View {
+    let group: GodoxGroup
+    @ObservedObject var controller: GodoxSessionController
+    @EnvironmentObject private var languageStore: AppLanguageStore
+
+    private var isParticipating: Bool {
+        controller.groupDraft(group).draft.operatingMode == .multi
+    }
+
+    private var canToggle: Bool {
+        controller.canSetMultiFlashParticipation(group, enabled: !isParticipating)
+    }
+
+    var body: some View {
+        let identity = group.visualIdentity
+        let fill = Color(estroboRGB: identity.fillRGB)
+        let foreground = Color(estroboRGB: identity.foregroundRGB)
+
+        Button {
+            controller.setMultiFlashParticipation(group, enabled: !isParticipating)
+        } label: {
+            Text(group.label)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(isParticipating ? foreground : PrototypePalette.secondaryText)
+                .frame(width: 29, height: 25)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(isParticipating ? fill : PrototypePalette.surfaceRaised)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .stroke(
+                            isParticipating ? fill.opacity(0.92) : PrototypePalette.dividerStrong,
+                            lineWidth: 1
+                        )
+                }
+                .overlay(alignment: .topTrailing) {
+                    if controller.groupDraft(group).hasPendingModeChange {
+                        Circle()
+                            .fill(PrototypePalette.warning)
+                            .frame(width: 6, height: 6)
+                            .offset(x: 2, y: -2)
+                    }
+                }
+                .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(!canToggle)
+        .help(participationHelp)
+        .accessibilityLabel(participationHelp)
+        .accessibilityValue(languageStore.language.localized(
+            isParticipating ? "Participa en Multi" : "Fuera de Multi"
+        ))
+        .accessibilityAddTraits(isParticipating ? .isSelected : [])
+    }
+
+    private var participationHelp: String {
+        if isParticipating {
+            if controller.multiFlashGroups.count == 1 {
+                return languageStore.language.localized(
+                    "Desactiva Multi desde el botón MULTI."
+                )
+            }
+            return languageStore.language.localizedFormat(
+                "Quitar grupo %@ de Multi",
+                group.label
+            )
+        }
+        if !controller.supportsMultiFlash(group) {
+            return languageStore.language.localizedFormat(
+                "El grupo %@ no admite Multi con esta configuración",
+                group.label
+            )
+        }
+        guard !controller.multiFlashGroups.isEmpty else {
+            return languageStore.language.localized(
+                "Activa Multi desde el botón MULTI."
+            )
+        }
+        return languageStore.language.localizedFormat("Añadir grupo %@ a Multi", group.label)
     }
 }
 
@@ -3293,9 +3932,12 @@ private struct FooterApplyControls: View {
         if controller.changeDeliveryMode == .automatic {
             return "Enviar ahora"
         }
+        if controller.hasPendingMultiFlashChange, controller.pendingGroups.isEmpty {
+            return "Aplicar Multi"
+        }
         if controller.pendingCount > 1 {
             return languageStore.language.localizedFormat(
-                "Aplicar %lld grupos",
+                "Aplicar %lld cambios",
                 controller.pendingCount
             )
         }
@@ -3318,7 +3960,7 @@ private struct FooterApplyControls: View {
         }
         .buttonStyle(QuietButtonStyle())
         .disabled(
-            controller.pendingCount == 0 || controller.phase == .applying ||
+            !controller.canDiscardPendingChanges || controller.phase == .applying ||
                 controller.applySequenceStatus != nil || controller.isInteractiveEditActive
         )
         .help(languageStore.language.localized(discardTitle))
@@ -3330,7 +3972,9 @@ private struct FooterApplyControls: View {
         if controller.changeDeliveryMode == .automatic {
             return "Los cambios se envían juntos después de una breve pausa"
         }
-        return "Aplica en orden todos los grupos pendientes"
+        return controller.hasPendingMultiFlashChange
+            ? "Aplica primero el ajuste global Multi y después los grupos pendientes"
+            : "Aplica en orden todos los grupos pendientes"
     }
 
     private var restorationGroup: GodoxGroup? {
@@ -3474,7 +4118,7 @@ private struct ApplyBar: View {
                     }
                     .buttonStyle(QuietButtonStyle())
                     .disabled(
-                        controller.pendingCount == 0 || controller.phase == .applying ||
+                        !controller.canDiscardPendingChanges || controller.phase == .applying ||
                             restorationGroup != nil || controller.applySequenceStatus != nil ||
                             controller.isInteractiveEditActive
                     )
@@ -3487,7 +4131,10 @@ private struct ApplyBar: View {
                         controller.discardPendingChanges()
                     }
                     .buttonStyle(QuietButtonStyle())
-                    .disabled(controller.isInteractiveEditActive)
+                    .disabled(
+                        !controller.canDiscardPendingChanges ||
+                            controller.isInteractiveEditActive
+                    )
                 }
 
                 Button(applyTitle) {
@@ -3723,10 +4370,13 @@ private struct ChannelsLayout: View {
                 (CGFloat(visibleCount) * channelWidth) + CGFloat(max(0, visibleCount - 1))
 
             if requiredWidth <= geometry.size.width {
-                channelStrips(width: channelWidth, minHeight: geometry.size.height)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                ScrollView(.vertical) {
+                    channelStrips(width: channelWidth, minHeight: geometry.size.height)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+                .scrollIndicators(.visible)
             } else {
-                ScrollView(.horizontal) {
+                ScrollView([.horizontal, .vertical]) {
                     channelStrips(width: channelWidth, minHeight: geometry.size.height)
                 }
                 .scrollIndicators(.visible)
@@ -3779,30 +4429,31 @@ private struct StudioChannelStrip: View {
     let setOperatingMode: (GroupOperatingMode) -> Void
     let setRadioEnabled: (Bool) -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
+    @EnvironmentObject private var controller: GodoxSessionController
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 10) {
                 GroupBadge(
                     group: group,
-                    isPending: state.hasPendingChange,
+                    isPending: hasVisiblePendingChange,
                     size: 44,
                     fontSize: 27
                 )
 
                 Text(state.draft.operatingMode.label.uppercased())
                     .prototypeBadge(
-                        foreground: state.hasPendingChange
+                        foreground: hasVisiblePendingChange
                             ? PrototypePalette.accent
                             : PrototypePalette.secondaryText,
-                        background: state.hasPendingChange
+                        background: hasVisiblePendingChange
                             ? PrototypePalette.accent.opacity(0.12)
                             : PrototypePalette.surfaceRaised
                     )
 
                 Spacer()
 
-                DraftChangeDot(changed: state.hasPendingChange)
+                DraftChangeDot(changed: hasVisiblePendingChange)
             }
 
             GroupStateControls(
@@ -3817,7 +4468,9 @@ private struct StudioChannelStrip: View {
             )
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(languageStore.language.localized("Potencia").uppercased())
+                Text(languageStore.language.localized(
+                    isMulti ? "Potencia Multi" : "Potencia"
+                ).uppercased())
                     .font(.caption2.weight(.bold))
                     .tracking(0.8)
                     .foregroundStyle(PrototypePalette.secondaryText)
@@ -3834,66 +4487,75 @@ private struct StudioChannelStrip: View {
                     }
                 }
                 .monospacedDigit()
-                .foregroundStyle(canEdit ? PrototypePalette.primaryText : PrototypePalette.muted)
+                .foregroundStyle(
+                    canInteractWithDisplayedPower
+                        ? PrototypePalette.primaryText
+                        : PrototypePalette.muted
+                )
                 .lineLimit(1)
             }
 
-            HStack(alignment: .top, spacing: 14) {
-                VerticalDiscretePowerControl(
-                    group: group,
-                    value: state.draft.power,
-                    allowed: allowedPowers,
-                    enabled: canEdit,
-                    onChange: setPower
-                )
-                .frame(width: 112, height: 250)
-
-                VStack(alignment: .leading, spacing: 16) {
-                    ModelingEditor(
+            if isMulti {
+                MultiModeSummary(compact: false)
+                    .frame(maxWidth: .infinity, minHeight: 250, alignment: .topLeading)
+            } else {
+                HStack(alignment: .top, spacing: 14) {
+                    VerticalDiscretePowerControl(
                         group: group,
-                        value: state.draft.modeling,
-                        baseline: state.baseline.modeling,
-                        allowed: allowedModeling,
+                        value: state.draft.power,
+                        allowed: allowedPowers,
                         enabled: canEdit,
-                        compact: true,
-                        onChange: setModeling
+                        onChange: setPower
                     )
+                    .frame(width: 112, height: 250)
 
-                    Rectangle()
-                        .fill(PrototypePalette.divider)
-                        .frame(height: 1)
+                    VStack(alignment: .leading, spacing: 16) {
+                        ModelingEditor(
+                            group: group,
+                            value: state.draft.modeling,
+                            baseline: state.baseline.modeling,
+                            allowed: allowedModeling,
+                            enabled: canEdit,
+                            compact: true,
+                            onChange: setModeling
+                        )
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(languageStore.language.localized("ESTADO"))
-                            .font(.caption2.weight(.bold))
-                            .tracking(0.7)
-                            .foregroundStyle(PrototypePalette.secondaryText)
+                        Rectangle()
+                            .fill(PrototypePalette.divider)
+                            .frame(height: 1)
 
-                        HStack(spacing: 7) {
-                            Circle()
-                                .fill(
-                                    state.hasPendingChange
-                                        ? PrototypePalette.accent
-                                        : confirmationColor(state.confirmation)
-                                )
-                                .frame(width: 7, height: 7)
-                            Text(statusLabel)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(
-                                    state.hasPendingChange
-                                        ? PrototypePalette.accent
-                                        : PrototypePalette.secondaryText
-                                )
-                                .lineLimit(1)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(languageStore.language.localized("ESTADO"))
+                                .font(.caption2.weight(.bold))
+                                .tracking(0.7)
+                                .foregroundStyle(PrototypePalette.secondaryText)
+
+                            HStack(spacing: 7) {
+                                Circle()
+                                    .fill(
+                                        state.hasPendingChange
+                                            ? PrototypePalette.accent
+                                            : confirmationColor(state.confirmation)
+                                    )
+                                    .frame(width: 7, height: 7)
+                                Text(statusLabel)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(
+                                        state.hasPendingChange
+                                            ? PrototypePalette.accent
+                                            : PrototypePalette.secondaryText
+                                    )
+                                    .lineLimit(1)
+                            }
                         }
-                    }
 
-                    Spacer(minLength: 0)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: 250, alignment: .topLeading)
                 }
-                .frame(maxWidth: .infinity, maxHeight: 250, alignment: .topLeading)
             }
 
-            if !capability.powerScale.isEmpty &&
+            if !isMulti && !capability.powerScale.isEmpty &&
                 (capability.hasMixedPowerCapabilities ||
                     !capability.powerScale.contains(state.draft.power)) {
                 PowerRangeSummary(
@@ -3910,19 +4572,23 @@ private struct StudioChannelStrip: View {
         .padding(.vertical, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(
-            state.hasPendingChange
+            hasVisiblePendingChange
                 ? PrototypePalette.accent.opacity(0.045)
                 : Color.clear
         )
         .overlay(alignment: .leading) {
-            if state.hasPendingChange {
+            if hasVisiblePendingChange {
                 Rectangle()
                     .fill(PrototypePalette.accent)
                     .frame(width: 2)
                     .padding(.vertical, 8)
             }
         }
-        .opacity(canEdit || canChangeOperatingMode || state.draft.operatingMode == .off ? 1 : 0.7)
+        .opacity(
+            canEdit || isMulti || canChangeOperatingMode || state.draft.operatingMode == .off
+                ? 1
+                : 0.7
+        )
         .help(groupInteractionHelp(
             group: group,
             state: state,
@@ -3930,8 +4596,15 @@ private struct StudioChannelStrip: View {
             canToggleMode: canToggleMode,
             canChangeOperatingMode: canChangeOperatingMode,
             hasAssignedModel: !capability.flashModels.isEmpty,
+            multiIsActive: !controller.multiFlashGroups.isEmpty,
             language: languageStore.language
         ))
+        .multiExcludedGroupOverlay(
+            group: group,
+            state: state,
+            controller: controller,
+            compact: false
+        )
     }
 
     private var statusLabel: String {
@@ -3943,13 +4616,29 @@ private struct StudioChannelStrip: View {
     }
 
     private var powerFraction: String {
-        state.draft.power.label.split(separator: " ").first.map(String.init)
-            ?? state.draft.power.label
+        displayedPower.label.split(separator: " ").first.map(String.init)
+            ?? displayedPower.label
     }
 
     private var powerOffset: String {
-        let components = state.draft.power.label.split(separator: " ")
+        let components = displayedPower.label.split(separator: " ")
         return components.count > 1 ? String(components[1]) : "+0.0"
+    }
+
+    private var isMulti: Bool {
+        state.draft.operatingMode == .multi
+    }
+
+    private var displayedPower: ManualPower {
+        isMulti ? controller.multiFlashDraft.power : state.draft.power
+    }
+
+    private var canInteractWithDisplayedPower: Bool {
+        isMulti ? controller.canEditMultiFlashSettings : canEdit
+    }
+
+    private var hasVisiblePendingChange: Bool {
+        state.hasPendingChange || (isMulti && controller.hasPendingMultiFlashChange)
     }
 }
 
@@ -4149,16 +4838,29 @@ private struct InspectorRailButton: View {
     let isSelected: Bool
     let select: () -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
+    @EnvironmentObject private var controller: GodoxSessionController
 
     var body: some View {
         let identity = group.visualIdentity
         let groupFill = Color(estroboRGB: identity.fillRGB)
         let groupForeground = Color(estroboRGB: identity.foregroundRGB)
-        let detail = state.draft.operatingMode == .off
-            ? "Apagado"
-            : state.hasPendingChange
-                ? "PENDIENTE"
-                : state.draft.modeling.label
+        let isMulti = state.draft.operatingMode == .multi
+        let isExcludedFromMulti = !controller.multiFlashGroups.isEmpty &&
+            state.draft.operatingMode == .off
+        let effectivePending = state.hasPendingChange ||
+            (isMulti && controller.hasPendingMultiFlashChange)
+        let detail = isExcludedFromMulti
+            ? "Desactivado"
+            : isMulti
+            ? "\(controller.multiFlashDraft.count)× · \(controller.multiFlashDraft.hertz) Hz"
+            : state.draft.operatingMode == .off
+                ? "Apagado"
+                : state.hasPendingChange
+                    ? "PENDIENTE"
+                    : state.draft.modeling.label
+        let displayedPower = isMulti
+            ? controller.multiFlashDraft.power
+            : state.draft.power
 
         Button(action: select) {
             HStack(spacing: 7) {
@@ -4174,14 +4876,14 @@ private struct InspectorRailButton: View {
                 } else {
                     GroupBadge(
                         group: group,
-                        isPending: false,
+                        isPending: effectivePending,
                         size: 24,
                         fontSize: 12
                     )
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(state.draft.power.label)
+                    Text(displayedPower.label)
                         .font(.system(size: 9, weight: .semibold, design: .monospaced))
                         .monospacedDigit()
                     Text(languageStore.language.localized(detail).uppercased())
@@ -4197,6 +4899,13 @@ private struct InspectorRailButton: View {
                 )
 
                 Spacer(minLength: 0)
+
+                if isExcludedFromMulti {
+                    Image(systemName: "bolt.slash.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(isSelected ? groupForeground : PrototypePalette.muted)
+                        .accessibilityHidden(true)
+                }
             }
             .padding(.horizontal, 9)
             .frame(height: 41)
@@ -4205,7 +4914,7 @@ private struct InspectorRailButton: View {
                     .fill(
                         isSelected
                             ? groupFill
-                            : state.hasPendingChange
+                            : effectivePending
                                 ? PrototypePalette.warning.opacity(0.11)
                                 : PrototypePalette.surface
                     )
@@ -4214,7 +4923,7 @@ private struct InspectorRailButton: View {
                             .stroke(
                                 isSelected
                                     ? groupForeground.opacity(0.34)
-                                    : state.hasPendingChange
+                                    : effectivePending
                                         ? PrototypePalette.warning.opacity(0.42)
                                         : PrototypePalette.divider,
                                 lineWidth: isSelected ? 1.5 : 1
@@ -4224,6 +4933,10 @@ private struct InspectorRailButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityValue(languageStore.language.localized(
+            isExcludedFromMulti ? "Desactivado en Multi" : detail
+        ))
+        .opacity(isExcludedFromMulti && !isSelected ? 0.58 : 1)
         .animation(.easeInOut(duration: 0.14), value: isSelected)
     }
 }
@@ -4244,13 +4957,14 @@ private struct InspectorEditor: View {
     let setOperatingMode: (GroupOperatingMode) -> Void
     let setRadioEnabled: (Bool) -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
+    @EnvironmentObject private var controller: GodoxSessionController
 
     var body: some View {
         VStack(spacing: 11) {
             HStack(spacing: 10) {
                 GroupBadge(
                     group: group,
-                    isPending: state.hasPendingChange,
+                    isPending: hasEffectivePendingChange,
                     size: 36,
                     fontSize: 18
                 )
@@ -4260,11 +4974,7 @@ private struct InspectorEditor: View {
                         .font(.system(size: 11, weight: .heavy, design: .rounded))
                         .tracking(1.1)
                         .foregroundStyle(PrototypePalette.secondaryText)
-                    Text(languageStore.language.localized(
-                        state.draft.operatingMode == .autoTTL
-                            ? "Exposición automática TTL"
-                            : "Potencia manual"
-                    ))
+                    Text(languageStore.language.localized(modeDescription))
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(PrototypePalette.primaryText)
                 }
@@ -4287,87 +4997,89 @@ private struct InspectorEditor: View {
                 setRadioEnabled: setRadioEnabled
             )
 
-            Text(state.draft.power.label)
-                .font(.system(size: 29, weight: .semibold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundStyle(canEdit ? PrototypePalette.primaryText : PrototypePalette.muted)
+            if isMulti {
+                MultiModeSummary(compact: false)
+            } else {
+                Text(state.draft.power.label)
+                    .font(.system(size: 29, weight: .semibold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(canEdit ? PrototypePalette.primaryText : PrototypePalette.muted)
 
-            HStack(spacing: 12) {
-                LargeStepButton(
-                    title: "−",
-                    accessibilityLabel: "Bajar potencia del grupo \(group.label)",
-                    enabled: canEdit,
-                    action: decrement
+                HStack(spacing: 12) {
+                    LargeStepButton(
+                        title: "−",
+                        accessibilityLabel: "Bajar potencia del grupo \(group.label)",
+                        enabled: canEdit,
+                        action: decrement
+                    )
+
+                    DiscretePowerSlider(
+                        group: group,
+                        value: state.draft.power,
+                        allowed: allowedPowers,
+                        enabled: canEdit,
+                        onChange: setPower
+                    )
+
+                    LargeStepButton(
+                        title: "+",
+                        accessibilityLabel: "Subir potencia del grupo \(group.label)",
+                        enabled: canEdit,
+                        action: increment
+                    )
+                }
+
+                HStack {
+                    Text(allowedPowers.first?.label ?? "—")
+                    Spacer()
+                    Text(languageStore.language.localized(
+                        state.hasPendingChange
+                            ? "PASOS DE 1/3 EV · CAMBIO PENDIENTE"
+                            : "PASOS DE 1/3 EV · SIN CAMBIOS"
+                    ))
+                    Spacer()
+                    Text(allowedPowers.last?.label ?? "—")
+                }
+                .font(.system(size: 8, weight: .bold, design: .rounded))
+                .foregroundStyle(PrototypePalette.muted)
+
+                PowerRangeSummary(
+                    capability: capability,
+                    currentPower: state.draft.power,
+                    compact: false
                 )
 
-                DiscretePowerSlider(
+                Divider()
+                    .overlay(PrototypePalette.divider)
+
+                ModelingEditor(
                     group: group,
-                    value: state.draft.power,
-                    allowed: allowedPowers,
+                    value: state.draft.modeling,
+                    baseline: state.baseline.modeling,
+                    allowed: allowedModeling,
                     enabled: canEdit,
-                    onChange: setPower
-                )
-
-                LargeStepButton(
-                    title: "+",
-                    accessibilityLabel: "Subir potencia del grupo \(group.label)",
-                    enabled: canEdit,
-                    action: increment
+                    compact: false,
+                    onChange: setModeling
                 )
             }
-
-            HStack {
-                Text(allowedPowers.first?.label ?? "—")
-                Spacer()
-                Text(languageStore.language.localized(
-                    state.hasPendingChange
-                        ? "PASOS DE 1/3 EV · CAMBIO PENDIENTE"
-                        : "PASOS DE 1/3 EV · SIN CAMBIOS"
-                ))
-                Spacer()
-                Text(allowedPowers.last?.label ?? "—")
-            }
-            .font(.system(size: 8, weight: .bold, design: .rounded))
-            .foregroundStyle(PrototypePalette.muted)
-
-            PowerRangeSummary(
-                capability: capability,
-                currentPower: state.draft.power,
-                compact: false
-            )
-
-            Divider()
-                .overlay(PrototypePalette.divider)
-
-            ModelingEditor(
-                group: group,
-                value: state.draft.modeling,
-                baseline: state.baseline.modeling,
-                allowed: allowedModeling,
-                enabled: canEdit,
-                compact: false,
-                onChange: setModeling
-            )
 
             VStack(spacing: 6) {
                 HStack {
                     Text(languageStore.language.localized("REFERENCIA DE LA APP"))
                     Spacer()
-                    Text(
-                        "\(state.baseline.power.label) · " +
-                            languageStore.language.localized(state.baseline.modeling.label)
-                    )
+                    Text(baselineReference)
                         .fontDesign(.monospaced)
                 }
                 HStack {
                     Text(languageStore.language.localized("BORRADOR"))
                     Spacer()
-                    Text(
-                        "\(state.draft.power.label) · " +
-                            languageStore.language.localized(state.draft.modeling.label)
-                    )
+                    Text(draftReference)
                         .fontDesign(.monospaced)
-                        .foregroundStyle(state.hasPendingChange ? PrototypePalette.warning : PrototypePalette.primaryText)
+                        .foregroundStyle(
+                            hasEffectivePendingChange
+                                ? PrototypePalette.warning
+                                : PrototypePalette.primaryText
+                        )
                 }
                 HStack {
                     Text(languageStore.language.localized("CONFIRMACIÓN"))
@@ -4392,6 +5104,7 @@ private struct InspectorEditor: View {
                     canToggleMode: canToggleMode,
                     canChangeOperatingMode: canChangeOperatingMode,
                     hasAssignedModel: !capability.flashModels.isEmpty,
+                    multiIsActive: !controller.multiFlashGroups.isEmpty,
                     language: languageStore.language
                 ).uppercased())
                     .font(.system(size: 8, weight: .bold, design: .rounded))
@@ -4400,7 +5113,52 @@ private struct InspectorEditor: View {
             }
         }
         .padding(14)
-        .background(groupSurface(isPending: state.hasPendingChange))
+        .background(groupSurface(isPending: hasEffectivePendingChange))
+        .multiExcludedGroupOverlay(
+            group: group,
+            state: state,
+            controller: controller,
+            compact: false
+        )
+    }
+
+    private var isMulti: Bool {
+        state.draft.operatingMode == .multi
+    }
+
+    private var hasEffectivePendingChange: Bool {
+        state.hasPendingChange || (isMulti && controller.hasPendingMultiFlashChange)
+    }
+
+    private var modeDescription: String {
+        switch state.draft.operatingMode {
+        case .autoTTL:
+            return "Exposición automática TTL"
+        case .multi:
+            return "Destellos múltiples"
+        case .manual, .off:
+            return "Potencia manual"
+        }
+    }
+
+    private var baselineReference: String {
+        if isMulti {
+            return multiReference(controller.multiFlashBaseline)
+        }
+        return "\(state.baseline.power.label) · " +
+            languageStore.language.localized(state.baseline.modeling.label)
+    }
+
+    private var draftReference: String {
+        if isMulti {
+            return multiReference(controller.multiFlashDraft)
+        }
+        return "\(state.draft.power.label) · " +
+            languageStore.language.localized(state.draft.modeling.label)
+    }
+
+    private func multiReference(_ settings: MultiFlashSettings) -> String {
+        "\(settings.power.label) · \(settings.count)× · \(settings.hertz) Hz"
     }
 }
 
@@ -4461,24 +5219,29 @@ private struct MatrixGroupCard: View {
     let setOperatingMode: (GroupOperatingMode) -> Void
     let setRadioEnabled: (Bool) -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
+    @EnvironmentObject private var controller: GodoxSessionController
 
     var body: some View {
         VStack(spacing: 9) {
             HStack(spacing: 7) {
-                GroupBadge(group: group, isPending: state.hasPendingChange)
+                GroupBadge(group: group, isPending: hasEffectivePendingChange)
                 Text(state.draft.operatingMode.label)
                     .font(.system(size: 8, weight: .bold, design: .rounded))
                     .tracking(0.5)
                     .foregroundStyle(PrototypePalette.secondaryText)
                 Spacer()
                 Text(languageStore.language.localized(
-                    state.hasPendingChange
+                    hasEffectivePendingChange
                         ? "PENDIENTE"
                         : compactConfirmationLabel(state.confirmation)
                 ))
                     .font(.system(size: 8, weight: .bold, design: .rounded))
                     .tracking(0.35)
-                    .foregroundStyle(state.hasPendingChange ? PrototypePalette.warning : PrototypePalette.muted)
+                    .foregroundStyle(
+                        hasEffectivePendingChange
+                            ? PrototypePalette.warning
+                            : PrototypePalette.muted
+                    )
             }
 
             GroupStateControls(
@@ -4492,56 +5255,64 @@ private struct MatrixGroupCard: View {
                 setRadioEnabled: setRadioEnabled
             )
 
-            Text(state.draft.power.label)
-                .font(.system(size: 20, weight: .semibold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundStyle(canEdit ? PrototypePalette.primaryText : PrototypePalette.muted)
+            if isMulti {
+                MultiModeSummary(compact: true)
+            } else {
+                Text(state.draft.power.label)
+                    .font(.system(size: 20, weight: .semibold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(canEdit ? PrototypePalette.primaryText : PrototypePalette.muted)
 
-            HStack(spacing: 7) {
-                StepButton(
-                    title: "−",
-                    accessibilityLabel: "Bajar potencia del grupo \(group.label)",
-                    enabled: canEdit,
-                    action: decrement
+                HStack(spacing: 7) {
+                    StepButton(
+                        title: "−",
+                        accessibilityLabel: "Bajar potencia del grupo \(group.label)",
+                        enabled: canEdit,
+                        action: decrement
+                    )
+
+                    DiscretePowerSlider(
+                        group: group,
+                        value: state.draft.power,
+                        allowed: allowedPowers,
+                        enabled: canEdit,
+                        onChange: setPower
+                    )
+
+                    StepButton(
+                        title: "+",
+                        accessibilityLabel: "Subir potencia del grupo \(group.label)",
+                        enabled: canEdit,
+                        action: increment
+                    )
+                }
+
+                PowerRangeSummary(
+                    capability: capability,
+                    currentPower: state.draft.power,
+                    compact: true
                 )
 
-                DiscretePowerSlider(
+                ModelingEditor(
                     group: group,
-                    value: state.draft.power,
-                    allowed: allowedPowers,
+                    value: state.draft.modeling,
+                    baseline: state.baseline.modeling,
+                    allowed: allowedModeling,
                     enabled: canEdit,
-                    onChange: setPower
-                )
-
-                StepButton(
-                    title: "+",
-                    accessibilityLabel: "Subir potencia del grupo \(group.label)",
-                    enabled: canEdit,
-                    action: increment
+                    compact: true,
+                    onChange: setModeling
                 )
             }
-
-            PowerRangeSummary(
-                capability: capability,
-                currentPower: state.draft.power,
-                compact: true
-            )
-
-            ModelingEditor(
-                group: group,
-                value: state.draft.modeling,
-                baseline: state.baseline.modeling,
-                allowed: allowedModeling,
-                enabled: canEdit,
-                compact: true,
-                onChange: setModeling
-            )
 
         }
         .padding(10)
         .frame(maxWidth: .infinity, minHeight: 238)
-        .background(groupSurface(isPending: state.hasPendingChange))
-        .opacity(canEdit || canChangeOperatingMode || state.draft.operatingMode == .off ? 1 : 0.62)
+        .background(groupSurface(isPending: hasEffectivePendingChange))
+        .opacity(
+            canEdit || isMulti || canChangeOperatingMode || state.draft.operatingMode == .off
+                ? 1
+                : 0.62
+        )
         .help(groupInteractionHelp(
             group: group,
             state: state,
@@ -4549,12 +5320,172 @@ private struct MatrixGroupCard: View {
             canToggleMode: canToggleMode,
             canChangeOperatingMode: canChangeOperatingMode,
             hasAssignedModel: !capability.flashModels.isEmpty,
+            multiIsActive: !controller.multiFlashGroups.isEmpty,
             language: languageStore.language
+        ))
+        .multiExcludedGroupOverlay(
+            group: group,
+            state: state,
+            controller: controller,
+            compact: true
+        )
+    }
+
+    private var isMulti: Bool {
+        state.draft.operatingMode == .multi
+    }
+
+    private var hasEffectivePendingChange: Bool {
+        state.hasPendingChange || (isMulti && controller.hasPendingMultiFlashChange)
+    }
+}
+
+private extension View {
+    @MainActor
+    func multiExcludedGroupOverlay(
+        group: GodoxGroup,
+        state: GroupDraft,
+        controller: GodoxSessionController,
+        compact: Bool
+    ) -> some View {
+        modifier(MultiExcludedGroupModifier(
+            group: group,
+            state: state,
+            controller: controller,
+            compact: compact
         ))
     }
 }
 
+@MainActor
+private struct MultiExcludedGroupModifier: ViewModifier {
+    let group: GodoxGroup
+    let state: GroupDraft
+    @ObservedObject var controller: GodoxSessionController
+    let compact: Bool
+
+    private var isExcluded: Bool {
+        !controller.multiFlashGroups.isEmpty && state.draft.operatingMode == .off
+    }
+
+    func body(content: Content) -> some View {
+        ZStack {
+            content
+                .opacity(isExcluded ? 0.16 : 1)
+                .allowsHitTesting(!isExcluded)
+                .accessibilityHidden(isExcluded)
+
+            if isExcluded {
+                MultiExcludedGroupOverlay(
+                    group: group,
+                    controller: controller,
+                    compact: compact
+                )
+                .padding(compact ? 10 : 18)
+                .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.16), value: isExcluded)
+    }
+}
+
+@MainActor
+private struct MultiExcludedGroupOverlay: View {
+    let group: GodoxGroup
+    @ObservedObject var controller: GodoxSessionController
+    let compact: Bool
+    @EnvironmentObject private var languageStore: AppLanguageStore
+
+    private var supportsMulti: Bool {
+        controller.supportsMultiFlash(group)
+    }
+
+    private var canActivate: Bool {
+        controller.canSetMultiFlashParticipation(group, enabled: true)
+    }
+
+    var body: some View {
+        VStack(spacing: compact ? 7 : 10) {
+            Image(systemName: "bolt.slash.fill")
+                .font(.system(size: compact ? 18 : 23, weight: .semibold))
+                .foregroundStyle(PrototypePalette.muted)
+
+            VStack(spacing: 3) {
+                Text(languageStore.language.localizedFormat(
+                    "GRUPO %@ DESACTIVADO",
+                    group.label
+                ))
+                    .font(.system(size: compact ? 9 : 11, weight: .heavy, design: .rounded))
+                    .tracking(0.7)
+                    .foregroundStyle(PrototypePalette.primaryText)
+
+                Text(languageStore.language.localized(
+                    supportsMulti
+                        ? "Este grupo está fuera de la secuencia Multi."
+                        : "Este grupo no admite Multi con su configuración actual."
+                ))
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(PrototypePalette.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+
+            if supportsMulti {
+                Button {
+                    controller.setMultiFlashParticipation(group, enabled: true)
+                } label: {
+                    Label(
+                        languageStore.language.localized("Activar en Multi"),
+                        systemImage: "plus.circle.fill"
+                    )
+                }
+                .buttonStyle(WorkspacePrimaryButtonStyle())
+                .disabled(!canActivate)
+                .accessibilityLabel(languageStore.language.localizedFormat(
+                    "Activar grupo %@ en Multi",
+                    group.label
+                ))
+            }
+        }
+        .padding(.horizontal, compact ? 14 : 20)
+        .padding(.vertical, compact ? 12 : 16)
+        .frame(maxWidth: compact ? 230 : 280)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(PrototypePalette.surface.opacity(0.97))
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(PrototypePalette.dividerStrong, lineWidth: 1)
+        }
+        .shadow(color: PrototypePalette.brandShadow, radius: 14, y: 5)
+        .accessibilityElement(children: .contain)
+    }
+}
+
 // MARK: - Reusable controls and styling
+
+@MainActor
+private struct MultiModeSummary: View {
+    let compact: Bool
+    @EnvironmentObject private var languageStore: AppLanguageStore
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(PrototypePalette.success)
+            Text(languageStore.language.localized("INCLUIDO EN MULTI"))
+                .tracking(0.55)
+            if !compact {
+                Text(languageStore.language.localized("AJUSTE EN CONSOLA GLOBAL"))
+                    .foregroundStyle(PrototypePalette.muted)
+            }
+        }
+        .font(.caption2.weight(.bold))
+        .foregroundStyle(PrototypePalette.secondaryText)
+        .accessibilityElement(children: .combine)
+    }
+}
 
 private struct PowerRangeSummary: View {
     let capability: ResolvedGroupCapability
@@ -4615,6 +5546,7 @@ private struct GroupStateControls: View {
     let setOperatingMode: (GroupOperatingMode) -> Void
     let setRadioEnabled: (Bool) -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
+    @EnvironmentObject private var controller: GodoxSessionController
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -4650,6 +5582,7 @@ private struct GroupStateControls: View {
         .foregroundStyle(PrototypePalette.secondaryText)
     }
 
+    @ViewBuilder
     private var exposureModePicker: some View {
         HStack(spacing: 7) {
             Text(languageStore.language.localized("Modo").uppercased())
@@ -4657,41 +5590,81 @@ private struct GroupStateControls: View {
                 .tracking(0.45)
                 .foregroundStyle(PrototypePalette.secondaryText)
 
-            Picker(
-                languageStore.language.localizedFormat(
+            if state.draft.operatingMode == .multi {
+                Label {
+                    Text(languageStore.language.localized("MULTI · GLOBAL"))
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.45)
+                } icon: {
+                    Image(systemName: "bolt.circle.fill")
+                }
+                .foregroundStyle(PrototypePalette.accent)
+                .frame(width: compact ? 132 : 154, height: 24)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(PrototypePalette.brandTile)
+                )
+                .overlay {
+                    Capsule(style: .continuous)
+                        .stroke(PrototypePalette.accent.opacity(0.7), lineWidth: 1)
+                }
+                .accessibilityLabel(languageStore.language.localizedFormat(
                     "Modo de exposición del grupo %@",
                     group.label
-                ),
-                selection: Binding(
-                    get: { displayedOperatingMode },
-                    set: setOperatingMode
-                )
-            ) {
-                Text(verbatim: "M").tag(GroupOperatingMode.manual)
-                Text(verbatim: "AUTO · TTL").tag(GroupOperatingMode.autoTTL)
+                ))
+                .accessibilityValue(languageStore.language.localized("Multi global"))
+            } else {
+                Picker(
+                    languageStore.language.localizedFormat(
+                        "Modo de exposición del grupo %@",
+                        group.label
+                    ),
+                    selection: Binding(
+                        get: { displayedOperatingMode },
+                        set: setOperatingMode
+                    )
+                ) {
+                    ForEach(selectableOperatingModes, id: \.self) { mode in
+                        Text(verbatim: mode == .autoTTL ? "AUTO · TTL" : mode.label)
+                            .tag(mode)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .frame(width: compact ? 132 : 154)
+                .disabled(!canChangeOperatingMode || !controller.multiFlashGroups.isEmpty)
+                .help(languageStore.language.localized(
+                    controller.multiFlashGroups.isEmpty
+                        ? "M usa la potencia manual guardada; Auto usa TTL neutro."
+                        : "El modo de cada grupo se controla desde el panel global Multi."
+                ))
+                .accessibilityValue(languageStore.language.localized(modeAccessibilityValue))
             }
-            .labelsHidden()
-            .pickerStyle(.segmented)
-            .frame(width: compact ? 132 : 154)
-            .disabled(!canChangeOperatingMode)
-            .help(languageStore.language.localized(
-                "M usa la potencia manual guardada; Auto usa TTL con compensación neutra."
-            ))
-            .accessibilityValue(languageStore.language.localized(
-                displayedOperatingMode == .autoTTL ? "Auto · TTL" : "Manual"
-            ))
+        }
+    }
+
+    private var selectableOperatingModes: [GroupOperatingMode] {
+        controller.availableOperatingModes(for: group).filter {
+            $0 == .manual || $0 == .autoTTL
         }
     }
 
     private var displayedOperatingMode: GroupOperatingMode {
         switch state.draft.operatingMode {
-        case .manual, .autoTTL:
+        case .manual, .autoTTL, .multi:
             return state.draft.operatingMode
         case .off:
             if state.lastKnownActiveMode == .autoTTL { return .autoTTL }
             return .manual
-        case .multi:
-            return .manual
+        }
+    }
+
+    private var modeAccessibilityValue: String {
+        switch displayedOperatingMode {
+        case .manual: "Manual"
+        case .autoTTL: "Auto · TTL"
+        case .multi: "Multi"
+        case .off: "Off"
         }
     }
 
@@ -4707,7 +5680,11 @@ private struct GroupStateControls: View {
         .help(activationExplanation)
         .accessibilityLabel(activationTitle)
         .accessibilityValue(languageStore.language.localized(
-            state.draft.isEnabledOnRadio ? "Activo" : "Apagado"
+            state.draft.isEnabledOnRadio
+                ? "Activo"
+                : controller.multiFlashGroups.isEmpty
+                    ? "Apagado"
+                    : "Desactivado en Multi"
         ))
         .accessibilityHint(activationExplanation)
     }
@@ -4717,7 +5694,15 @@ private struct GroupStateControls: View {
     }
 
     private var activationTitle: String {
-        languageStore.language.localizedFormat(
+        if state.draft.operatingMode == .off,
+           !controller.multiFlashGroups.isEmpty,
+           controller.supportsMultiFlash(group) {
+            return languageStore.language.localizedFormat(
+                "Añadir grupo %@ a Multi",
+                group.label
+            )
+        }
+        return languageStore.language.localizedFormat(
             state.draft.isEnabledOnRadio ? "Grupo %@ activo" : "Activar grupo %@",
             group.label
         )
@@ -4735,25 +5720,32 @@ private struct GroupStateControls: View {
             )
         }
 
+        if state.draft.operatingMode == .multi,
+           controller.multiFlashGroups.count == 1 {
+            return languageStore.language.localized(
+                "Desactiva Multi desde el botón MULTI."
+            )
+        }
+
         switch state.draft.operatingMode {
+        case .off where activationIsEnabled && !controller.multiFlashGroups.isEmpty:
+            return languageStore.language.localizedFormat(
+                "El grupo %@ está fuera de Multi. Actívalo para añadirlo a la ráfaga global.",
+                group.label
+            )
         case .off where activationIsEnabled:
             return languageStore.language.localizedFormat(
                 "El grupo %@ está apagado. Actívalo para editar potencia y modelado.",
                 group.label
             )
         case .manual where activationIsEnabled,
-             .autoTTL where activationIsEnabled:
+             .autoTTL where activationIsEnabled,
+             .multi where activationIsEnabled:
             return languageStore.language.localizedFormat(
                 "Desactiva el grupo %@ para dejar de dispararlo; el cambio queda pendiente de envío.",
                 group.label
             )
-        case .multi:
-            return languageStore.language.localizedFormat(
-                "El grupo %@ está en %@ y no admite cambios desde esta versión.",
-                group.label,
-                state.draft.operatingMode.label
-            )
-        case .manual, .autoTTL, .off:
+        case .manual, .autoTTL, .multi, .off:
             return languageStore.language.localized(
                 "Espera a que termine la operación actual."
             )
@@ -4768,6 +5760,7 @@ private func groupInteractionHelp(
     canToggleMode: Bool,
     canChangeOperatingMode: Bool,
     hasAssignedModel: Bool,
+    multiIsActive: Bool,
     language: AppLanguage
 ) -> String {
     if !hasAssignedModel {
@@ -4778,6 +5771,11 @@ private func groupInteractionHelp(
     }
 
     switch state.draft.operatingMode {
+    case .off where canToggleMode && multiIsActive:
+        return language.localizedFormat(
+            "Añade el grupo %@ a la ráfaga Multi global.",
+            group.label
+        )
     case .off where canToggleMode:
         return language.localizedFormat(
             "Activa el grupo %@ para editar potencia y modelado.",
@@ -4797,12 +5795,12 @@ private func groupInteractionHelp(
         )
     case .autoTTL:
         return language.localized("Espera a que termine la operación actual.")
-    case .multi:
-        return language.localizedFormat(
-            "El grupo %@ está en %@ y no admite cambios desde esta versión.",
-            group.label,
-            state.draft.operatingMode.label
+    case .multi where canChangeOperatingMode:
+        return language.localized(
+            "Multi activo; ajusta potencia, destellos y Hz en el control global Multi."
         )
+    case .multi:
+        return language.localized("Espera a que termine la operación actual.")
     }
 }
 

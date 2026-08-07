@@ -36,6 +36,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     @Published private(set) var presets: [StudioPreset] = []
     @Published private(set) var activePresetID: UUID?
     @Published private(set) var globalBeepEnabled = false
+    @Published private(set) var multiFlashBaseline = MultiFlashSettings.default
+    @Published private(set) var multiFlashDraft = MultiFlashSettings.default
     @Published private(set) var isGlobalStandbyEnabled = false
     @Published private(set) var isGlobalControlPending = false
     @Published private(set) var activeInteractiveEditCount = 0
@@ -53,6 +55,12 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         var keepsConnectionFlowVisible: Bool {
             self == .connectionSynchronization
         }
+    }
+
+    private enum ApplySequenceJournalKind {
+        case none
+        case forward
+        case restoration
     }
 
     private enum GlobalControlPurpose {
@@ -73,6 +81,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         let groups: [GodoxGroup]
         let purpose: ApplySequencePurpose
         let forceWrite: Bool
+        let restorationGlobalSnapshot: GlobalRadioSnapshot
     }
 
     private struct QueuedGroupChange {
@@ -80,12 +89,28 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         let snapshot: ManualGroupSnapshot
         let frame: Data
         let forceWrite: Bool
+        let restorationSnapshot: ManualGroupSnapshot
+        let restorationGlobalSnapshot: GlobalRadioSnapshot?
+        let restorationUnderlyingMultiMode: GroupOperatingMode?
+        let restorationRestoresAfterMulti: Bool
     }
 
     private struct GlobalPowerPosition {
         let group: GodoxGroup
         let allowed: [ManualPower]
         let anchorIndex: Int
+    }
+
+    private struct InitialMultiScenePlan {
+        let groups: [GodoxGroup: GroupDraft]
+        let settings: MultiFlashSettings
+        let activatedGroups: [GodoxGroup]
+        let disabledGroups: [GodoxGroup]
+    }
+
+    private struct ManualMultiScenePlan {
+        let groups: [GodoxGroup: GroupDraft]
+        let normalizedPowers: [(group: GodoxGroup, power: ManualPower)]
     }
 
     private enum ControlIntent {
@@ -153,6 +178,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     private var applySequenceCompletedCount = 0
     private var applySequenceTotalCount = 0
     private var applySequencePurpose: ApplySequencePurpose = .pendingChanges
+    private var applySequenceJournalKind: ApplySequenceJournalKind = .none
     private var automaticApplySuppressedForLocalPreset = false
     private var interactiveEditTokens: Set<InteractiveEditToken> = []
     private var globalRadioSnapshot = GlobalRadioSnapshot(
@@ -287,32 +313,57 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 guard let stored = restoredWorkspace.groupConfigurations[group] else { continue }
                 initialGroups[group] = GroupDraft(
                     baseline: stored.snapshot,
-                    draft: stored.snapshot
+                    draft: stored.snapshot,
+                    lastKnownActiveMode: stored.lastKnownActiveMode,
+                    restoresAfterMulti: stored.restoresAfterMulti
                 )
             }
         }
-        var recoveredRestorationGroup: GodoxGroup?
+        var recoveredRestorationGroups: [GodoxGroup] = []
         var initialPhysicalSafetyState = PhysicalOperationSafetyState()
         switch initialRestorationStore.load() {
         case .none:
             break
         case .record(let group, let point):
-            _ = initialPhysicalSafetyState.begin(
-                group: group,
-                deviceID: point.deviceID,
-                baseline: point.snapshot
-            )
-            initialGroups[group] = GroupDraft(
-                baseline: point.snapshot,
-                draft: point.snapshot,
-                confirmation: .failed("Recuperación pendiente de una sesión anterior")
-            )
-            recoveredRestorationGroup = group
+            let points = [group: point]
+            if initialPhysicalSafetyState.begin(points: points) {
+                recoveredRestorationGroups = [group]
+                initialGroups[group] = GroupDraft(
+                    baseline: point.snapshot,
+                    draft: point.snapshot,
+                    confirmation: .failed("Recuperación pendiente de una sesión anterior"),
+                    lastKnownActiveMode: point.multiUnderlyingMode,
+                    restoresAfterMulti: point.restoresAfterMulti
+                )
+            } else {
+                recoveryBlockReason = "El registro local de restauración no forma una operación segura"
+            }
+        case .batch(let points):
+            if initialPhysicalSafetyState.begin(points: points) {
+                recoveredRestorationGroups = GodoxGroup.allCases.filter {
+                    points[$0] != nil
+                }
+                for group in recoveredRestorationGroups {
+                    guard let point = points[group] else { continue }
+                    initialGroups[group] = GroupDraft(
+                        baseline: point.snapshot,
+                        draft: point.snapshot,
+                        confirmation: .failed("Recuperación pendiente de una sesión anterior"),
+                        lastKnownActiveMode: point.multiUnderlyingMode,
+                        restoresAfterMulti: point.restoresAfterMulti
+                    )
+                }
+            } else {
+                recoveryBlockReason = "El lote local de restauración no forma una operación segura"
+            }
         case .invalid:
             recoveryBlockReason = "El registro local de restauración es ilegible; las escrituras físicas están bloqueadas"
         }
         groups = initialGroups
         physicalSafetyState = initialPhysicalSafetyState
+        let initialMultiFlashSettings = restoredWorkspace?.multiFlashSettings ?? .default
+        multiFlashBaseline = initialMultiFlashSettings
+        multiFlashDraft = initialMultiFlashSettings
 
         var initialConfigurations = Dictionary(uniqueKeysWithValues: GodoxGroup.allCases.map {
             ($0, GroupConfiguration(
@@ -360,13 +411,12 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 supportedGroups: initialWorkingGroups,
                 defaultVisibleGroups: defaultVisible
             )
-        if let recoveredRestorationGroup,
-           !initialVisibleGroups.contains(recoveredRestorationGroup) {
+        if !recoveredRestorationGroups.isEmpty {
             initialWorkingGroups = initialProfile.supportedGroups.filter {
-                initialWorkingGroups.contains($0) || $0 == recoveredRestorationGroup
+                initialWorkingGroups.contains($0) || recoveredRestorationGroups.contains($0)
             }
             initialVisibleGroups = initialWorkingGroups.filter {
-                initialVisibleGroups.contains($0) || $0 == recoveredRestorationGroup
+                initialVisibleGroups.contains($0) || recoveredRestorationGroups.contains($0)
             }
         }
         for group in GodoxGroup.allCases {
@@ -382,16 +432,44 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             initialGroups[$0]?.draft.modeling != .off
         }
         globalBeepEnabled = initialGlobalBeep
-        globalRadioSnapshot = GlobalRadioSnapshot(
+        var initialGlobalSnapshot = GlobalRadioSnapshot(
             apkDefaultsWithBeepEnabled: initialGlobalBeep,
             modelingLightEnabled: initialGlobalModeling,
             standbyEnabled: false
         )
+        initialGlobalSnapshot.multiEnabled = initialWorkingGroups.contains {
+            initialGroups[$0]?.draft.operatingMode == .multi
+        }
+        initialGlobalSnapshot.multiCount = initialMultiFlashSettings.countByte
+        initialGlobalSnapshot.multiHertz = initialMultiFlashSettings.hertzByte
+        initialGlobalSnapshot.multiPowerByte = initialMultiFlashSettings.powerByte
+        globalRadioSnapshot = initialGlobalSnapshot
         hasCompletedOnboarding = restoredWorkspace?.onboardingCompleted ?? false
         super.init()
 
+        let restoredMultiFlashSettingsBeforeMigration = multiFlashDraft
+        var didMigrateStoredMultiFlashSettings = false
+        if recoveredRestorationGroups.isEmpty,
+           normalizeMultiFlashDraftForCurrentGroups() {
+            // Treat a newly introduced manufacturer limit as a local data
+            // migration, not as an unsent user edit on launch.
+            didMigrateStoredMultiFlashSettings =
+                multiFlashDraft != restoredMultiFlashSettingsBeforeMigration
+            multiFlashBaseline = multiFlashDraft
+            globalRadioSnapshot.multiCount = multiFlashDraft.countByte
+            globalRadioSnapshot.multiHertz = multiFlashDraft.hertzByte
+            globalRadioSnapshot.multiPowerByte = multiFlashDraft.powerByte
+        }
+
         client = transport ?? BluetoothClient()
         client.delegate = self
+        if didMigrateStoredMultiFlashSettings, hasCompletedOnboarding,
+           !persistStudioLibrary() {
+            addActivity(
+                .warning,
+                "Multi se ajustó a un límite seguro, pero no pudo actualizarse en la configuración guardada"
+            )
+        }
         if studioLibraryLoadWasInvalid {
             addActivity(
                 .warning,
@@ -409,10 +487,11 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 "El radio guardado no pudo cargarse; busca el transmisor e introduce su código nuevamente"
             )
         }
-        if let recoveredRestorationGroup {
+        if !recoveredRestorationGroups.isEmpty {
+            let labels = recoveredRestorationGroups.map(\.label).joined(separator: ", ")
             addActivity(
                 .error,
-                "Hay un ajuste anterior de \(recoveredRestorationGroup.label) por recuperar; conecta el radio original antes de continuar"
+                "Hay una escena anterior por recuperar (\(labels)); conecta el radio original antes de continuar"
             )
         } else if let recoveryBlockReason {
             addActivity(.error, recoveryBlockReason)
@@ -560,7 +639,30 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
     }
 
-    var pendingCount: Int { pendingGroups.count }
+    var hasPendingMultiFlashChange: Bool {
+        if multiFlashBaseline != multiFlashDraft { return true }
+        guard hasConfirmedGlobalSnapshot else { return false }
+        return globalRadioSnapshot.multiEnabled != !multiFlashGroups.isEmpty ||
+            globalRadioSnapshot.multiCount != multiFlashDraft.countByte ||
+            globalRadioSnapshot.multiHertz != multiFlashDraft.hertzByte ||
+            globalRadioSnapshot.multiPowerByte != multiFlashDraft.powerByte
+    }
+
+    var pendingCount: Int {
+        pendingGroups.count + (hasPendingMultiFlashChange ? 1 : 0)
+    }
+
+    /// Un cambio derivado sólo de quitar el último grupo Multi del workspace
+    /// no tiene un borrador que pueda descartarse sin deshacer el workspace.
+    var canDiscardPendingChanges: Bool {
+        if !pendingGroups.isEmpty { return true }
+        return multiFlashBaseline != multiFlashDraft &&
+            isValidMultiFlashSettings(multiFlashBaseline)
+    }
+
+    var multiFlashGroups: [GodoxGroup] {
+        workingGroups.filter { groups[$0]?.draft.operatingMode == .multi }
+    }
 
     var isInteractiveEditActive: Bool {
         activeInteractiveEditCount > 0
@@ -599,15 +701,21 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
 
     var canApply: Bool {
         let eligibleGroups = groupsEligibleForApply
+        let canApplyMultiFlashOnly = restorationPoints.isEmpty && hasPendingMultiFlashChange
         guard recoveryBlockReason == nil, isSessionReady, !isReconfiguringWorkspace,
               !isInteractiveEditActive,
               !isGlobalStandbyEnabled,
-              !eligibleGroups.isEmpty,
+              !eligibleGroups.isEmpty || canApplyMultiFlashOnly,
               !isTestPending,
               controlIntents.isEmpty, awaitingRadioResponses.isEmpty,
               activeGroupChange == nil, queuedGroupChanges.isEmpty else {
             return false
         }
+        if !restorationPoints.isEmpty,
+           Set(eligibleGroups) != Set(restorationPoints.keys) {
+            return false
+        }
+        if restorationPoints.isEmpty, !isMultiFlashDraftValid { return false }
         return eligibleGroups.allSatisfy {
             canTransmit($0, snapshot: groupDraft($0).draft)
         }
@@ -647,6 +755,14 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
 
     var workingConfigurationIssue: String? {
         guard !workingGroups.isEmpty else { return "Selecciona al menos un grupo de trabajo" }
+        guard isMultiFlashDraftValid else {
+            return "Revisa la potencia, los destellos y la frecuencia de Multi"
+        }
+        let activeModes = workingGroups.compactMap { groups[$0]?.draft.operatingMode }
+        if activeModes.contains(.multi),
+           activeModes.contains(where: { $0 == .manual || $0 == .autoTTL }) {
+            return "Multi es global: los grupos activos deben estar en Multi o apagados"
+        }
         for group in workingGroups {
             let configuration = groupConfiguration(group)
             let snapshot = groupDraft(group).draft
@@ -722,6 +838,129 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             }
     }
 
+    var canEditMultiFlashSettings: Bool {
+        recoveryBlockReason == nil && phase == .ready && !isReconfiguringWorkspace &&
+            !isGlobalStandbyEnabled && !isTestPending &&
+            physicalSafetyState.allowsNewEdits && controlIntents.isEmpty &&
+            awaitingRadioResponses.isEmpty && activeGroupChange == nil &&
+            queuedGroupChanges.isEmpty && !allowedMultiFlashPowers.isEmpty
+    }
+
+    /// Multi se enciende y apaga exclusivamente como una decisión global. Al
+    /// encenderlo debe existir al menos un grupo activo compatible; al apagarlo
+    /// toda la escena de trabajo debe poder quedar en Manual de forma válida.
+    func canSetGlobalMultiFlashEnabled(_ enabled: Bool) -> Bool {
+        guard canEditMultiFlashSettings,
+              enabled != !multiFlashGroups.isEmpty else {
+            return false
+        }
+        return enabled
+            ? initialMultiScenePlan() != nil
+            : manualMultiScenePlan() != nil
+    }
+
+    func supportsMultiFlash(_ group: GodoxGroup) -> Bool {
+        transmitterProfile.supportedMultiGroups.contains(group) &&
+            managedGroups.contains(group) &&
+            !resolvedCapability(for: group).multiPowerScale.isEmpty
+    }
+
+    var allowedMultiFlashPowers: [ManualPower] {
+        let selected = multiFlashGroups
+        return selected.isEmpty
+            ? MultiFlashSettings.supportedPowers
+            : multiPowerScale(for: selected)
+    }
+
+    var multiFlashCountRange: ClosedRange<Int> {
+        MultiFlashSettings.countRange.lowerBound...multiFlashMaximumCount
+    }
+
+    var multiFlashMaximumCount: Int {
+        maximumMultiFlashCount(
+            power: multiFlashDraft.power,
+            hertz: multiFlashDraft.hertz,
+            groups: multiFlashGroups
+        )
+    }
+
+    var hasVerifiedMultiFlashCountLimit: Bool {
+        multiFlashGroups.contains {
+            resolvedCapability(for: $0).multiLimitProfiles.contains {
+                $0.hasManufacturerPublishedLimit(
+                    power: multiFlashDraft.power,
+                    hertz: multiFlashDraft.hertz
+                )
+            }
+        }
+    }
+
+    var hasConservativeMultiFlashCountLimit: Bool {
+        multiFlashGroups.contains {
+            resolvedCapability(for: $0).multiLimitProfiles.contains {
+                $0.maximumFlashCount(
+                    power: multiFlashDraft.power,
+                    hertz: multiFlashDraft.hertz
+                ) != nil && !$0.hasManufacturerPublishedLimit(
+                    power: multiFlashDraft.power,
+                    hertz: multiFlashDraft.hertz
+                )
+            }
+        }
+    }
+
+    var hasUnverifiedMultiFlashCountLimit: Bool {
+        multiFlashGroups.contains {
+            resolvedCapability(for: $0).hasUnverifiedMultiLimits
+        }
+    }
+
+    private var isMultiFlashDraftValid: Bool {
+        isValidMultiFlashSettings(multiFlashDraft)
+    }
+
+    private func isValidMultiFlashSettings(_ settings: MultiFlashSettings) -> Bool {
+        let scale = multiFlashGroups.isEmpty
+            ? MultiFlashSettings.supportedPowers
+            : multiPowerScale(for: multiFlashGroups)
+        let maximumCount = maximumMultiFlashCount(
+            power: settings.power,
+            hertz: settings.hertz,
+            groups: multiFlashGroups
+        )
+        return scale.contains(settings.power) &&
+            (MultiFlashSettings.countRange.lowerBound...maximumCount).contains(settings.count)
+    }
+
+    private func multiPowerScale(for groups: [GodoxGroup]) -> [ManualPower] {
+        guard !groups.isEmpty,
+              groups.allSatisfy(supportsMultiFlash),
+              let commonMinimumDenominator = groups.compactMap({
+                  resolvedCapability(for: $0).minimumManualDenominator
+              }).min() else {
+            return []
+        }
+        return ManualPower.scale(minimumDenominator: commonMinimumDenominator).filter {
+            $0.decimalValue <= 80 && $0.decimalValue.isMultiple(of: 10)
+        }
+    }
+
+    private func maximumMultiFlashCount(
+        power: ManualPower,
+        hertz: Int,
+        groups: [GodoxGroup]
+    ) -> Int {
+        let verifiedLimits = groups.flatMap { group in
+            resolvedCapability(for: group).multiLimitProfiles.compactMap {
+                $0.maximumFlashCount(power: power, hertz: hertz)
+            }
+        }
+        return min(
+            MultiFlashSettings.countRange.upperBound,
+            verifiedLimits.min() ?? MultiFlashSettings.countRange.upperBound
+        )
+    }
+
     func setChangeDeliveryMode(_ mode: ChangeDeliveryMode) {
         guard canChangeDeliveryMode, mode != changeDeliveryMode else { return }
         cancelAutomaticApply()
@@ -765,8 +1004,12 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         return groupDraft(group).draft.operatingMode == .manual
     }
 
-    /// M y Auto/TTL son los dos modos de exposición editables en este corte.
-    /// Multi permanece sólo como valor decodificable: no se ofrece ni se escribe.
+    func availableOperatingModes(for group: GodoxGroup) -> [GroupOperatingMode] {
+        var modes: [GroupOperatingMode] = [.manual, .autoTTL]
+        if supportsMultiFlash(group) { modes.append(.multi) }
+        return modes
+    }
+
     func canChangeOperatingMode(_ group: GodoxGroup) -> Bool {
         guard phase == .ready,
               !isGlobalStandbyEnabled,
@@ -779,15 +1022,19 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             return false
         }
         let snapshot = groupDraft(group).draft
-        guard snapshot.operatingMode == .manual || snapshot.operatingMode == .autoTTL else {
+        let modes = availableOperatingModes(for: group)
+        guard modes.contains(snapshot.operatingMode) else {
             return false
         }
-        var alternate = snapshot
-        alternate.operatingMode = snapshot.operatingMode == .manual ? .autoTTL : .manual
-        if alternate.operatingMode == .autoTTL {
-            alternate.compensationByte = 0
+        return modes.contains { mode in
+            guard mode != snapshot.operatingMode else { return false }
+            var alternate = snapshot
+            alternate.operatingMode = mode
+            if mode == .autoTTL || mode == .multi {
+                alternate.compensationByte = 0
+            }
+            return isValidForTransmission(group, snapshot: alternate)
         }
-        return isValidForTransmission(group, snapshot: alternate)
     }
 
     func allowedPowers(for group: GodoxGroup) -> [ManualPower] {
@@ -934,6 +1181,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             !isInteractiveEditActive &&
             !isGlobalStandbyEnabled &&
             !isTestPending &&
+            isMultiFlashDraftValid &&
             pendingCount == 0 && restorationPoints.isEmpty &&
             controlIntents.isEmpty && awaitingRadioResponses.isEmpty &&
             activeGroupChange == nil && queuedGroupChanges.isEmpty
@@ -946,6 +1194,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         if let recoveryBlockReason { return recoveryBlockReason }
         if !restorationPoints.isEmpty { return "Recupera el ajuste anterior antes de disparar" }
         if phase != .ready { return "Conecta y sincroniza el radio antes de disparar" }
+        if !isMultiFlashDraftValid { return "Revisa la configuración Multi antes de disparar" }
         if pendingCount > 0 { return "Aplica o descarta los cambios antes de probar" }
         return "Espera a que termine la operación actual"
     }
@@ -1031,7 +1280,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         let followup = GlobalControlFollowup(
             groups: workingGroups,
             purpose: .pendingChanges,
-            forceWrite: true
+            forceWrite: true,
+            restorationGlobalSnapshot: globalRadioSnapshot
         )
         if !submitGlobalControl(snapshot, purpose: .beep, followup: followup) {
             addActivity(.error, "No se pudo preparar el cambio global de beep")
@@ -1054,26 +1304,335 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
     }
 
-    /// Cambia únicamente el modo A1 del grupo. La potencia manual permanece en
-    /// el snapshot para recuperarla al volver a M; Auto/TTL comienza siempre con
-    /// compensación neutra hasta que exista un editor TTL dedicado.
+    func setMultiFlashPower(_ power: ManualPower) {
+        guard canEditMultiFlashSettings,
+              allowedMultiFlashPowers.contains(power) else {
+            return
+        }
+        let maximumCount = maximumMultiFlashCount(
+            power: power,
+            hertz: multiFlashDraft.hertz,
+            groups: multiFlashGroups
+        )
+        guard
+              let candidate = MultiFlashSettings(
+                  power: power,
+                  count: min(multiFlashDraft.count, maximumCount),
+                  hertz: multiFlashDraft.hertz
+              ), candidate != multiFlashDraft else {
+            return
+        }
+        noteMultiFlashCountNormalization(from: multiFlashDraft, to: candidate)
+        updateMultiFlashDraft(candidate)
+    }
+
+    func setMultiFlashCount(_ count: Int) {
+        guard canEditMultiFlashSettings,
+              multiFlashCountRange.contains(count),
+              let candidate = MultiFlashSettings(
+                  power: multiFlashDraft.power,
+                  count: count,
+                  hertz: multiFlashDraft.hertz
+              ), candidate != multiFlashDraft else {
+            return
+        }
+        updateMultiFlashDraft(candidate)
+    }
+
+    func setMultiFlashHertz(_ hertz: Int) {
+        guard canEditMultiFlashSettings else { return }
+        let maximumCount = maximumMultiFlashCount(
+            power: multiFlashDraft.power,
+            hertz: hertz,
+            groups: multiFlashGroups
+        )
+        guard
+              let candidate = MultiFlashSettings(
+                  power: multiFlashDraft.power,
+                  count: min(multiFlashDraft.count, maximumCount),
+                  hertz: hertz
+              ), candidate != multiFlashDraft else {
+            return
+        }
+        noteMultiFlashCountNormalization(from: multiFlashDraft, to: candidate)
+        updateMultiFlashDraft(candidate)
+    }
+
+    /// La participación por grupo sólo modifica una sesión Multi ya activa. El
+    /// último participante no puede quitarse desde aquí porque eso apagaría la
+    /// decisión global; el cierre pertenece al botón Multi superior.
+    func canSetMultiFlashParticipation(_ group: GodoxGroup, enabled: Bool) -> Bool {
+        guard !multiFlashGroups.isEmpty,
+              workingGroups.contains(group), supportsMultiFlash(group),
+              groupConfiguration(group).hasCompleteBaseline else {
+            return false
+        }
+
+        let mode = groupDraft(group).draft.operatingMode
+        if enabled {
+            switch mode {
+            case .multi:
+                return true
+            case .off:
+                return canToggleRadioEnabled(group)
+            case .manual, .autoTTL:
+                return false
+            }
+        }
+        return mode == .multi && multiFlashGroups.count > 1 &&
+            canToggleRadioEnabled(group)
+    }
+
+    func setMultiFlashParticipation(_ group: GodoxGroup, enabled: Bool) {
+        guard canSetMultiFlashParticipation(group, enabled: enabled) else { return }
+
+        let mode = groupDraft(group).draft.operatingMode
+        if enabled {
+            if mode == .off {
+                setDraftRadioEnabled(group, enabled: true)
+            }
+        } else if mode == .multi {
+            setDraftRadioEnabled(group, enabled: false)
+        }
+    }
+
+    func setGlobalMultiFlashEnabled(_ enabled: Bool) {
+        guard canSetGlobalMultiFlashEnabled(enabled) else { return }
+        if enabled {
+            _ = beginMultiFlashScene()
+        } else {
+            _ = endMultiFlashSceneInManual()
+        }
+    }
+
+    /// Builds the initial global Multi scene in one atomic draft. Every active
+    /// compatible working group joins Multi so the group cards match the global
+    /// state immediately. Groups that were already Off stay Off; unsupported
+    /// active groups move to Off because Godox only documents Multi on A-E.
+    private func initialMultiScenePlan() -> InitialMultiScenePlan? {
+        guard multiFlashGroups.isEmpty else { return nil }
+
+        var nextGroups = groups
+        var activatedGroups: [GodoxGroup] = []
+        var disabledGroups: [GodoxGroup] = []
+
+        for workingGroup in workingGroups {
+            guard groupConfiguration(workingGroup).hasCompleteBaseline,
+                  var state = nextGroups[workingGroup] else {
+                return nil
+            }
+
+            switch state.draft.operatingMode {
+            case .manual, .autoTTL:
+                state.lastKnownActiveMode = state.draft.operatingMode
+                state.draftRestoresAfterMulti = true
+                if supportsMultiFlash(workingGroup) {
+                    state.draft.operatingMode = .multi
+                    state.draft.compensationByte = 0
+                    activatedGroups.append(workingGroup)
+                } else {
+                    state.draft.operatingMode = .off
+                    disabledGroups.append(workingGroup)
+                }
+            case .off:
+                state.draftRestoresAfterMulti = false
+            case .multi:
+                return nil
+            }
+
+            guard isValidForTransmission(workingGroup, snapshot: state.draft) else {
+                return nil
+            }
+            nextGroups[workingGroup] = state
+        }
+
+        let sharedPowerScale = multiPowerScale(for: activatedGroups)
+        guard !activatedGroups.isEmpty, let safePower = sharedPowerScale.first else {
+            return nil
+        }
+        let nextPower = sharedPowerScale.contains(multiFlashDraft.power)
+            ? multiFlashDraft.power
+            : safePower
+        let nextMaximumCount = maximumMultiFlashCount(
+            power: nextPower,
+            hertz: multiFlashDraft.hertz,
+            groups: activatedGroups
+        )
+        guard let settings = MultiFlashSettings(
+            power: nextPower,
+            count: min(multiFlashDraft.count, nextMaximumCount),
+            hertz: multiFlashDraft.hertz
+        ) else {
+            return nil
+        }
+
+        return InitialMultiScenePlan(
+            groups: nextGroups,
+            settings: settings,
+            activatedGroups: activatedGroups,
+            disabledGroups: disabledGroups
+        )
+    }
+
+    @discardableResult
+    private func beginMultiFlashScene() -> Bool {
+        guard let plan = initialMultiScenePlan() else { return false }
+
+        if plan.settings.power != multiFlashDraft.power {
+            addActivity(
+                .info,
+                "Multi se ajustó a \(plan.settings.power.label), el mínimo común de sus flashes"
+            )
+        }
+        noteMultiFlashCountNormalization(from: multiFlashDraft, to: plan.settings)
+        multiFlashDraft = plan.settings
+        groups = plan.groups
+        for workingGroup in workingGroups {
+            groupConfigurations[workingGroup]?.isEnabledOnRadio =
+                plan.groups[workingGroup]?.draft.isEnabledOnRadio == true
+        }
+
+        addActivity(
+            .info,
+            "Multi global se activó en los grupos \(plan.activatedGroups.map(\.label).joined(separator: ", "))"
+        )
+        if !plan.disabledGroups.isEmpty {
+            addActivity(
+                .info,
+                "Multi es global; se apagaron los grupos \(plan.disabledGroups.map(\.label).joined(separator: ", "))"
+            )
+        }
+        draftDidChange()
+        return true
+    }
+
+    /// Construye el único destino válido al apagar Multi: todos los grupos de
+    /// trabajo activos en Manual, con compensación neutra y sin restauraciones
+    /// diferidas. Conserva cada potencia si sigue siendo válida para el grupo.
+    private func manualMultiScenePlan() -> ManualMultiScenePlan? {
+        guard !multiFlashGroups.isEmpty else { return nil }
+
+        var nextGroups = groups
+        var normalizedPowers: [(group: GodoxGroup, power: ManualPower)] = []
+        for workingGroup in workingGroups {
+            guard groupConfiguration(workingGroup).hasCompleteBaseline,
+                  var state = nextGroups[workingGroup] else {
+                return nil
+            }
+            let scale = resolvedCapability(for: workingGroup).powerScale
+            guard let safePower = scale.contains(state.draft.power)
+                ? state.draft.power
+                : scale.first else {
+                return nil
+            }
+            if safePower != state.draft.power {
+                normalizedPowers.append((workingGroup, safePower))
+            }
+            state.draft.power = safePower
+            state.draft.operatingMode = .manual
+            state.draft.compensationByte = 0
+            state.lastKnownActiveMode = .manual
+            state.draftRestoresAfterMulti = false
+            guard isValidForTransmission(workingGroup, snapshot: state.draft) else {
+                return nil
+            }
+            nextGroups[workingGroup] = state
+        }
+        return ManualMultiScenePlan(
+            groups: nextGroups,
+            normalizedPowers: normalizedPowers
+        )
+    }
+
+    @discardableResult
+    private func endMultiFlashSceneInManual() -> Bool {
+        guard let plan = manualMultiScenePlan() else { return false }
+
+        groups = plan.groups
+        for workingGroup in workingGroups {
+            groupConfigurations[workingGroup]?.isEnabledOnRadio = true
+        }
+        for normalization in plan.normalizedPowers {
+            noteCommonRangeNormalization(
+                normalization.power,
+                for: normalization.group
+            )
+        }
+        addActivity(.info, "Multi global se desactivó; todos los grupos volvieron a Manual")
+        draftDidChange()
+        return true
+    }
+
+    private func updateMultiFlashDraft(_ candidate: MultiFlashSettings) {
+        multiFlashDraft = candidate
+        draftDidChange()
+    }
+
+    private func noteMultiFlashCountNormalization(
+        from previous: MultiFlashSettings,
+        to candidate: MultiFlashSettings
+    ) {
+        guard candidate.count < previous.count else { return }
+        addActivity(
+            .info,
+            "Multi limitó la secuencia a \(candidate.count) destellos para la potencia, Hz y modelos participantes"
+        )
+    }
+
+    @discardableResult
+    private func normalizeMultiFlashDraftForCurrentGroups() -> Bool {
+        guard !multiFlashGroups.isEmpty else { return true }
+        let scale = allowedMultiFlashPowers
+        guard let safePower = scale.first else { return false }
+        let nextPower = scale.contains(multiFlashDraft.power)
+            ? multiFlashDraft.power
+            : safePower
+        let maximumCount = maximumMultiFlashCount(
+            power: nextPower,
+            hertz: multiFlashDraft.hertz,
+            groups: multiFlashGroups
+        )
+        guard let normalized = MultiFlashSettings(
+            power: nextPower,
+            count: min(multiFlashDraft.count, maximumCount),
+            hertz: multiFlashDraft.hertz
+        ) else { return false }
+        guard normalized != multiFlashDraft else { return true }
+
+        if normalized.power != multiFlashDraft.power {
+            addActivity(
+                .info,
+                "Multi se ajustó a \(safePower.label), el mínimo común de sus flashes"
+            )
+        }
+        noteMultiFlashCountNormalization(from: multiFlashDraft, to: normalized)
+        multiFlashDraft = normalized
+        return true
+    }
+
+    /// M y Auto siguen siendo modos editables por grupo. Multi queda fuera de
+    /// esta ruta: su entrada y salida pertenecen exclusivamente al control
+    /// global y la participación se cambia con setMultiFlashParticipation.
     func setDraftOperatingMode(_ group: GodoxGroup, mode: GroupOperatingMode) {
         guard canChangeOperatingMode(group),
-              mode == .manual || mode == .autoTTL,
+              availableOperatingModes(for: group).contains(mode),
               var state = groups[group],
               state.draft.operatingMode != mode else {
             return
         }
+
+        guard mode != .multi, state.draft.operatingMode != .multi else { return }
 
         var candidate = state.draft
         candidate.operatingMode = mode
         if mode == .autoTTL {
             candidate.compensationByte = 0
         }
-        guard isValidForTransmission(group, snapshot: candidate) else { return }
 
+        guard isValidForTransmission(group, snapshot: candidate) else { return }
         state.draft = candidate
         state.lastKnownActiveMode = mode
+        state.draftRestoresAfterMulti = false
         groups[group] = state
         groupConfigurations[group]?.isEnabledOnRadio = true
         draftDidChange()
@@ -1091,15 +1650,47 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         let normalizedPower = nextSnapshot.power == state.draft.power
             ? nil
             : nextSnapshot.power
-        if enabled {
+        let wasMulti = state.draft.operatingMode == .multi
+        if enabled, nextSnapshot.operatingMode == .multi {
+            if state.lastKnownActiveMode == nil {
+                state.lastKnownActiveMode = .manual
+            }
+        } else if enabled {
             state.lastKnownActiveMode = nextSnapshot.operatingMode
-        } else {
+            state.draftRestoresAfterMulti = false
+        } else if !wasMulti {
             state.lastKnownActiveMode = state.draft.operatingMode
+            state.draftRestoresAfterMulti = false
         }
         state.draft = nextSnapshot
         groups[group] = state
         groupConfigurations[group]?.isEnabledOnRadio = enabled
         noteCommonRangeNormalization(normalizedPower, for: group)
+        if enabled, nextSnapshot.operatingMode == .multi,
+           let safePower = allowedMultiFlashPowers.first {
+            let nextPower = allowedMultiFlashPowers.contains(multiFlashDraft.power)
+                ? multiFlashDraft.power
+                : safePower
+            let maximumCount = maximumMultiFlashCount(
+                power: nextPower,
+                hertz: multiFlashDraft.hertz,
+                groups: multiFlashGroups
+            )
+            if let normalized = MultiFlashSettings(
+                power: nextPower,
+                count: min(multiFlashDraft.count, maximumCount),
+                hertz: multiFlashDraft.hertz
+            ), normalized != multiFlashDraft {
+                if normalized.power != multiFlashDraft.power {
+                    addActivity(
+                        .info,
+                        "Multi se ajustó a \(safePower.label), el mínimo común de sus flashes"
+                    )
+                }
+                noteMultiFlashCountNormalization(from: multiFlashDraft, to: normalized)
+                multiFlashDraft = normalized
+            }
+        }
         draftDidChange()
     }
 
@@ -1111,12 +1702,27 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         var candidate = state.draft
         if enabled {
             guard candidate.operatingMode == .off else { return nil }
-            let restoredMode = state.lastKnownActiveMode ?? .manual
-            guard restoredMode == .manual || restoredMode == .autoTTL else { return nil }
+            let restoredMode: GroupOperatingMode
+            if !multiFlashGroups.isEmpty {
+                guard supportsMultiFlash(group) else { return nil }
+                restoredMode = .multi
+            } else if state.lastKnownActiveMode == .autoTTL {
+                restoredMode = .autoTTL
+            } else {
+                restoredMode = .manual
+            }
+            guard availableOperatingModes(for: group).contains(restoredMode) else { return nil }
             candidate.operatingMode = restoredMode
+            if restoredMode == .autoTTL || restoredMode == .multi {
+                candidate.compensationByte = 0
+            }
         } else {
-            guard candidate.operatingMode == .manual ||
-                    candidate.operatingMode == .autoTTL else { return nil }
+            guard availableOperatingModes(for: group).contains(candidate.operatingMode) else {
+                return nil
+            }
+            if candidate.operatingMode == .multi, multiFlashGroups.count <= 1 {
+                return nil
+            }
             candidate.operatingMode = .off
         }
 
@@ -1232,6 +1838,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         let previousReconfigurationState = isReconfiguringWorkspace
         let previousActivePresetID = activePresetID
         let previousAutomaticSuppression = automaticApplySuppressedForLocalPreset
+        let previousMultiFlashDraft = multiFlashDraft
         let requestedVisibleGroups = previousReconfigurationState
             ? orderedGroups.filter {
                 !previousWorkingGroups.contains($0) || previousVisibleGroups.contains($0)
@@ -1297,12 +1904,60 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                   ),
                   state.draft.modelingState.isValidForWrite,
                   state.draft.operatingMode == .manual ||
+                    state.draft.operatingMode == .autoTTL ||
+                    state.draft.operatingMode == .multi ||
                     state.draft.operatingMode == .off,
                   !state.draft.beepEnabled || capability.supportsBeepDraft else {
                 addActivity(.warning, "Los valores actuales de \(group.label) no son compatibles")
                 return false
             }
+            if state.draft.operatingMode == .multi,
+               (!profile.supportedMultiGroups.contains(group) || capability.multiPowerScale.isEmpty) {
+                addActivity(.warning, "El grupo \(group.label) no admite Multi en este perfil")
+                return false
+            }
             nextGroups[group] = state
+        }
+
+        var restoredSceneForWorkspaceChange = false
+        let retainedMultiGroups = orderedGroups.filter {
+            nextGroups[$0]?.draft.operatingMode == .multi
+        }
+        if retainedMultiGroups.isEmpty {
+            for group in orderedGroups {
+                guard var state = nextGroups[group],
+                      let configuration = nextConfigurations[group] else { return false }
+                if state.draftRestoresAfterMulti {
+                    state.draft.operatingMode = state.lastKnownActiveMode == .autoTTL
+                        ? .autoTTL
+                        : .manual
+                    if state.draft.operatingMode == .autoTTL {
+                        state.draft.compensationByte = 0
+                    }
+                    restoredSceneForWorkspaceChange = true
+                }
+                state.draftRestoresAfterMulti = false
+                let capability = ResolvedGroupCapability.resolve(
+                    configuration: configuration,
+                    profile: profile
+                )
+                guard let minimum = capability.minimumManualDenominator,
+                      ManualPower.isSupported(
+                          state.draft.power,
+                          minimumDenominator: minimum
+                      ),
+                      state.draft.modelingState.isValidForWrite,
+                      state.draft.operatingMode == .manual ||
+                        state.draft.operatingMode == .autoTTL ||
+                        state.draft.operatingMode == .off,
+                      !state.draft.beepEnabled || capability.supportsBeepDraft else {
+                    addActivity(.warning, "No se pudo restaurar la escena previa de \(group.label)")
+                    return false
+                }
+                nextGroups[group] = state
+                nextConfigurations[group]?.isEnabledOnRadio =
+                    state.draft.isEnabledOnRadio
+            }
         }
 
         transmitterProfile = profile
@@ -1310,6 +1965,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         visibleGroups = nextVisibleGroups
         groupConfigurations = nextConfigurations
         groups = nextGroups
+        guard normalizeMultiFlashDraftForCurrentGroups() else { return false }
 
         hasCompletedOnboarding = true
         isReconfiguringWorkspace = false
@@ -1321,6 +1977,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             visibleGroups = previousVisibleGroups
             groupConfigurations = previousConfigurations
             groups = previousGroups
+            multiFlashDraft = previousMultiFlashDraft
             hasCompletedOnboarding = previousOnboardingState
             isReconfiguringWorkspace = previousReconfigurationState
             activePresetID = previousActivePresetID
@@ -1339,6 +1996,9 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             .success,
             "Espacio de trabajo listo · \(orderedGroups.map(\.label).joined(separator: ", "))"
         )
+        if restoredSceneForWorkspaceChange {
+            addActivity(.info, "Multi global se desactivó y se restauró la escena previa")
+        }
         scheduleAutomaticApplyIfNeeded()
         return true
     }
@@ -1362,6 +2022,28 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
         let presetGlobalBeep = preset.groups.contains {
             preset.states[$0]?.beepEnabled == true
+        }
+        let presetMultiGroups = preset.groups.filter {
+            preset.states[$0]?.operatingMode == .multi
+        }
+        if !presetMultiGroups.isEmpty,
+           preset.groups.contains(where: {
+               let mode = preset.states[$0]?.operatingMode
+               return mode == .manual || mode == .autoTTL
+           }) {
+            return "Multi es global; el preset mezcla grupos Multi con M/TTL"
+        }
+        if !presetMultiGroups.isEmpty,
+           !multiPowerScale(for: presetMultiGroups).contains(preset.multiFlashSettings.power) {
+            return "La potencia Multi del preset no coincide con los flashes configurados"
+        }
+        if !presetMultiGroups.isEmpty,
+           preset.multiFlashSettings.count > maximumMultiFlashCount(
+               power: preset.multiFlashSettings.power,
+               hertz: preset.multiFlashSettings.hertz,
+               groups: presetMultiGroups
+           ) {
+            return "Los destellos Multi del preset superan el límite seguro de sus flashes"
         }
         for group in preset.groups {
             guard var snapshot = preset.states[group] else {
@@ -1395,11 +2077,23 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             snapshot.beepEnabled = globalBeepEnabled
             return (group, snapshot)
         })
+        let lastKnownActiveModes = Dictionary(uniqueKeysWithValues: workingGroups.compactMap {
+            group -> (GodoxGroup, GroupOperatingMode)? in
+            guard let mode = groupDraft(group).lastKnownActiveMode,
+                  mode == .manual || mode == .autoTTL else { return nil }
+            return (group, mode)
+        })
+        let groupsRestoredAfterMulti = Set(workingGroups.filter {
+            groupDraft($0).draftRestoresAfterMulti
+        })
         guard let preset = StudioPreset(
             name: trimmed,
             profileID: transmitterProfile.id,
             groups: workingGroups,
-            states: states
+            states: states,
+            lastKnownActiveModes: lastKnownActiveModes,
+            groupsRestoredAfterMulti: groupsRestoredAfterMulti,
+            multiFlashSettings: multiFlashDraft
         ) else {
             addActivity(.error, "No se pudo preparar el preset")
             return false
@@ -1456,6 +2150,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         let previousActivePresetID = activePresetID
         let previousAutomaticSuppression = automaticApplySuppressedForLocalPreset
         let previousGlobalBeepEnabled = globalBeepEnabled
+        let previousMultiFlashBaseline = multiFlashBaseline
+        let previousMultiFlashDraft = multiFlashDraft
         let presetGlobalBeep = preset.groups.contains {
             preset.states[$0]?.beepEnabled == true
         }
@@ -1463,21 +2159,33 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             guard var snapshot = preset.states[group], var state = groups[group] else { continue }
             snapshot.beepEnabled = presetGlobalBeep
             state.draft = snapshot
-            if snapshot.operatingMode != .off {
+            if let storedMode = preset.lastKnownActiveModes[group] {
+                state.lastKnownActiveMode = storedMode
+            } else if snapshot.operatingMode == .manual || snapshot.operatingMode == .autoTTL {
                 state.lastKnownActiveMode = snapshot.operatingMode
             }
+            state.draftRestoresAfterMulti =
+                preset.groupsRestoredAfterMulti.contains(group)
             if phase == .idle {
                 state.baseline = snapshot
+                state.baselineLastKnownActiveMode = state.lastKnownActiveMode
+                state.baselineRestoresAfterMulti = state.draftRestoresAfterMulti
                 state.confirmation = .unread
             }
             groups[group] = state
             groupConfigurations[group]?.isEnabledOnRadio = snapshot.isEnabledOnRadio
         }
         globalBeepEnabled = presetGlobalBeep
+        multiFlashDraft = preset.multiFlashSettings
+        if phase == .idle {
+            multiFlashBaseline = preset.multiFlashSettings
+        }
         activePresetID = preset.id
         guard persistStudioLibrary() else {
             groups = previousGroups
             globalBeepEnabled = previousGlobalBeepEnabled
+            multiFlashBaseline = previousMultiFlashBaseline
+            multiFlashDraft = previousMultiFlashDraft
             activePresetID = previousActivePresetID
             automaticApplySuppressedForLocalPreset = previousAutomaticSuppression
             addActivity(.error, "No se pudo cargar el preset en el espacio de trabajo")
@@ -1511,6 +2219,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         let previousConfiguration = configuration
         let previousState = groups[group]
         let previousActivePresetID = activePresetID
+        let previousMultiFlashDraft = multiFlashDraft
         if assigned {
             configuration.assignedFlashModelIDs.insert(modelID)
         } else {
@@ -1534,6 +2243,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         if hasCompletedOnboarding, workingGroups.contains(group),
            let state = groups[group],
            (capability.powerScale.isEmpty ||
+            (state.draft.operatingMode == .multi && capability.multiPowerScale.isEmpty) ||
             (state.draft.beepEnabled && !capability.supportsBeepDraft)) {
             addActivity(.warning, "Los valores actuales de \(group.label) no admiten ese modelo")
             scheduleAutomaticApplyIfNeeded()
@@ -1547,10 +2257,20 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             groups[group] = state
             addActivity(.warning, "El borrador de \(group.label) se ajustó al rango común \(first.label)")
         }
+        if groups[group]?.draft.operatingMode == .multi,
+           !normalizeMultiFlashDraftForCurrentGroups() {
+            groupConfigurations[group] = previousConfiguration
+            if let previousState { groups[group] = previousState }
+            multiFlashDraft = previousMultiFlashDraft
+            addActivity(.warning, "No se pudo conservar un ajuste Multi seguro")
+            scheduleAutomaticApplyIfNeeded()
+            return
+        }
         activePresetID = nil
         if hasCompletedOnboarding, !persistStudioLibrary() {
             groupConfigurations[group] = previousConfiguration
             if let previousState { groups[group] = previousState }
+            multiFlashDraft = previousMultiFlashDraft
             activePresetID = previousActivePresetID
             addActivity(.warning, "La configuración cambió, pero no pudo guardarse")
             scheduleAutomaticApplyIfNeeded()
@@ -1566,11 +2286,40 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             return
         }
         cancelAutomaticApply()
-        guard let restoration = physicalSafetyState.prepareRestoration(for: group),
-              var state = groups[group] else { return }
-        state.draft = restoration
-        groups[group] = state
-        addActivity(.warning, "Ajuste anterior preparado para recuperar \(group.label); falta pulsar Aplicar")
+        guard restorationPoints[group] != nil,
+              physicalSafetyState.prepareRestoration(for: group) != nil else { return }
+
+        let orderedGroups = GodoxGroup.allCases.filter { restorationPoints[$0] != nil }
+        for restorationGroup in orderedGroups {
+            guard let point = restorationPoints[restorationGroup],
+                  var state = groups[restorationGroup] else { continue }
+            let restoration = point.snapshot
+            state.draft = restoration
+            if let underlyingMode = point.multiUnderlyingMode {
+                state.lastKnownActiveMode = underlyingMode
+            } else if restoration.operatingMode == .manual ||
+                        restoration.operatingMode == .autoTTL {
+                state.lastKnownActiveMode = restoration.operatingMode
+            }
+            state.draftRestoresAfterMulti = point.restoresAfterMulti
+            groups[restorationGroup] = state
+        }
+
+        if let globalSnapshot = restorationPoints.values.first?.globalSnapshot,
+           let settings = MultiFlashSettings(
+               countByte: globalSnapshot.multiCount,
+               hertzByte: globalSnapshot.multiHertz,
+               powerByte: globalSnapshot.multiPowerByte
+           ) {
+            globalBeepEnabled = globalSnapshot.beepEnabled
+            multiFlashDraft = settings
+            isGlobalStandbyEnabled = globalSnapshot.standbyEnabled
+        }
+        let labels = orderedGroups.map(\.label).joined(separator: ", ")
+        addActivity(
+            .warning,
+            "Escena segura preparada para recuperar \(labels); falta pulsar Aplicar"
+        )
     }
 
     /// Disparo global explícito. El protocolo Test viaja por FFF1 sin
@@ -1589,7 +2338,12 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             self.isTestPending = false
             self.invalidateSession("La orden Test no fue entregada a CoreBluetooth en 3 segundos")
         }
-        addActivity(.warning, "Enviando disparo Test global")
+        addActivity(
+            .warning,
+            multiFlashGroups.isEmpty
+                ? "Enviando disparo Test global"
+                : "Enviando prueba de secuencia Multi global"
+        )
         client.sendTest(SafeGodoxProtocol.testPayload(now: Date()))
     }
 
@@ -2011,12 +2765,44 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     private func finishApplySequence() {
         let completedPurpose = applySequencePurpose
         let completedCount = applySequenceTotalCount
+        if !restorationPoints.isEmpty {
+            guard let sessionDeviceID else {
+                failApplySequence("No se pudo identificar el radio para cerrar la operación segura")
+                return
+            }
+            let previousSafetyState = physicalSafetyState
+            let didComplete: Bool
+            switch applySequenceJournalKind {
+            case .forward:
+                didComplete = physicalSafetyState.completeSuccessfulOperation(
+                    deviceID: sessionDeviceID
+                )
+            case .restoration:
+                didComplete = physicalSafetyState.completeRestoration(
+                    deviceID: sessionDeviceID
+                )
+            case .none:
+                didComplete = false
+            }
+            guard didComplete else {
+                failApplySequence("No se pudo cerrar el lote de recuperación de la escena")
+                return
+            }
+            guard restorationStore.clear() else {
+                physicalSafetyState = previousSafetyState
+                failApplySequence(
+                    "El radio confirmó la escena, pero no se pudo cerrar su recuperación local"
+                )
+                return
+            }
+        }
         queuedGroupChanges.removeAll()
         activeGroupChange = nil
         applySequenceCompletedCount = 0
         applySequenceTotalCount = 0
         applySequenceStatus = nil
         applySequencePurpose = .pendingChanges
+        applySequenceJournalKind = .none
         isSynchronizingValues = false
         phase = .ready
         if completedPurpose.synchronizesValues {
@@ -2036,6 +2822,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         applySequenceTotalCount = 0
         applySequenceStatus = nil
         applySequencePurpose = .pendingChanges
+        applySequenceJournalKind = .none
         isSynchronizingValues = false
     }
 
@@ -2059,6 +2846,13 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             addActivity(.warning, "Hay una recuperación pendiente; no se descartó el ajuste preparado")
             return
         }
+        guard canDiscardPendingChanges else {
+            addActivity(
+                .warning,
+                "El cambio global proviene del workspace y debe aplicarse al radio"
+            )
+            return
+        }
         cancelAutomaticApply()
         automaticApplySuppressedForLocalPreset = false
         for group in transmitterProfile.supportedGroups {
@@ -2067,6 +2861,15 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             groups[group] = state
             groupConfigurations[group]?.isEnabledOnRadio = state.draft.isEnabledOnRadio
         }
+        let safeMultiBeforeDiscard = multiFlashDraft
+        multiFlashDraft = multiFlashBaseline
+        if !normalizeMultiFlashDraftForCurrentGroups() {
+            multiFlashDraft = safeMultiBeforeDiscard
+            addActivity(
+                .warning,
+                "Los cambios de grupo se descartaron, pero Multi conservó su ajuste seguro pendiente"
+            )
+        }
         globalBeepEnabled = workingGroups.contains {
             groups[$0]?.draft.beepEnabled == true
         }
@@ -2074,7 +2877,12 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         if hasCompletedOnboarding, !persistStudioLibrary() {
             addActivity(.warning, "Los cambios se descartaron, pero el estado local no pudo guardarse")
         }
-        addActivity(.info, "Cambios descartados")
+        addActivity(
+            multiFlashDraft == multiFlashBaseline ? .info : .warning,
+            multiFlashDraft == multiFlashBaseline
+                ? "Cambios descartados"
+                : "Multi conservó un ajuste seguro pendiente para los flashes configurados"
+        )
     }
 
     func applyPendingChanges() {
@@ -2089,11 +2897,48 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
 
         let targetGroups = groupsEligibleForApply
         let desiredGlobal = desiredGlobalSnapshot()
-        if hasConfirmedGlobalSnapshot, desiredGlobal != globalRadioSnapshot {
+        if !restorationPoints.isEmpty {
+            let requiredGroups = Set(restorationPoints.keys)
+            guard !targetGroups.isEmpty,
+                  Set(targetGroups) == requiredGroups,
+                  let firstGroup = targetGroups.first,
+                  let point = restorationPoints[firstGroup] else {
+                addActivity(
+                    .error,
+                    "La recuperación no pudo reconstruir todos los grupos de la escena"
+                )
+                return
+            }
+            let recoveryGlobal = point.globalSnapshot ?? desiredGlobal
+            if point.globalSnapshot == nil {
+                addActivity(
+                    .warning,
+                    "El registro anterior no incluía A0; se reconstruyó un estado global conservador"
+                )
+            }
             let followup = GlobalControlFollowup(
                 groups: targetGroups,
                 purpose: .pendingChanges,
-                forceWrite: false
+                forceWrite: false,
+                restorationGlobalSnapshot: recoveryGlobal
+            )
+            if !submitGlobalControl(
+                recoveryGlobal,
+                purpose: .pendingChanges,
+                followup: followup
+            ) {
+                addActivity(.error, "No se pudo preparar A0 para la recuperación segura")
+            }
+        } else if desiredGlobal != globalRadioSnapshot ||
+                    (!hasConfirmedGlobalSnapshot && hasCompletedOnboarding) {
+            let restorationGlobal = hasConfirmedGlobalSnapshot
+                ? globalRadioSnapshot
+                : desiredGlobal
+            let followup = targetGroups.isEmpty ? nil : GlobalControlFollowup(
+                groups: targetGroups,
+                purpose: .pendingChanges,
+                forceWrite: false,
+                restorationGlobalSnapshot: restorationGlobal
             )
             if !submitGlobalControl(
                 desiredGlobal,
@@ -2102,11 +2947,14 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             ) {
                 addActivity(.error, "No se pudo preparar el estado global previo a los cambios")
             }
-        } else {
+        } else if !targetGroups.isEmpty {
             startApplySequence(
                 groups: targetGroups,
                 purpose: .pendingChanges,
-                forceWrite: false
+                forceWrite: false,
+                restorationGlobalSnapshot: hasConfirmedGlobalSnapshot
+                    ? globalRadioSnapshot
+                    : nil
             )
         }
     }
@@ -2136,13 +2984,15 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
         harmonizeWorkingGroupBeepDrafts()
         isSynchronizingValues = true
+        let desiredGlobal = desiredGlobalSnapshot()
         let followup = GlobalControlFollowup(
             groups: workingGroups,
             purpose: purpose,
-            forceWrite: true
+            forceWrite: true,
+            restorationGlobalSnapshot: desiredGlobal
         )
         guard submitGlobalControl(
-            desiredGlobalSnapshot(),
+            desiredGlobal,
             purpose: .valueSynchronization(purpose),
             followup: followup
         ) else {
@@ -2163,6 +3013,10 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         snapshot.modelingLightEnabled = workingGroups.contains { group in
             groups[group]?.draft.modeling != .off
         }
+        snapshot.multiEnabled = !multiFlashGroups.isEmpty
+        snapshot.multiCount = multiFlashDraft.countByte
+        snapshot.multiHertz = multiFlashDraft.hertzByte
+        snapshot.multiPowerByte = multiFlashDraft.powerByte
         snapshot.standbyEnabled = isGlobalStandbyEnabled
         return snapshot
     }
@@ -2198,6 +3052,22 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
 
         do {
             let frame = try SafeGodoxProtocol.globalFrame(snapshot: snapshot)
+            if let followup,
+               restorationPoints.isEmpty || applySequenceJournalKind == .forward {
+                let preflightChanges = try makeQueuedGroupChanges(
+                    groups: followup.groups,
+                    forceWrite: followup.forceWrite,
+                    restorationGlobalSnapshot: followup.restorationGlobalSnapshot,
+                    isExactRestoration: false
+                )
+                guard prepareForwardJournal(for: preflightChanges) else {
+                    addActivity(
+                        .error,
+                        "No se pudo guardar la escena anterior completa; no se transmitió A0"
+                    )
+                    return false
+                }
+            }
             let previousSnapshot = globalRadioSnapshot
             let intentID = UUID()
             globalRadioSnapshot = snapshot
@@ -2217,9 +3087,9 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             scheduleGlobalControlTimeout(for: intentID)
             switch purpose {
             case .valueSynchronization:
-                addActivity(.info, "Sincronizando beep, modelado y standby globales")
+                addActivity(.info, "Sincronizando beep, modelado, Multi y standby globales")
             case .pendingChanges:
-                addActivity(.info, "Actualizando el estado global antes de los grupos")
+                addActivity(.info, "Actualizando el estado global y Multi antes de los grupos")
             case .beep:
                 addActivity(.info, "Enviando beep global \(snapshot.beepEnabled ? "on" : "off")")
             case .standby:
@@ -2238,35 +3108,27 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     private func startApplySequence(
         groups targetGroups: [GodoxGroup],
         purpose: ApplySequencePurpose,
-        forceWrite: Bool
+        forceWrite: Bool,
+        restorationGlobalSnapshot: GlobalRadioSnapshot?
     ) {
         do {
-            let changes = try targetGroups.map { group -> QueuedGroupChange in
-                let snapshot = groupDraft(group).draft
-                let isExactRestoration = sessionDeviceID.map {
-                    physicalSafetyState.permitsOnlyExactRestoration(
-                        group: group,
-                        deviceID: $0,
-                        snapshot: snapshot
-                    )
-                } ?? false
-                let capabilityMinimum = resolvedCapability(for: group)
-                    .minimumManualDenominator ?? 0
-                let frame = try SafeGodoxProtocol.manualGroupFrame(
-                    group: group,
-                    snapshot: snapshot,
-                    minimumManualDenominator: isExactRestoration
-                        ? 512
-                        : capabilityMinimum
-                )
-                return QueuedGroupChange(
-                    group: group,
-                    snapshot: snapshot,
-                    frame: frame,
-                    forceWrite: forceWrite
-                )
-            }
+            let isExactRestoration = !restorationPoints.isEmpty &&
+                applySequenceJournalKind != .forward
+            let changes = try makeQueuedGroupChanges(
+                groups: targetGroups,
+                forceWrite: forceWrite,
+                restorationGlobalSnapshot: restorationGlobalSnapshot,
+                isExactRestoration: isExactRestoration
+            )
             guard !changes.isEmpty else { return }
+            if isExactRestoration {
+                applySequenceJournalKind = .restoration
+            } else if !prepareForwardJournal(for: changes) {
+                failApplySequence(
+                    "No se pudo guardar la escena anterior completa; no se transmitió A1"
+                )
+                return
+            }
             queuedGroupChanges = changes
             activeGroupChange = nil
             applySequenceCompletedCount = 0
@@ -2287,6 +3149,96 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
     }
 
+    private func makeQueuedGroupChanges(
+        groups targetGroups: [GodoxGroup],
+        forceWrite: Bool,
+        restorationGlobalSnapshot: GlobalRadioSnapshot?,
+        isExactRestoration: Bool
+    ) throws -> [QueuedGroupChange] {
+        try targetGroups.map { group -> QueuedGroupChange in
+            let state = groupDraft(group)
+            let snapshot = state.draft
+            if isExactRestoration {
+                guard let sessionDeviceID,
+                      physicalSafetyState.permitsOnlyExactRestoration(
+                          group: group,
+                          deviceID: sessionDeviceID,
+                          snapshot: snapshot
+                      ) else {
+                    throw SafeGodoxProtocolError.invalidGroupSnapshot
+                }
+            }
+            let capabilityMinimum = resolvedCapability(for: group)
+                .minimumManualDenominator ?? 0
+            let frame = try SafeGodoxProtocol.manualGroupFrame(
+                group: group,
+                snapshot: snapshot,
+                minimumManualDenominator: isExactRestoration
+                    ? 512
+                    : capabilityMinimum,
+                underlyingMultiMode: isExactRestoration
+                    ? restorationPoints[group]?.multiUnderlyingMode
+                    : state.lastKnownActiveMode
+            )
+            let restorationSnapshot = isExactRestoration
+                ? snapshot
+                : state.baseline
+            let restorationRestoresAfterMulti = isExactRestoration
+                ? (restorationPoints[group]?.restoresAfterMulti ?? false)
+                : state.baselineRestoresAfterMulti
+            let restorationUnderlyingMultiMode: GroupOperatingMode?
+            if restorationSnapshot.operatingMode == .multi ||
+                restorationSnapshot.operatingMode == .off ||
+                restorationRestoresAfterMulti {
+                restorationUnderlyingMultiMode = isExactRestoration
+                    ? restorationPoints[group]?.multiUnderlyingMode
+                    : state.baselineLastKnownActiveMode
+            } else {
+                restorationUnderlyingMultiMode = nil
+            }
+            return QueuedGroupChange(
+                group: group,
+                snapshot: snapshot,
+                frame: frame,
+                forceWrite: forceWrite,
+                restorationSnapshot: restorationSnapshot,
+                restorationGlobalSnapshot: restorationGlobalSnapshot,
+                restorationUnderlyingMultiMode: restorationUnderlyingMultiMode,
+                restorationRestoresAfterMulti: restorationRestoresAfterMulti
+            )
+        }
+    }
+
+    private func prepareForwardJournal(for changes: [QueuedGroupChange]) -> Bool {
+        guard let sessionDeviceID, !changes.isEmpty else { return false }
+        var points: [GodoxGroup: GroupRestorationPoint] = [:]
+        for change in changes {
+            guard points[change.group] == nil else { return false }
+            points[change.group] = GroupRestorationPoint(
+                deviceID: sessionDeviceID,
+                snapshot: change.restorationSnapshot,
+                globalSnapshot: change.restorationGlobalSnapshot,
+                multiUnderlyingMode: change.restorationUnderlyingMultiMode,
+                restoresAfterMulti: change.restorationRestoresAfterMulti
+            )
+        }
+
+        if applySequenceJournalKind == .forward {
+            return restorationPoints == points
+        }
+        guard applySequenceJournalKind == .none,
+              restorationPoints.isEmpty,
+              physicalSafetyState.begin(points: points) else {
+            return false
+        }
+        guard restorationStore.save(points: points) else {
+            _ = physicalSafetyState.cancelUnsentOperation(points: points)
+            return false
+        }
+        applySequenceJournalKind = .forward
+        return true
+    }
+
     private func sendNextQueuedGroupChange() {
         guard activeGroupChange == nil,
               controlIntents.isEmpty,
@@ -2299,11 +3251,12 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
 
         let change = queuedGroupChanges.removeFirst()
-        guard let state = groups[change.group],
+        guard groups[change.group] != nil,
               canTransmit(
                   change.group,
                   snapshot: change.snapshot,
-                  forceWrite: change.forceWrite
+                  forceWrite: change.forceWrite,
+                  permitsJournaledForwardWrite: applySequenceJournalKind == .forward
               ),
               let sessionDeviceID,
               let sessionID else {
@@ -2325,29 +3278,6 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 )
             }
             return
-        }
-
-        if restorationPoints[change.group] == nil {
-            guard physicalSafetyState.begin(
-                group: change.group,
-                deviceID: sessionDeviceID,
-                baseline: state.baseline
-            ) else {
-                failApplySequence(
-                    "Otra operación física exige recuperación; se detuvo la secuencia"
-                )
-                return
-            }
-            guard let point = restorationPoints[change.group],
-                  restorationStore.save(group: change.group, point: point) else {
-                _ = physicalSafetyState.cancelUnsentOperation(
-                    group: change.group,
-                    deviceID: sessionDeviceID,
-                    baseline: state.baseline
-                )
-                failApplySequence("No se pudo guardar el ajuste anterior; no se transmitió")
-                return
-            }
         }
 
         activeGroupChange = change
@@ -2372,16 +3302,22 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     private func canTransmit(
         _ group: GodoxGroup,
         snapshot: ManualGroupSnapshot,
-        forceWrite: Bool = false
+        forceWrite: Bool = false,
+        permitsJournaledForwardWrite: Bool = false
     ) -> Bool {
         guard recoveryBlockReason == nil,
               let sessionDeviceID, let state = groups[group] else { return false }
         if !restorationPoints.isEmpty {
-            return physicalSafetyState.permitsOnlyExactRestoration(
-                group: group,
-                deviceID: sessionDeviceID,
-                snapshot: snapshot
-            )
+            if !permitsJournaledForwardWrite {
+                return physicalSafetyState.permitsOnlyExactRestoration(
+                    group: group,
+                    deviceID: sessionDeviceID,
+                    snapshot: snapshot
+                )
+            }
+            guard restorationPoints[group]?.deviceID == sessionDeviceID else {
+                return false
+            }
         }
 
         guard isValidForTransmission(group, snapshot: snapshot) else { return false }
@@ -2404,15 +3340,26 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
               snapshot.modelingState.isValidForWrite,
               snapshot.operatingMode == .autoTTL ||
                 snapshot.operatingMode == .manual ||
+                snapshot.operatingMode == .multi ||
                 snapshot.operatingMode == .off else {
             return false
+        }
+        if snapshot.operatingMode == .multi {
+            let nextMultiGroups = multiFlashGroups.filter { $0 != group } + [group]
+            guard supportsMultiFlash(group), !multiPowerScale(for: nextMultiGroups).isEmpty else {
+                return false
+            }
         }
         if snapshot.beepEnabled && !capability.supportsBeepDraft { return false }
         return true
     }
 
     private var physicalApplyBlockReason: String {
-        guard !pendingGroups.isEmpty else { return "No hay cambios pendientes" }
+        guard !pendingGroups.isEmpty else {
+            return hasPendingMultiFlashChange
+                ? "Revisa la configuración Multi antes de enviarla"
+                : "No hay cambios pendientes"
+        }
         if !restorationPoints.isEmpty {
             return "Hay una recuperación pendiente; prepara y aplica el ajuste anterior al radio original"
         }
@@ -2686,7 +3633,9 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 .success,
                 client.isSimulation
                     ? "Orden Test simulada · no se envió ningún comando físico"
-                    : "Orden Test entregada a CoreBluetooth · confirma el destello visualmente"
+                    : multiFlashGroups.isEmpty
+                        ? "Orden Test entregada a CoreBluetooth · confirma el destello visualmente"
+                        : "Orden Test entregada a CoreBluetooth · confirma visualmente la secuencia Multi"
             )
         case .control:
             break
@@ -2792,6 +3741,13 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             globalRadioSnapshot = snapshot
             globalBeepEnabled = snapshot.beepEnabled
             isGlobalStandbyEnabled = snapshot.standbyEnabled
+            if let confirmedMulti = MultiFlashSettings(
+                countByte: snapshot.multiCount,
+                hertzByte: snapshot.multiHertz,
+                powerByte: snapshot.multiPowerByte
+            ) {
+                multiFlashBaseline = confirmedMulti
+            }
             switch purpose {
             case .valueSynchronization:
                 addActivity(.success, "Estado global GATT aceptado")
@@ -2812,7 +3768,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 startApplySequence(
                     groups: followup.groups,
                     purpose: followup.purpose,
-                    forceWrite: followup.forceWrite
+                    forceWrite: followup.forceWrite,
+                    restorationGlobalSnapshot: followup.restorationGlobalSnapshot
                 )
             } else {
                 phase = .ready
@@ -2863,9 +3820,11 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
         state.baseline = snapshot
         state.draft = snapshot
-        if snapshot.operatingMode != .off {
+        if snapshot.operatingMode == .manual || snapshot.operatingMode == .autoTTL {
             state.lastKnownActiveMode = snapshot.operatingMode
         }
+        state.baselineLastKnownActiveMode = state.lastKnownActiveMode
+        state.baselineRestoresAfterMulti = state.draftRestoresAfterMulti
         state.confirmation = .radioResponded(Date())
         groups[group] = state
         groupConfigurations[group]?.isEnabledOnRadio = snapshot.isEnabledOnRadio
@@ -2876,21 +3835,6 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             )
         }
 
-        if restorationPoints[group] != nil, let sessionDeviceID {
-            guard restorationStore.clear() else {
-                failApplySequence(
-                    "El radio respondió, pero no se pudo cerrar la recuperación; se detuvo la secuencia"
-                )
-                return
-            }
-            guard physicalSafetyState.completeSuccessfulOperation(
-                group: group,
-                deviceID: sessionDeviceID
-            ) else {
-                failApplySequence("No se pudo cerrar el punto de recuperación del cambio")
-                return
-            }
-        }
         addActivity(.success, "Cambio aplicado y confirmado por el radio para \(group.label)")
         self.activeGroupChange = nil
         applySequenceCompletedCount += 1
@@ -3249,6 +4193,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
 
         let catalogIDs = Set(profile.flashCatalog.map(\.id))
+        var multiMinimumDenominators: [Int] = []
         for group in workspace.workingGroups {
             guard let stored = workspace.groupConfigurations[group],
                   stored.assignedFlashModelIDs.isSubset(of: catalogIDs) else {
@@ -3274,10 +4219,32 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                   stored.snapshot.modelingState.isValidForWrite,
                   stored.snapshot.operatingMode == .autoTTL ||
                     stored.snapshot.operatingMode == .manual ||
+                    stored.snapshot.operatingMode == .multi ||
                     stored.snapshot.operatingMode == .off,
                   !stored.snapshot.beepEnabled || capability.supportsBeepDraft else {
                 return false
             }
+            if stored.snapshot.operatingMode == .multi {
+                guard profile.supportedMultiGroups.contains(group),
+                      !capability.multiPowerScale.isEmpty,
+                      let denominator = capability.minimumManualDenominator else {
+                    return false
+                }
+                multiMinimumDenominators.append(denominator)
+            }
+        }
+        let activeModes = workspace.workingGroups.compactMap {
+            workspace.groupConfigurations[$0]?.snapshot.operatingMode
+        }
+        if activeModes.contains(.multi),
+           activeModes.contains(where: { $0 == .manual || $0 == .autoTTL }) {
+            return false
+        }
+        if let commonMinimum = multiMinimumDenominators.min() {
+            let commonScale = ManualPower.scale(minimumDenominator: commonMinimum).filter {
+                $0.decimalValue <= 80 && $0.decimalValue.isMultiple(of: 10)
+            }
+            guard commonScale.contains(workspace.multiFlashSettings.power) else { return false }
         }
         return true
     }
@@ -3299,7 +4266,9 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                   let configuration = groupConfigurations[group],
                   let stored = StudioWorkspaceGroup(
                       snapshot: state.draft,
-                      assignedFlashModelIDs: configuration.assignedFlashModelIDs
+                      assignedFlashModelIDs: configuration.assignedFlashModelIDs,
+                      lastKnownActiveMode: state.lastKnownActiveMode,
+                      restoresAfterMulti: state.draftRestoresAfterMulti
                   ) else {
                 return nil
             }
@@ -3311,7 +4280,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             profileID: transmitterProfile.id,
             workingGroups: workingGroups,
             visibleGroups: locallyVisible,
-            groupConfigurations: storedGroups
+            groupConfigurations: storedGroups,
+            multiFlashSettings: multiFlashDraft
         )
     }
 

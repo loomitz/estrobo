@@ -4,7 +4,19 @@ Todos los cambios relevantes de Estrobo se documentan aquí. Mientras el proyect
 
 ## Sin publicar
 
-- Ningún cambio registrado después de `0.1.0-beta.2`.
+### Añadido
+
+- Modo Multi global para grupos `A–E`, con potencia en pasos completos hasta `1/4`, `1–100` destellos, `1–100 Hz` y exposición mínima estimada redondeada hacia arriba a milésimas.
+- Persistencia retrocompatible de Multi en espacios de trabajo y presets.
+- Secuencia segura A0 → A1, cambios Multi A0-only y restauración fail-closed mediante un journal atómico de A0 + todos los A1 afectados, cubiertos por pruebas deterministas.
+
+### Cambiado
+
+- El botón Multi junto a Beep activa o desactiva el sistema y muestra u oculta la consola inline; no abre menú. Canales, Inspector y Matriz eliminan Multi del selector por grupo: los participantes muestran **MULTI · GLOBAL** y los no participantes aparecen desactivados mediante un overlay.
+- Multi usa A0 global y una escena A1 exclusiva limitada al workspace: al entrar convierte juntos todos los grupos activos compatibles y mantiene Off a los no participantes. Al salir, todos los grupos del workspace quedan activos en Manual; no se restaura la escena M/TTL/Off previa ni se envía A1 fuera del workspace.
+- A0 conserva la potencia Multi efectiva; cada A1 mantiene la potencia Manual de origen o usa `0x32` si venía de TTL.
+- Una tanda ya no elimina la recuperación al confirmar un grupo intermedio: conserva la escena completa hasta el último GATT + `FEC8` y puede restaurarla íntegra después de reiniciar.
+- Test identifica una secuencia Multi sin presentar la entrega Bluetooth como confirmación óptica.
 
 ## 0.1.0-beta.2 — 2026-08-06
 
