@@ -152,7 +152,7 @@ jobs:
       - validate
       - native
     runs-on: macos-15
-    timeout-minutes: 35
+    timeout-minutes: 40
     permissions:
       contents: read
     env:
