@@ -4,6 +4,13 @@ export default defineConfig({
   site: "https://estrobo.app",
   output: "static",
   trailingSlash: "always",
+  i18n: {
+    locales: ["es", "en"],
+    defaultLocale: "es",
+    routing: {
+      prefixDefaultLocale: false,
+    },
+  },
   devToolbar: {
     enabled: false,
   },

@@ -19,6 +19,7 @@ const softwareSchema = {
   softwareVersion: release.version,
   downloadUrl: releaseDownloads.dmg,
   url: "https://estrobo.app",
+  inLanguage: "es",
   description,
   offers: {
     "@type": "Offer",
@@ -28,7 +29,7 @@ const softwareSchema = {
 };
 ---
 
-<BaseLayout title={title} description={description} pageClass="home-page">
+<BaseLayout title={title} description={description} canonicalPath="/" alternatePath="/en/" pageClass="home-page">
   <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(softwareSchema)}></script>
   <SiteHeader active="home" />
 

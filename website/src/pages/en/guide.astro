@@ -1,0 +1,289 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteHeader from "../../components/SiteHeader.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
+import DownloadButton from "../../components/DownloadButton.astro";
+import { appImages } from "../../config/app-images";
+import { release, releaseDownloads } from "../../config/release";
+
+const title = "User Guide — Estrobo";
+const description = "Install Estrobo, set up your groups, and connect a compatible Bluetooth-enabled Godox trigger with this step-by-step guide.";
+---
+
+<BaseLayout title={title} description={description} locale="en" canonicalPath="/en/guide/" alternatePath="/guia/" pageClass="guide-page">
+  <SiteHeader active="guide" locale="en" />
+
+  <main id="contenido">
+    <header class="guide-hero">
+      <div class="guide-hero-copy" data-reveal>
+        <p class="eyebrow">User Guide · Beta {release.version}</p>
+        <h1>From download<br />to your first adjustment.</h1>
+        <p>Install Estrobo like any other Mac app, set up your workspace, and sync knowing exactly what will change.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#instalar"><i class="ph ph-download-simple" aria-hidden="true"></i><span>View installation</span></a>
+          <a class="text-link text-link-light" href="#requisitos">View requirements <i class="ph ph-arrow-down" aria-hidden="true"></i></a>
+        </div>
+      </div>
+      <figure class="guide-hero-image" data-reveal>
+        <img src={appImages.primerInicio.src} srcset={appImages.primerInicio.srcset} sizes="(max-width: 68rem) 100vw, 68vw" alt="Estrobo first-launch setup screen" width="2774" height="2122" fetchpriority="high" />
+        <figcaption>Actual public release screenshot · simulated transport</figcaption>
+      </figure>
+    </header>
+
+    <a class="guide-progress" href="#indice-guia" data-guide-progress aria-label="Back to the guide index">
+      <span data-guide-progress-count>01 of 07</span>
+      <strong data-guide-progress-label>Before you start</strong>
+      <i class="ph ph-list" aria-hidden="true"></i>
+    </a>
+
+    <div class="guide-shell">
+      <aside class="guide-toc" id="indice-guia" aria-label="Guide contents">
+        <p>In this guide</p>
+        <nav aria-label="Guide sections" data-guide-toc>
+          <a href="#requisitos" data-guide-link data-step="01 of 07" data-label="Before you start"><span>01</span> Before you start</a>
+          <a href="#instalar" data-guide-link data-step="02 of 07" data-label="Install Estrobo"><span>02</span> Install Estrobo</a>
+          <a href="#configurar" data-guide-link data-step="03 of 07" data-label="Set up groups"><span>03</span> Set up groups</a>
+          <a href="#conectar" data-guide-link data-step="04 of 07" data-label="Connect the trigger"><span>04</span> Connect the trigger</a>
+          <a href="#sincronizar" data-guide-link data-step="05 of 07" data-label="Understand Sync"><span>05</span> Understand Sync</a>
+          <a href="#controles" data-guide-link data-step="06 of 07" data-label="Adjust flashes"><span>06</span> Adjust flashes</a>
+          <a href="#problemas" data-guide-link data-step="07 of 07" data-label="Troubleshoot"><span>07</span> Troubleshoot</a>
+        </nav>
+      </aside>
+
+      <article class="guide-content">
+        <section class="guide-section" data-reveal>
+          <p id="requisitos" class="guide-kicker">01 · Before you start</p>
+          <h2>Prepare your Mac and trigger.</h2>
+          <p>Estrobo connects over Bluetooth to a <strong>compatible trigger</strong>. The flashes continue to receive commands through the trigger’s own radio system.</p>
+
+          <dl class="requirements-list">
+            <div><dt><i class="ph ph-laptop" aria-hidden="true"></i> System</dt><dd>macOS 13 or later, on Apple Silicon or Intel.</dd></div>
+            <div><dt><i class="ph ph-bluetooth" aria-hidden="true"></i> Bluetooth</dt><dd>Available on the Mac, with permission granted to Estrobo.</dd></div>
+            <div><dt><i class="ph ph-broadcast" aria-hidden="true"></i> Trigger</dt><dd>Built-in Bluetooth and a compatible BLE/GATT profile.</dd></div>
+            <div><dt><i class="ph ph-plugs" aria-hidden="true"></i> Exclusive connection</dt><dd>Quit Godox Flash or any other connected app; the trigger supports only one Bluetooth connection at a time.</dd></div>
+          </dl>
+
+          <div class="guide-callout guide-callout-info">
+            <i class="ph ph-test-tube" aria-hidden="true"></i>
+            <div><strong>Test setup</strong><p>Testing was performed with a Godox X3Pro for Sony and Godox AD400Pro II flashes.</p></div>
+          </div>
+        </section>
+
+        <section class="guide-section" data-reveal>
+          <p id="instalar" class="guide-kicker">02 · Install Estrobo</p>
+          <h2>Drag Estrobo to Applications.</h2>
+          <p>Download the official DMG, open it, and drag Estrobo to Applications. This version is signed with Developer ID and notarized by Apple, so you do not need Terminal or changes to your security settings to install it.</p>
+
+          <div class="guide-install-download">
+            <DownloadButton label={`Download DMG ${release.version}`} locale="en" className="button button-dark button-large" />
+          </div>
+
+          <ol class="numbered-steps">
+            <li><span>1</span><div><strong>Open the downloaded DMG.</strong><p>macOS will mount a disk image containing Estrobo and a shortcut to Applications.</p></div></li>
+            <li><span>2</span><div><strong>Drag Estrobo to Applications.</strong><p>Drag <code>estrobo.app</code> to the Applications folder on your Mac.</p></div></li>
+            <li><span>3</span><div><strong>Eject the disk image and open Estrobo.</strong><p>Eject the installer, then open the app from Applications, Launchpad, or Spotlight.</p></div></li>
+            <li><span>4</span><div><strong>Grant Bluetooth access.</strong><p>macOS will request permission the first time Estrobo needs it.</p></div></li>
+          </ol>
+
+          <details class="verification-details">
+            <summary>Verify the download manually (optional) <i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div>
+              <p>Also download <code>SHA256SUMS</code> and the manifest from the same release. Keep the DMG and those two files together in Downloads.</p>
+              <div class="release-files">
+                <a href={releaseDownloads.checksums}><i class="ph ph-fingerprint" aria-hidden="true"></i><span>Checksums<small>{release.checksumName}</small></span><i class="ph ph-download-simple" aria-hidden="true"></i></a>
+                <a href={releaseDownloads.manifest}><i class="ph ph-brackets-curly" aria-hidden="true"></i><span>Manifest<small>{release.manifestName}</small></span><i class="ph ph-download-simple" aria-hidden="true"></i></a>
+              </div>
+              <div class="code-block">
+                <div><span>Terminal</span><button class="copy-command" type="button" data-copy-command><i class="ph ph-copy" aria-hidden="true"></i><span data-copy-label aria-live="polite">Copy command</span></button></div>
+                <pre><code data-command>cd ~/Downloads
+shasum -a 256 -c SHA256SUMS</code></pre>
+              </div>
+              <p>Verification succeeds when both the DMG and manifest report <strong>OK</strong>.</p>
+            </div>
+          </details>
+        </section>
+
+        <section class="guide-section guide-section-media" data-reveal>
+          <div class="guide-section-copy">
+            <p id="configurar" class="guide-kicker">03 · Set up groups</p>
+            <h2>Define your workspace before connecting.</h2>
+            <ol class="plain-steps">
+              <li>Review the trigger’s group compatibility profile.</li>
+              <li>Add the groups you actually use.</li>
+              <li>Assign at least one flash model to each group.</li>
+              <li>Check the common power range calculated by Estrobo.</li>
+              <li>Save and continue.</li>
+            </ol>
+            <p class="precise-note"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i> The values shown are the local state Estrobo will send when it connects.</p>
+          </div>
+          <figure>
+            <img src={appImages.primerInicio.src} srcset={appImages.primerInicio.srcset} sizes="(max-width: 44rem) calc(100vw - 2.5rem), 52vw" alt="Selecting groups and flash models during first launch" width="2774" height="2122" loading="lazy" />
+            <figcaption>The safe range is limited to what the assigned models share.</figcaption>
+          </figure>
+        </section>
+
+        <section class="guide-section guide-section-media media-reverse" data-reveal>
+          <div class="guide-section-copy">
+            <p id="conectar" class="guide-kicker">04 · Connect the trigger</p>
+            <h2>Find, identify, and sync.</h2>
+            <ol class="plain-steps">
+              <li>Turn on Bluetooth on the trigger and quit any other connected app.</li>
+              <li>Click <strong>Find triggers</strong>.</li>
+              <li>Compare the name, signal strength, and UUID suffix before choosing.</li>
+              <li>Enter the <strong>six-digit Radio Code</strong>.</li>
+              <li>Turn on Remember only if you accept storing that code locally and unencrypted.</li>
+              <li>Click <strong>Connect and sync</strong> and wait for the Ready status.</li>
+            </ol>
+            <p class="precise-note"><i class="ph ph-shield-warning" aria-hidden="true"></i> The Radio Code is a six-digit local PIN, not a strong credential. Do not reuse a personal PIN.</p>
+          </div>
+          <figure>
+            <img src={appImages.conexion.src} srcset={appImages.conexion.srcset} sizes="(max-width: 44rem) calc(100vw - 2.5rem), 52vw" alt="Estrobo screen for finding a trigger and entering the six-digit Radio Code" width="2774" height="2122" loading="lazy" />
+            <figcaption>The name, RSSI, and UUID can help distinguish triggers, but they do not authenticate them.</figcaption>
+          </figure>
+        </section>
+
+        <section class="guide-section" data-reveal>
+          <p id="sincronizar" class="guide-kicker">05 · Understand Sync</p>
+          <h2>Sync applies. It does not import.</h2>
+          <p>The trigger does not provide a complete snapshot that Estrobo can read. This is why the local state is the source of truth.</p>
+
+          <div class="sync-contract">
+            <div><i class="ph ph-check-circle" aria-hidden="true"></i><strong>What it does</strong><p>Writes the global state and configured groups from Estrobo to the trigger.</p></div>
+            <div><i class="ph ph-x-circle" aria-hidden="true"></i><strong>What it does not do</strong><p>It does not read, import, or reconstruct the configuration already on the trigger.</p></div>
+          </div>
+
+          <div class="guide-callout guide-callout-warning">
+            <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>
+            <div><strong>Connecting means accepting the overwrite.</strong><p>Once authentication completes, Estrobo sends its local values. Clicking Sync later repeats that sequence even when no changes are pending.</p></div>
+          </div>
+        </section>
+
+        <section class="guide-section" data-reveal>
+          <p id="controles" class="guide-kicker">06 · Adjust flashes</p>
+          <h2>One state, three ways to work.</h2>
+          <figure class="guide-wide-image">
+            <img src={appImages.inspector.src} srcset={appImages.inspector.srcset} sizes="(max-width: 44rem) calc(100vw - 2.5rem), 62rem" alt="Inspector view with detailed power and modeling controls" width="2774" height="2122" loading="lazy" />
+          </figure>
+
+          <dl class="control-list">
+            <div><dt>M</dt><dd>Manual power in 1/3 EV increments, within the common range of the assigned flashes.</dd></div>
+            <div><dt>Auto · TTL</dt><dd>TTL with neutral compensation; the physical result depends on the model and the scene.</dd></div>
+            <div><dt>Modeling</dt><dd>Off, proportional, or fixed, depending on the configured capabilities.</dd></div>
+            <div><dt>Channels</dt><dd>Direct comparison of the visible groups.</dd></div>
+            <div><dt>Inspector</dt><dd>One group at a time, with its reference, draft, and confirmation.</dd></div>
+            <div><dt>Matrix</dt><dd>Compact controls for reviewing several groups together.</dd></div>
+          </dl>
+
+          <h3>Automatic or On Apply</h3>
+          <div class="delivery-modes">
+            <div><span>Default</span><strong>Automatic</strong><p>Sends 700 ms after the last change. A slider sends only its final value when released.</p></div>
+            <div><span>Manual control</span><strong>On Apply</strong><p>Keeps the draft until you click Send now. Discard reverts only changes that have not been sent.</p></div>
+          </div>
+        </section>
+
+        <section class="guide-section" data-reveal>
+          <p id="problemas" class="guide-kicker">07 · Troubleshoot</p>
+          <h2>Return to a known state.</h2>
+          <div class="troubleshooting-list">
+            <details>
+              <summary>macOS will not open Estrobo <i class="ph ph-plus" aria-hidden="true"></i></summary>
+              <p>Confirm that Estrobo is in Applications and that you downloaded it from the official release. If macOS cannot verify the developer, do not bypass the warning: delete that copy, verify the checksum, and download the official DMG again.</p>
+            </details>
+            <details>
+              <summary>The trigger does not appear <i class="ph ph-plus" aria-hidden="true"></i></summary>
+              <p>Grant Bluetooth permission, quit other apps, move the trigger closer, and search again. Bluetooth alone is not enough: the BLE/GATT profile must be compatible.</p>
+            </details>
+            <details>
+              <summary>The Radio Code fails <i class="ph ph-plus" aria-hidden="true"></i></summary>
+              <p>Check that it contains exactly six digits and that your Mac’s date and time are correct.</p>
+            </details>
+            <details>
+              <summary>The trigger changed after connecting <i class="ph ph-plus" aria-hidden="true"></i></summary>
+              <p>This is expected: Estrobo applies its local state when the connection completes. Trigger → app import is not available.</p>
+            </details>
+            <details>
+              <summary>The operation is in an uncertain state <i class="ph ph-plus" aria-hidden="true"></i></summary>
+              <p>Do not try to compensate from another app. Reconnect to the same UUID and follow the recovery flow until the complete scene is confirmed.</p>
+            </details>
+          </div>
+          <p class="support-link">Still not working? <a href="https://github.com/loomitz/estrobo/blob/main/SUPPORT.en.md">See support and how to report it <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a></p>
+        </section>
+      </article>
+    </div>
+
+    <section class="guide-final-cta">
+      <div data-reveal>
+        <img src="/images/brand/app-icon-light.svg" alt="" width="56" height="56" />
+        <p class="eyebrow eyebrow-ink">Ready to get started</p>
+        <h2>Download. Install. Sync.</h2>
+        <DownloadButton label={`Download DMG ${release.version}`} locale="en" className="button button-dark button-large" />
+      </div>
+      <SiteFooter locale="en" />
+    </section>
+  </main>
+
+  <script>
+    const copyButton = document.querySelector<HTMLButtonElement>("[data-copy-command]");
+    const command = document.querySelector<HTMLElement>("[data-command]");
+
+    copyButton?.addEventListener("click", async () => {
+      if (!command) return;
+      try {
+        await navigator.clipboard.writeText(command.textContent ?? "");
+        const label = copyButton.querySelector<HTMLElement>("[data-copy-label]");
+        const icon = copyButton.querySelector("i");
+        if (label) label.textContent = "Copied";
+        icon?.classList.replace("ph-copy", "ph-check");
+        window.setTimeout(() => {
+          if (label) label.textContent = "Copy command";
+          icon?.classList.replace("ph-check", "ph-copy");
+        }, 1800);
+      } catch {
+        const label = copyButton.querySelector<HTMLElement>("[data-copy-label]");
+        if (label) label.textContent = "Could not copy; select the command";
+      }
+    });
+
+    const guideLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>("[data-guide-link]"));
+    const guideSections = guideLinks
+      .map((link) => document.querySelector<HTMLElement>(link.hash))
+      .filter((section): section is HTMLElement => Boolean(section));
+    const progress = document.querySelector<HTMLAnchorElement>("[data-guide-progress]");
+    const progressCount = progress?.querySelector<HTMLElement>("[data-guide-progress-count]");
+    const progressLabel = progress?.querySelector<HTMLElement>("[data-guide-progress-label]");
+
+    const setCurrentSection = (id: string) => {
+      const activeLink = guideLinks.find((link) => link.hash === `#${id}`);
+      if (!activeLink) return;
+
+      guideLinks.forEach((link) => {
+        if (link === activeLink) link.setAttribute("aria-current", "location");
+        else link.removeAttribute("aria-current");
+      });
+
+      const step = activeLink.dataset.step ?? "";
+      const label = activeLink.dataset.label ?? activeLink.textContent?.trim() ?? "";
+      if (progressCount) progressCount.textContent = step;
+      if (progressLabel) progressLabel.textContent = label;
+      progress?.setAttribute("aria-label", `Back to the index. Current section: ${label}`);
+    };
+
+    guideLinks.forEach((link) => {
+      link.addEventListener("click", () => setCurrentSection(link.hash.slice(1)));
+    });
+
+    const initialSection = window.location.hash.slice(1) || guideSections[0]?.id;
+    if (initialSection) setCurrentSection(initialSection);
+
+    if ("IntersectionObserver" in window) {
+      const sectionObserver = new IntersectionObserver((entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible?.target.id) setCurrentSection(visible.target.id);
+      }, { rootMargin: "-45% 0px -54%", threshold: 0 });
+
+      guideSections.forEach((section) => sectionObserver.observe(section));
+    }
+  </script>
+</BaseLayout>

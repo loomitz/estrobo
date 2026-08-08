@@ -1,10 +1,24 @@
+---
+import { localeRoutes, type Locale } from "../i18n/config";
+
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = "es" } = Astro.props;
+const isEnglish = locale === "en";
+const copy = isEnglish
+  ? { navLabel: "Footer links", guide: "Guide", privacy: "Privacy", support: "Support", kofi: "Support on Ko-fi" }
+  : { navLabel: "Enlaces del pie", guide: "Guía", privacy: "Privacidad", support: "Soporte", kofi: "Apoyar en Ko-fi" };
+---
+
 <footer class="site-footer">
-  <a class="footer-domain" href="/">estrobo.app</a>
-  <nav aria-label="Enlaces del pie">
-    <a href="/guia/">Guía</a>
-    <a href="https://github.com/loomitz/estrobo/blob/main/PRIVACY.md">Privacidad</a>
-    <a href="https://github.com/loomitz/estrobo/blob/main/SUPPORT.md">Soporte</a>
+  <a class="footer-domain" href={localeRoutes.home[locale]}>estrobo.app</a>
+  <nav aria-label={copy.navLabel}>
+    <a href={localeRoutes.guide[locale]}>{copy.guide}</a>
+    <a href={`https://github.com/loomitz/estrobo/blob/main/${isEnglish ? "PRIVACY.en.md" : "PRIVACY.md"}`}>{copy.privacy}</a>
+    <a href={`https://github.com/loomitz/estrobo/blob/main/${isEnglish ? "SUPPORT.en.md" : "SUPPORT.md"}`}>{copy.support}</a>
     <a href="https://github.com/loomitz/estrobo">GitHub</a>
-    <a href="https://ko-fi.com/loomitz68613">Apoyar en Ko-fi</a>
+    <a href="https://ko-fi.com/loomitz68613">{copy.kofi}</a>
   </nav>
 </footer>

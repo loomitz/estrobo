@@ -1,38 +1,88 @@
 ---
 import { release, releaseDownloads } from "../config/release";
+import { localeRoutes, type Locale } from "../i18n/config";
 
 interface Props {
   active?: "home" | "guide" | "other";
+  locale?: Locale;
 }
 
-const { active = "other" } = Astro.props;
+const { active = "other", locale = "es" } = Astro.props;
+const isEnglish = locale === "en";
+const copy = isEnglish
+  ? {
+      brandLabel: "Estrobo, home",
+      openMenu: "Open menu",
+      closeMenu: "Close menu",
+      navLabel: "Main navigation",
+      howItWorks: "How it works",
+      guide: "Guide",
+      download: "Download",
+      languageLabel: "Language",
+    }
+  : {
+      brandLabel: "Estrobo, inicio",
+      openMenu: "Abrir menú",
+      closeMenu: "Cerrar menú",
+      navLabel: "Navegación principal",
+      howItWorks: "Cómo funciona",
+      guide: "Guía",
+      download: "Descargar",
+      languageLabel: "Idioma",
+    };
+const homePath = localeRoutes.home[locale];
+const guidePath = localeRoutes.guide[locale];
+const howItWorksHash = "#como-funciona";
+const howItWorksPath = active === "home" ? howItWorksHash : `${homePath}${howItWorksHash}`;
+const languagePage = active === "guide" ? "guide" : "home";
 ---
 
 <header class="site-header" data-site-header>
-  <a class="brand-lockup" href="/" aria-label="Estrobo, inicio">
+  <a class="brand-lockup" href={homePath} aria-label={copy.brandLabel}>
     <img src="/images/brand/estrobo-gradient.svg" alt="" width="376" height="71" />
   </a>
 
   <button
     class="menu-button"
     type="button"
-    aria-label="Abrir menú"
+    aria-label={copy.openMenu}
     aria-expanded="false"
     aria-controls="site-nav"
     data-menu-button
+    data-open-label={copy.openMenu}
+    data-close-label={copy.closeMenu}
   >
     <i class="ph ph-list" aria-hidden="true"></i>
   </button>
 
-  <nav class="site-nav" id="site-nav" aria-label="Navegación principal" data-site-nav>
-    <a href={active === "home" ? "#como-funciona" : "/#como-funciona"}>Cómo funciona</a>
-    <a href="/guia/" aria-current={active === "guide" ? "page" : undefined}>Guía</a>
+  <nav class="site-nav" id="site-nav" aria-label={copy.navLabel} data-site-nav>
+    <a href={howItWorksPath}>{copy.howItWorks}</a>
+    <a href={guidePath} aria-current={active === "guide" ? "page" : undefined}>{copy.guide}</a>
+    <div class="language-switcher" role="group" aria-label={copy.languageLabel}>
+      <a
+        href={localeRoutes[languagePage].es}
+        lang="es"
+        hreflang="es"
+        aria-label="Español"
+        aria-current={locale === "es" ? "page" : undefined}
+        data-language-link
+      >ES</a>
+      <span aria-hidden="true">/</span>
+      <a
+        href={localeRoutes[languagePage].en}
+        lang="en"
+        hreflang="en"
+        aria-label="English"
+        aria-current={locale === "en" ? "page" : undefined}
+        data-language-link
+      >EN</a>
+    </div>
     <a class="nav-github" href={release.repositoryUrl}>
       <i class="ph ph-github-logo" aria-hidden="true"></i>
       <span>GitHub</span>
     </a>
     <a class="nav-download" href={releaseDownloads.dmg}>
-      Descargar
+      {copy.download}
       <i class="ph ph-arrow-down" aria-hidden="true"></i>
     </a>
   </nav>
@@ -52,7 +102,7 @@ const { active = "other" } = Astro.props;
 
   const closeMenu = (restoreFocus = false) => {
     menuButton?.setAttribute("aria-expanded", "false");
-    menuButton?.setAttribute("aria-label", "Abrir menú");
+    menuButton?.setAttribute("aria-label", menuButton.dataset.openLabel ?? "Open menu");
     nav?.classList.remove("is-open");
     document.body.classList.remove("menu-open");
     const icon = menuButton?.querySelector("i");
@@ -63,7 +113,7 @@ const { active = "other" } = Astro.props;
 
   const openMenu = () => {
     menuButton?.setAttribute("aria-expanded", "true");
-    menuButton?.setAttribute("aria-label", "Cerrar menú");
+    menuButton?.setAttribute("aria-label", menuButton.dataset.closeLabel ?? "Close menu");
     nav?.classList.add("is-open");
     document.body.classList.add("menu-open");
     const icon = menuButton?.querySelector("i");
@@ -93,6 +143,15 @@ const { active = "other" } = Astro.props;
       heading.focus({ preventScroll: true });
     });
   }));
+
+  nav?.querySelectorAll<HTMLAnchorElement>("[data-language-link]").forEach((link) => {
+    link.addEventListener("click", () => {
+      if (!window.location.hash) return;
+      const destination = new URL(link.href);
+      destination.hash = window.location.hash;
+      link.href = destination.toString();
+    });
+  });
 
   document.addEventListener("keydown", (event) => {
     if (!mobileNav.matches || !isMenuOpen()) return;

@@ -1,7 +1,36 @@
 ---
 import { appImages } from "../config/app-images";
+import type { Locale } from "../i18n/config";
 
-const views = [
+interface Props {
+  locale?: Locale;
+}
+
+const { locale = "es" } = Astro.props;
+const isEnglish = locale === "en";
+const views = isEnglish ? [
+  {
+    id: "channels",
+    label: "Channels",
+    description: "Compare groups at a glance.",
+    image: appImages.canales,
+    alt: "Estrobo Channels view with groups B and C connected in simulation mode",
+  },
+  {
+    id: "inspector",
+    label: "Inspector",
+    description: "Fine-tune one group with all its context.",
+    image: appImages.inspector,
+    alt: "Estrobo Inspector view showing detailed adjustments for group B",
+  },
+  {
+    id: "matrix",
+    label: "Matrix",
+    description: "Bring compact controls together on one surface.",
+    image: appImages.matriz,
+    alt: "Estrobo Matrix view with compact controls for groups B and C",
+  },
+] : [
   {
     id: "canales",
     label: "Canales",
@@ -24,10 +53,14 @@ const views = [
     alt: "Vista Matriz de Estrobo con controles compactos para los grupos B y C",
   },
 ];
+const tablistLabel = isEnglish ? "Estrobo views" : "Vistas de Estrobo";
+const screenshotCaption = isEnglish
+  ? "Actual public beta screenshot · simulated transport"
+  : "Captura real de una beta pública · transporte de simulación";
 ---
 
 <div class="screenshot-switcher" data-screenshot-switcher>
-  <div class="view-tabs" role="tablist" aria-label="Vistas de Estrobo" aria-orientation="horizontal">
+  <div class="view-tabs" role="tablist" aria-label={tablistLabel} aria-orientation="horizontal">
     {views.map((view, index) => (
       <button
         type="button"
@@ -63,7 +96,7 @@ const views = [
           height="2122"
           loading="lazy"
         />
-        <figcaption><strong>{view.label}</strong> · Captura real de una beta pública · transporte de simulación</figcaption>
+        <figcaption><strong>{view.label}</strong> · {screenshotCaption}</figcaption>
       </figure>
     ))}
   </div>

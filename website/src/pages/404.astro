@@ -1,15 +1,44 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import SiteHeader from "../components/SiteHeader.astro";
 ---
 
-<BaseLayout title="Página no encontrada — Estrobo" description="La página que buscas no existe." canonicalPath={null} robots="noindex, nofollow" pageClass="not-found-page">
-  <SiteHeader />
+<BaseLayout title="Página no encontrada / Page not found — Estrobo" description="La página que buscas no existe. The page you’re looking for doesn’t exist." canonicalPath={null} robots="noindex, nofollow" pageClass="not-found-page">
+  <script is:inline slot="head">
+    const errorLocale = window.location.pathname === "/en" || window.location.pathname.startsWith("/en/") ? "en" : "es";
+    document.documentElement.dataset.errorLocale = errorLocale;
+    document.documentElement.lang = errorLocale;
+    if (errorLocale === "en") {
+      document.title = "Page not found — Estrobo";
+      document.querySelector('meta[name="description"]')?.setAttribute("content", "The page you’re looking for doesn’t exist.");
+    } else {
+      document.title = "Página no encontrada — Estrobo";
+      document.querySelector('meta[name="description"]')?.setAttribute("content", "La página que buscas no existe.");
+    }
+  </script>
+  <header class="site-header">
+    <a class="brand-lockup" href="/" aria-label="Estrobo, inicio / home">
+      <img src="/images/brand/estrobo-gradient.svg" alt="" width="376" height="71" />
+    </a>
+    <nav class="not-found-language" aria-label="Idioma / Language">
+      <a href="/" lang="es" hreflang="es" aria-label="Español">ES</a>
+      <span aria-hidden="true">/</span>
+      <a href="/en/" lang="en" hreflang="en" aria-label="English">EN</a>
+    </nav>
+  </header>
+  <script is:inline>
+    if (document.documentElement.dataset.errorLocale === "en") {
+      document.querySelector(".skip-link")?.replaceChildren("Skip to content");
+      document.querySelector(".brand-lockup")?.setAttribute("href", "/en/");
+    }
+  </script>
   <main id="contenido" class="not-found">
     <img src="/images/brand/app-icon-light.svg" alt="" width="72" height="72" />
     <p class="eyebrow">Error 404</p>
-    <h1>Esta señal no llegó.</h1>
-    <p>La página que buscas no existe o cambió de lugar.</p>
-    <a class="button button-primary" href="/"><i class="ph ph-arrow-left" aria-hidden="true"></i> Volver a Estrobo</a>
+    <h1><span data-error-copy="es">Esta señal no llegó.</span><span data-error-copy="en" lang="en">This signal didn’t get through.</span></h1>
+    <p><span data-error-copy="es">La página que buscas no existe o cambió de lugar.</span><span data-error-copy="en" lang="en">The page you’re looking for doesn’t exist or has moved.</span></p>
+    <div class="not-found-actions">
+      <a class="button button-primary" data-error-copy="es" href="/"><i class="ph ph-arrow-left" aria-hidden="true"></i> Volver a Estrobo</a>
+      <a class="button button-primary" data-error-copy="en" href="/en/" lang="en">Back to Estrobo <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+    </div>
   </main>
 </BaseLayout>
