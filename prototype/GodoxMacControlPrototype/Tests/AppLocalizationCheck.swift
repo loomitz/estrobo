@@ -9,6 +9,7 @@ enum AppLocalizationCheck {
         checkResourceParity(english: english, spanish: spanish)
         checkRuntimeCatalogCoverage(english: english, spanish: spanish)
         checkWorkspaceConfigurationCopy(english: english, spanish: spanish)
+        checkSavedTransmittersCopy(english: english, spanish: spanish)
         checkMultiCopy(english: english, spanish: spanish)
         checkBluetoothMessages(english: english, spanish: spanish)
         checkControllerMessages(english: english, spanish: spanish)
@@ -63,23 +64,65 @@ enum AppLocalizationCheck {
             spanishTranslations: spanish
         )
         assertLocalized(
-            "Administrar perfiles",
-            english: "Manage profiles",
-            spanish: "Administrar perfiles",
+            "Antes de conectar, elige tus grupos y asigna sus flashes.",
+            english: "Before connecting, choose your groups and assign their flashes.",
+            spanish: "Antes de conectar, elige tus grupos y asigna sus flashes.",
             englishTranslations: english,
             spanishTranslations: spanish
         )
         assertLocalized(
-            "Quitar un perfil sólo lo oculta en este Mac; puedes restaurarlo después.",
-            english: "Removing a profile only hides it on this Mac; you can restore it later.",
-            spanish: "Quitar un perfil sólo lo oculta en este Mac; puedes restaurarlo después.",
+            "Aún no hay grupos de trabajo",
+            english: "No working groups yet",
+            spanish: "Aún no hay grupos de trabajo",
             englishTranslations: english,
             spanishTranslations: spanish
         )
         assertLocalized(
-            "Quitar",
-            english: "Remove",
-            spanish: "Quitar",
+            "Estrobo no selecciona grupos por ti. Añade los que realmente utilizas y asigna sus modelos de flash.",
+            english: "Estrobo does not select groups for you. Add the ones you actually use and assign their flash models.",
+            spanish: "Estrobo no selecciona grupos por ti. Añade los que realmente utilizas y asigna sus modelos de flash.",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Elegir grupos",
+            english: "Choose groups",
+            spanish: "Elegir grupos",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Compatibilidad de grupos",
+            english: "Group compatibility",
+            spanish: "Compatibilidad de grupos",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Elige la compatibilidad de grupos para tu transmisor.",
+            english: "Choose the group compatibility for your transmitter.",
+            spanish: "Elige la compatibilidad de grupos para tu transmisor.",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Desconecta para cambiar la compatibilidad de grupos.",
+            english: "Disconnect to change group compatibility.",
+            spanish: "Desconecta para cambiar la compatibilidad de grupos.",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Define los grupos y funciones disponibles; no representa un transmisor guardado.",
+            english: "Defines the available groups and features; it does not represent a saved transmitter.",
+            spanish: "Define los grupos y funciones disponibles; no representa un transmisor guardado.",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Transmisores guardados…",
+            english: "Saved transmitters…",
+            spanish: "Transmisores guardados…",
             englishTranslations: english,
             spanishTranslations: spanish
         )
@@ -94,6 +137,75 @@ enum AppLocalizationCheck {
             "%lld grupos seleccionados",
             english: "%lld groups selected",
             spanish: "%lld grupos seleccionados",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+    }
+
+    private static func checkSavedTransmittersCopy(
+        english: [String: String],
+        spanish: [String: String]
+    ) {
+        assertLocalized(
+            "Transmisores guardados",
+            english: "Saved transmitters",
+            spanish: "Transmisores guardados",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Radios que se han conectado y guardado en este Mac.",
+            english: "Transmitters that have connected to and been saved on this Mac.",
+            spanish: "Radios que se han conectado y guardado en este Mac.",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Aún no hay transmisores guardados",
+            english: "No saved transmitters yet",
+            spanish: "Aún no hay transmisores guardados",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Activa Recordar antes de conectar; se guardará sólo al completar autenticación y Sync.",
+            english: "Turn on Remember before connecting; it is saved only after authentication and Sync complete.",
+            spanish: "Activa Recordar antes de conectar; se guardará sólo al completar autenticación y Sync.",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Encontrado en la última búsqueda",
+            english: "Found in the last scan",
+            spanish: "Encontrado en la última búsqueda",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Identificador …%@",
+            english: "Identifier …%@",
+            spanish: "Identificador …%@",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "¿Olvidar este transmisor?",
+            english: "Forget this transmitter?",
+            spanish: "¿Olvidar este transmisor?",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Se eliminarán el transmisor y su Código del radio guardados en este Mac.",
+            english: "The transmitter and its saved Radio Code will be removed from this Mac.",
+            spanish: "Se eliminarán el transmisor y su Código del radio guardados en este Mac.",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "%lld transmisores guardados",
+            english: "%lld saved transmitters",
+            spanish: "%lld transmisores guardados",
             englishTranslations: english,
             spanishTranslations: spanish
         )

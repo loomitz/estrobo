@@ -12,8 +12,8 @@
 
 Estrobo brings compatible Godox flash-trigger controls into one focused Mac workspace. Organize working groups and adjust power, mode, modeling light, and global controls without an account, backend, analytics, or telemetry.
 
-> [!WARNING]
-> This first public beta is not signed with Apple Developer ID and is not notarized by Apple. It is self-signed only to keep its identity consistent between beta builds, so macOS will block the first launch with a Gatekeeper warning.
+> [!IMPORTANT]
+> Public beta `0.1.0-beta.3` is signed with Apple Developer ID and notarized by Apple. Gatekeeper accepts the official DMG, so the **Open Anyway** workaround used by earlier betas is no longer required. macOS may still show its normal confirmation for an app downloaded from the Internet and will request Bluetooth permission on first use.
 
 ![Estrobo Channels view in simulated mode](prototype/GodoxMacControlPrototype/QA/channels-after-dark-final-en.png)
 
@@ -42,33 +42,32 @@ This is the only hardware matrix used for physical testing so far; the exact cam
 
 ## Install this beta
 
-1. Download `estrobo-<tag>-macos-universal.zip`, `SHA256SUMS`, and `estrobo-<tag>-manifest.json` from [GitHub Releases](https://github.com/loomitz/estrobo/releases). Keep the three files together in Downloads and do not use builds from issues or third-party links.
-2. Open Terminal and verify the release files before extracting them:
+1. Download `estrobo-v0.1.0-beta.3-macos-universal.dmg`, `SHA256SUMS`, and `estrobo-v0.1.0-beta.3-manifest.json` from the [`0.1.0-beta.3` GitHub Release](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.3). Keep the three files together in Downloads and do not use builds from issues or third-party links.
+2. Open Terminal and verify the release files before mounting the image:
 
    ```sh
    cd ~/Downloads
    shasum -a 256 -c SHA256SUMS
    ```
 
-   Continue only if the ZIP and manifest both report `OK`.
-3. Extract the ZIP and move `estrobo.app` to Applications.
-4. Double-click Estrobo once. Because this beta has no Apple Developer ID signature or notarization, macOS will block its first launch.
-5. Go to **Apple menu → System Settings → Privacy & Security**, scroll down to **Security**, click **Open Anyway**, authenticate, and confirm **Open**. Apple keeps this button available for a limited time after the first launch attempt. See [Apple's official procedure](https://support.apple.com/guide/mac-help/mh40617/mac).
+   Continue only if the DMG and manifest both report `OK`.
+3. Double-click the DMG. In the window that opens, drag `estrobo.app` onto the **Applications** folder.
+4. Eject the Estrobo disk image, then open Estrobo from Applications. Confirm the normal macOS downloaded-app prompt if it appears and grant Bluetooth access when requested.
 
-The warning is expected, but it does not prove that every file is safe. Always verify the checksum and release source. Do not disable Gatekeeper, remove the quarantine attribute, or manually trust the project's self-signed certificate.
+The official DMG and the app inside it are both signed and notarized. If macOS reports that the developer cannot be verified, do not bypass Gatekeeper: delete that copy, verify `SHA256SUMS`, and download the asset again from this repository.
 
-> **Unreleased source status:** Multi described below is available only when building the current source checkout. It is not included in the downloadable `0.1.0-beta.2` prerelease.
+> **Current public beta:** `0.1.0-beta.3` includes the saved-transmitter library and experimental Global Multi described below.
 
 ## Quick start
 
 1. Turn on the transmitter and close any other app connected to it.
-2. Open Estrobo and configure the profile, working groups, and at least one flash model per group.
+2. Open Estrobo and configure group compatibility, working groups, and at least one flash model per group.
 3. Click **Find**. Choose the trigger using its name, RSSI, and UUID suffix; the name and UUID help distinguish it but do not authenticate it cryptographically.
 4. Enter the six-digit **Radio Code**. It is the transmitter's local compatibility/proximity PIN, not a strong credential or a high-value secret. Do not reuse a personal PIN.
-5. The option to remember it starts off. If enabled, Estrobo stores it locally and unencrypted only after completing `PWOK` and synchronization; it never sends it over the Internet. **Forget** removes the saved radio and code.
+5. The option to remember it starts off. If enabled, Estrobo adds that transmitter to its local saved-transmitter library only after completing `PWOK` and synchronization; its code remains unencrypted on this Mac and is never sent over the Internet. **Forget** removes only that saved transmitter and code.
 6. The BLE handshake is still required. Once it completes, Estrobo acts as the source of truth and deliberately overwrites global A0 and every configured group's A1. The transmitter's previous state does not matter.
 7. In **Automatic**, a change is sent 700 ms after the last adjustment. Dragging does not transmit intermediate values: the delay starts when you release the control. You can also choose **On Apply** and use **Send now** or **Discard**.
-8. In a development build from the current source, press **MULTI** beside Beep to turn Global Multi on or off; it opens no menu. Turning it on displays the inline console and atomically places every active compatible group in Multi. Non-participating groups remain Off and appear disabled behind an overlay; compatible groups can be added again there or from the console. The last participant can only be closed with the global button. Turning **MULTI** off makes every workspace group—including groups previously Off or TTL—active in Manual; the previous M/TTL/Off scene is not restored. Groups outside the workspace do not receive A1. Multi excludes HSS; use **Test** only after reviewing the active groups and the displayed model limit.
+8. In beta 3, press **MULTI** beside Beep to turn Global Multi on or off; it opens no menu. Turning it on displays the inline console and atomically places every active compatible group in Multi. Non-participating groups remain Off and appear disabled behind an overlay; compatible groups can be added again there or from the console. The last participant can only be closed with the global button. Turning **MULTI** off makes every workspace group—including groups previously Off or TTL—active in Manual; the previous M/TTL/Off scene is not restored. Groups outside the workspace do not receive A1. Multi excludes HSS; use **Test** only after reviewing the active groups and the displayed model limit, and treat the optical result as unvalidated until the exact hardware matrix passes physical smoke.
 
 Read [Automatic synchronization](docs/AUTOMATIC-SYNC.md) before connecting hardware.
 
@@ -91,12 +90,13 @@ The app displays **Simulated radio** explicitly. It never enables this mode as a
 
 ## What is included
 
-- Groups `0–9` and `A–F`, depending on the profile; Manual power in 1/3 EV Godox steps and a safe common range for the models assigned to each group.
+- Groups `0–9` and `A–F`, according to the selected compatibility; Manual power in 1/3 EV Godox steps and a safe common range for the models assigned to each group.
 - Per-group M, Auto/TTL, and Off; the **MULTI** button beside Beep is the only way to turn Global Multi on or off and shows its inline console while active. It provides full-stop power up to `1/4`, flash-count/frequency controls, and `A–E` participation. Starting Multi atomically includes all active compatible groups while non-participants stay Off and appear disabled. Turning it off returns every working group to active Manual. Groups outside the workspace do not receive A1.
 - A0 carries the effective Multi power, count, and Hz. A Multi A1 retains the stored Manual power when the group came from M, or uses `0x32` when it came from TTL; neither A1 value replaces the global Multi power. The estimated minimum exposure is `flash count ÷ Hz`, rounded upward to `0.001 s`.
 - Multi's editable base domain is `1–100` flashes and `1–100 Hz`, but its effective flash-count maximum can be lower. For an assigned AD400Pro II, Estrobo enforces the manufacturer's published power × frequency rows and normalizes the count when power or Hz lowers that ceiling. Because the manual jumps from `20–50 Hz` to `60–100 Hz`, Estrobo conservatively applies the latter ceiling at `51–59 Hz` and labels that gap as unpublished rather than verified. Other flash models never inherit the AD400Pro II table: the console marks their limit as unverified, or partially verified when verified and unverified models participate together. HSS is excluded.
 - Modeling light off/proportional/fixed, global Beep, global Standby, and explicit Test.
 - Global power adjustment that preserves the relationship between groups.
+- A local library of saved transmitters with UUID-based reconnection and individual forgetting. The single remembered transmitter from `beta.2` migrates automatically; new entries still require explicit remember opt-in followed by authentication + Sync.
 - Channels, Inspector, and Matrix views; local presets; Spanish and English; light and dark appearance.
 - Automatic delivery with a 700 ms debounce or **On Apply** mode.
 - Fail-closed recovery with an atomic scene journal: it retains A0 plus every affected A1, resends them in order, and keeps the batch until every group confirms GATT + `FEC8`.
@@ -104,7 +104,7 @@ The app displays **Simulated radio** explicitly. It never enables this mode as a
 <details>
 <summary><strong>See workspace configuration</strong></summary>
 
-![Local settings for groups and flash models](prototype/GodoxMacControlPrototype/QA/group-colors-settings-light-en-window.png)
+![Group compatibility and saved-transmitter library in Settings](prototype/GodoxMacControlPrototype/QA/saved-transmitters-settings-dark-en.png)
 
 </details>
 

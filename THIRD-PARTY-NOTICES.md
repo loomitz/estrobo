@@ -2,7 +2,7 @@
 
 ## Inventario de esta versión
 
-La aplicación Estrobo `0.1.0-beta.2` no declara dependencias mediante Swift Package Manager, CocoaPods o Carthage y no incluye frameworks, bibliotecas, APKs o firmware de terceros versionados dentro de su bundle público.
+La aplicación Estrobo `0.1.0-beta.3` no declara dependencias mediante Swift Package Manager, CocoaPods o Carthage y no incluye frameworks, bibliotecas, APKs o firmware de terceros versionados dentro de su bundle público.
 
 El código usa frameworks del sistema proporcionados por macOS/Xcode:
 

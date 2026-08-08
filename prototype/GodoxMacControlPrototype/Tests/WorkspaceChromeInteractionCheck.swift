@@ -77,6 +77,62 @@ enum WorkspaceChromeInteractionCheck {
             workspaceConfiguration.contains("LanguageToggle()"),
             "First-run configuration must keep a language control before Settings is available"
         )
+        expect(
+            workspaceConfiguration.contains("\"Compatibilidad de grupos\"") &&
+                workspaceConfiguration.contains("Picker(") &&
+                workspaceConfiguration.contains("\"Transmisores guardados…\"") &&
+                workspaceConfiguration.contains("SavedTransmittersSheet(controller: controller)") &&
+                !workspaceConfiguration.contains("\"Administrar perfiles…\""),
+            "Onboarding must separate group compatibility from saved transmitters"
+        )
+        expect(
+            workspaceConfiguration.contains(
+                "let startsEmpty = !controller.hasStoredWorkspaceConfiguration"
+            ) &&
+                workspaceConfiguration.contains("? Set<GodoxGroup>()") &&
+                workspaceConfiguration.contains("controller.workingGroups.filter") &&
+                workspaceConfiguration.contains("? Set<String>()") &&
+                !workspaceConfiguration.contains("if initialGroups.isEmpty") &&
+                !workspaceConfiguration.contains("[.b, .c]") &&
+                !workspaceConfiguration.contains("supportedGroups.prefix(1)") &&
+                workspaceConfiguration.contains("\"Aún no hay grupos de trabajo\"") &&
+                workspaceConfiguration.contains("\"Elegir grupos\"") &&
+                workspaceConfiguration.contains(
+                    ".disabled(!configurationIsValid || !controller.canConfigureWorkspace)"
+                ),
+            "First-run onboarding must begin empty, explain the choice, and block saving until it is valid"
+        )
+
+        let savedTransmitters = section(
+            in: source,
+            from: "private struct SavedTransmittersSheet: View",
+            to: "struct QuickControlsBar: View"
+        )
+        expect(
+            savedTransmitters.contains("controller.savedRadios.isEmpty") &&
+                savedTransmitters.contains("ForEach(controller.savedRadios") &&
+                savedTransmitters.contains("id: \\.deviceID") &&
+                savedTransmitters.contains("controller.isSavedRadioDiscovered(radio.deviceID)") &&
+                savedTransmitters.contains("radioPendingForget = radio") &&
+                savedTransmitters.contains("controller.forgetSavedRadio(radio.deviceID)") &&
+                savedTransmitters.contains(".disabled(!controller.canForgetSavedRadios)") &&
+                savedTransmitters.contains("¿Olvidar este transmisor?") &&
+                savedTransmitters.contains("\"Conectado\"") &&
+                savedTransmitters.contains("\"Encontrado en la última búsqueda\"") &&
+                savedTransmitters.contains("\"Guardado en este Mac\"") &&
+                savedTransmitters.contains("\"Aún no hay transmisores guardados\"") &&
+                !savedTransmitters.contains("availableTransmitterProfiles"),
+            "Saved transmitters must be a real per-device list with status, empty state, and individual removal"
+        )
+        expect(
+                source.contains("private var savedTransmittersCard: some View") &&
+                source.contains("controller.savedRadios.filter") &&
+                source.contains("showsSavedTransmitters = true") &&
+                !source.contains("if let savedRadio = controller.savedRadio") &&
+                !source.contains("controller.forgetSavedRadio()") &&
+                !source.contains("\"Buscar radio guardado\""),
+            "Connection setup must summarize and open the plural transmitter library"
+        )
 
         let footer = section(
             in: source,
@@ -111,6 +167,19 @@ enum WorkspaceChromeInteractionCheck {
                 !settings.contains("Vista inicial") &&
                 !settings.contains("La vista se aplicará la próxima vez"),
             "Settings must call the immediate workspace choice View, never Initial view"
+        )
+        expect(
+            settings.contains("SettingsRow(title: \"Compatibilidad de grupos\"") &&
+                settings.contains("no representa un transmisor guardado") &&
+                settings.contains("SettingsRow(title: \"Transmisores guardados\"") &&
+                settings.contains("SavedTransmittersSheet(controller: controller)") &&
+                !settings.contains("SettingsRow(title: \"Perfil del transmisor\"") &&
+                !settings.contains("\"Administrar perfiles…\""),
+            "Settings must present group compatibility and saved transmitters as separate concepts"
+        )
+        expect(
+            !source.contains("TransmitterProfileManagerSheet"),
+            "The channel-profile manager must not remain as transmitter history UI"
         )
         expect(
             source.components(separatedBy: "WorkspaceVariantSelector(").count - 1 == 1,

@@ -29,8 +29,8 @@ No necesitamos un Código del radio para diagnosticar. Usa valores sintéticos e
 - Código del radio real;
 - payload `Psub`, respuesta `PWOK` o token temporal;
 - UUID completo, nombre de estación o información personal;
-- claves, certificados privados, P12, passwords o GitHub Secrets;
-- ZIP sospechoso o binarios de terceros;
+- claves, certificados privados, P12, API keys `.p8`, credenciales de notarización, passwords o GitHub Secrets;
+- DMG sospechoso o binarios de terceros;
 - detalles de una vulnerabilidad explotable.
 
 Para vulnerabilidades usa [GitHub Private Vulnerability Reporting](SECURITY.md).
@@ -39,7 +39,7 @@ Para vulnerabilidades usa [GitHub Private Vulnerability Reporting](SECURITY.md).
 
 La compatibilidad se amplía sólo con evidencia física reversible por modelo/firmware. Un nombre BLE, RSSI, UUID o acuse `FEC8` no basta para declarar soporte. Puede pedirse una reproducción en modo simulado o un gate físico coordinado; no se prometerá una fecha ni un SLA.
 
-El handshake `Psub`/`PWOK` es obligatorio; el Código del radio es el PIN local del transmisor, no una credencial fuerte. No abras issues para eliminar Gatekeeper mediante firma ad hoc: el beta usa una identidad autosignada estable y la advertencia es intencional.
+El handshake `Psub`/`PWOK` es obligatorio; el Código del radio es el PIN local del transmisor, no una credencial fuerte. La beta oficial usa Developer ID y notarización: si Gatekeeper no la identifica como `Notarized Developer ID`, verifica el checksum y vuelve a descargar antes de abrir un issue.
 
 ## Proyecto independiente
 

@@ -1224,10 +1224,14 @@ enum SafeGodoxProtocolFrameCheck {
             var objects: [String: Any] = [:]
             var acceptsWrites = true
             var acceptsRemoval = true
+            var rejectedRemovalKeys: Set<String> = []
         }
         let memory = MemoryStore()
+        let currentKey = "saved-radios-v2-test"
+        let legacyKey = "saved-radio-v1-test"
         let store = SavedRadioStore(
-            storageKey: "saved-radio-test",
+            storageKey: currentKey,
+            legacyStorageKey: legacyKey,
             readObject: { memory.objects[$0] },
             writeData: { data, key in
                 guard memory.acceptsWrites else { return false }
@@ -1235,7 +1239,8 @@ enum SafeGodoxProtocolFrameCheck {
                 return true
             },
             removeValue: { key in
-                guard memory.acceptsRemoval else { return false }
+                guard memory.acceptsRemoval,
+                      !memory.rejectedRemovalKeys.contains(key) else { return false }
                 memory.objects[key] = nil
                 return true
             }
@@ -1260,33 +1265,98 @@ enum SafeGodoxProtocolFrameCheck {
         expect(first.name == "GDBH-TEST")
 
         expect(store.load() == .none)
-        expect(store.save(first))
-        expect(store.load() == .record(first))
+        expect(store.upsert(first))
+        expect(store.load() == .records([first]))
 
-        expect(store.save(replacement))
-        expect(store.load() == .record(replacement))
+        expect(store.upsert(replacement))
+        expect(store.load() == .records([first, replacement]))
 
-        memory.objects["saved-radio-test"] = Data([0x00, 0x01])
+        guard let updatedFirst = SavedRadio(
+            deviceID: firstID,
+            name: "GDBH-RENAMED",
+            radioCode: "222222"
+        ) else {
+            preconditionFailure("No se pudo construir la actualización sintética")
+        }
+        expect(store.upsert(updatedFirst))
+        expect(store.load() == .records([updatedFirst, replacement]))
+
+        expect(store.remove(deviceID: firstID))
+        expect(store.load() == .records([replacement]))
+        expect(store.remove(deviceID: firstID))
+        expect(store.load() == .records([replacement]))
+
+        memory.objects.removeAll()
+        memory.objects[legacyKey] = Data(
+            #"{"version":1,"deviceID":"11111111-2222-3333-4444-555555555555","name":"GDBH-LEGACY","password":"123456"}"#.utf8
+        )
+        guard let legacy = SavedRadio(
+            deviceID: firstID,
+            name: "GDBH-LEGACY",
+            radioCode: "123456"
+        ) else {
+            preconditionFailure("No se pudo construir el radio legado sintético")
+        }
+        expect(store.load() == .records([legacy]))
+        expect(memory.objects[legacyKey] == nil)
+        guard let migratedData = memory.objects[currentKey] as? Data,
+              let migratedJSON = String(data: migratedData, encoding: .utf8) else {
+            preconditionFailure("La migración v1 no produjo el registro plural v2")
+        }
+        expect(migratedJSON.contains(#""version":2"#))
+        expect(store.upsert(replacement))
+        expect(store.load() == .records([legacy, replacement]))
+
+        let invalidPayload = Data([0x00, 0x01])
+        memory.objects[currentKey] = invalidPayload
         expect(store.load() == .invalid)
-        memory.objects["saved-radio-test"] = Data(
+        expect(!store.upsert(first))
+        expect((memory.objects[currentKey] as? Data) == invalidPayload)
+        memory.objects[currentKey] = Data(
             #"{"version":1,"deviceID":"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE","name":"Ami-TEST","password":"12345A"}"#.utf8
         )
         expect(store.load() == .invalid)
-        memory.objects["saved-radio-test"] = Data(
+        memory.objects[currentKey] = Data(
             #"{"version":2,"deviceID":"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE","name":"Ami-TEST","password":"654321"}"#.utf8
         )
         expect(store.load() == .invalid)
 
-        expect(store.save(replacement))
+        memory.objects.removeAll()
+        memory.objects[legacyKey] = Data(
+            #"{"version":1,"deviceID":"11111111-2222-3333-4444-555555555555","name":"GDBH-LEGACY","password":"123456"}"#.utf8
+        )
+        memory.rejectedRemovalKeys = [legacyKey]
+        expect(store.load() == .records([legacy]))
+        expect(memory.objects[currentKey] != nil)
+        expect(memory.objects[legacyKey] != nil)
+        expect(store.load() == .records([legacy]))
+        expect(memory.objects[legacyKey] != nil)
+        expect(!store.clear())
+        expect(memory.objects[currentKey] != nil)
+        expect(memory.objects[legacyKey] != nil)
+        memory.rejectedRemovalKeys = []
+        expect(store.load() == .records([legacy]))
+        expect(memory.objects[legacyKey] == nil)
+        expect(store.clear())
+        expect(store.load() == .none)
+
+        memory.objects.removeAll()
+        expect(store.upsert(first))
+        expect(store.upsert(replacement))
+        memory.acceptsWrites = false
+        expect(!store.remove(deviceID: firstID))
+        expect(store.load() == .records([first, replacement]))
+        memory.acceptsWrites = true
+
         memory.acceptsRemoval = false
         expect(!store.clear())
-        expect(store.load() == .record(replacement))
+        expect(store.load() == .records([first, replacement]))
         memory.acceptsRemoval = true
         expect(store.clear())
         expect(store.load() == .none)
 
         memory.acceptsWrites = false
-        expect(!store.save(first))
+        expect(!store.upsert(first))
         expect(store.load() == .none)
     }
 
