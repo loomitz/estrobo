@@ -22,7 +22,7 @@ Usa únicamente los assets del prerelease en GitHub Releases:
 - `SHA256SUMS`;
 - `estrobo-v0.1.0-beta.3-manifest.json` con versión, firma, notarización y procedencia.
 
-Conserva los tres archivos juntos en Descargas y compruébalos antes de extraer:
+Conserva los tres archivos juntos en Descargas y compruébalos antes de montar el DMG:
 
 ```sh
 cd ~/Downloads

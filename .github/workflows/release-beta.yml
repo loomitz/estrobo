@@ -1,4 +1,4 @@
-name: Legacy self-signed beta rebuild
+name: Legacy self-signed beta release (beta.1/beta.2)
 
 on:
   workflow_dispatch:
