@@ -1,5 +1,7 @@
 # Soporte
 
+<p align="center"><strong>Español</strong> &nbsp;·&nbsp; <a href="SUPPORT.en.md">English</a></p>
+
 Estrobo es un beta público limitado y su canal de soporte es **GitHub Issues**. No existe un email de soporte publicado.
 
 ## Antes de abrir un issue

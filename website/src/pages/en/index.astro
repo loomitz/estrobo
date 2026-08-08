@@ -1,0 +1,235 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SiteHeader from "../../components/SiteHeader.astro";
+import SiteFooter from "../../components/SiteFooter.astro";
+import DownloadButton from "../../components/DownloadButton.astro";
+import ScreenshotSwitcher from "../../components/ScreenshotSwitcher.astro";
+import { appImages } from "../../config/app-images";
+import { release, releaseDownloads } from "../../config/release";
+
+const title = "Estrobo — Control Your Godox Flashes from Your Mac";
+const description = "A free, native macOS app that synchronizes flash groups through a Bluetooth-compatible Godox trigger. No account, cloud, or telemetry.";
+
+const softwareSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Estrobo",
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "macOS 13 or later",
+  softwareVersion: release.version,
+  downloadUrl: releaseDownloads.dmg,
+  url: "https://estrobo.app/en/",
+  inLanguage: "en",
+  description,
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "MXN",
+  },
+};
+---
+
+<BaseLayout title={title} description={description} locale="en" canonicalPath="/en/" alternatePath="/" pageClass="home-page">
+  <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(softwareSchema)}></script>
+  <SiteHeader active="home" locale="en" />
+
+  <main id="contenido">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-backdrop" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <div class="hero-copy" data-reveal>
+          <p class="eyebrow">Free public beta for macOS</p>
+          <img class="hero-brand" src="/images/brand/estrobo-text-white.svg" alt="Estrobo" width="287" height="60" />
+          <h1 id="hero-title">Your flashes.<br />In sync.</h1>
+          <p class="hero-lede">Control flash groups, power, and modeling lights from your Mac through a Bluetooth-compatible Godox trigger.</p>
+          <div class="hero-actions">
+            <DownloadButton href="#descargar" icon="arrow-down" locale="en" />
+            <a class="text-link text-link-light" href="/en/guide/">View the guide <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+          </div>
+          <p class="trust-line"><span aria-hidden="true"></span> macOS 13+ · Apple Silicon + Intel · Everything stays local</p>
+        </div>
+
+        <figure class="hero-product" data-reveal data-hero-product>
+          <img src={appImages.canales.src} srcset={appImages.canales.srcset} sizes="(max-width: 68rem) 100vw, 62vw" alt="Estrobo in Channels view, controlling two flash groups in simulation mode" width="2774" height="2122" fetchpriority="high" />
+          <figcaption>Real interface · public beta</figcaption>
+        </figure>
+      </div>
+      <a class="scroll-cue" href="#local" aria-label="Continue to the next section">
+        <span>Discover</span>
+        <i class="ph ph-arrow-down" aria-hidden="true"></i>
+      </a>
+    </section>
+
+    <section class="section section-local" id="local" aria-labelledby="local-title">
+      <div class="section-grid local-grid">
+        <div class="section-copy" data-reveal>
+          <p class="eyebrow eyebrow-ink">Local by design</p>
+          <h2 id="local-title">Your studio doesn’t need the cloud.</h2>
+          <p class="section-lede">Estrobo works without an account, backend, ads, analytics, or telemetry.</p>
+
+          <ol class="proof-list" aria-label="Privacy principles">
+            <li><span>01</span>No internet</li>
+            <li><span>02</span>No account</li>
+            <li><span>03</span>No ads</li>
+            <li><span>04</span>No telemetry</li>
+          </ol>
+
+          <p class="precise-note"><i class="ph ph-hard-drives" aria-hidden="true"></i> Preferences, presets, and recovery data remain in this Mac’s sandbox.</p>
+        </div>
+
+        <figure class="local-visual" data-reveal>
+          <img src="/images/generated/local-desk.webp" alt="A laptop and generic trigger set apart on a studio table, visually representing a local workflow" width="1586" height="992" loading="lazy" />
+          <figcaption>Visual representation · the app’s workflow remains on the Mac</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section section-signal section-dark" id="como-funciona" aria-labelledby="signal-title">
+      <div class="narrow-heading" data-reveal>
+        <p class="eyebrow">How it works</p>
+        <h2 id="signal-title">Bluetooth to the trigger.<br />Radio to your flashes.</h2>
+        <p>Estrobo does not connect directly to the flashes.</p>
+      </div>
+
+      <ol class="signal-flow" data-reveal>
+        <li>
+          <span class="signal-index">01</span>
+          <i class="ph ph-laptop" aria-hidden="true"></i>
+          <div><strong>Mac</strong><small>Estrobo prepares the local state.</small></div>
+        </li>
+        <li class="signal-transfer signal-bluetooth" aria-label="Bluetooth">
+          <i class="ph ph-bluetooth" aria-hidden="true"></i>
+          <span>Bluetooth</span>
+          <i class="ph ph-arrow-right" aria-hidden="true"></i>
+        </li>
+        <li>
+          <span class="signal-index">02</span>
+          <i class="ph ph-broadcast" aria-hidden="true"></i>
+          <div><strong>Trigger</strong><small>Authenticates and receives the settings.</small></div>
+        </li>
+        <li class="signal-transfer signal-radio" aria-label="Trigger radio">
+          <i class="ph ph-radio" aria-hidden="true"></i>
+          <span>Radio</span>
+          <i class="ph ph-arrow-right" aria-hidden="true"></i>
+        </li>
+        <li>
+          <span class="signal-index">03</span>
+          <i class="ph ph-lightning" aria-hidden="true"></i>
+          <div><strong>Flashes</strong><small>The trigger applies the scene to each group.</small></div>
+        </li>
+      </ol>
+
+      <p class="signal-note" data-reveal><i class="ph ph-info" aria-hidden="true"></i> Built-in Bluetooth is required, but by itself it does not guarantee compatibility.</p>
+    </section>
+
+    <section class="section section-product" aria-labelledby="product-title">
+      <div class="product-heading" data-reveal>
+        <div>
+          <p class="eyebrow eyebrow-ink">One state, three views</p>
+          <h2 id="product-title">Adjust from the view that works for you.</h2>
+        </div>
+        <p>Channels for comparison. Inspector for fine-tuning. Matrix for the big picture.</p>
+      </div>
+      <div data-reveal>
+        <ScreenshotSwitcher locale="en" />
+      </div>
+    </section>
+
+    <section class="section section-workflow section-dark" aria-labelledby="workflow-title">
+      <div class="workflow-heading" data-reveal>
+        <p class="eyebrow">Ready in three steps</p>
+        <h2 id="workflow-title">Set up. Connect. Adjust.</h2>
+      </div>
+
+      <ol class="workflow-steps">
+        <li data-reveal>
+          <figure>
+            <img src={appImages.primerInicio.src} srcset={appImages.primerInicio.srcset} sizes="(max-width: 62rem) calc(100vw - 2.5rem), 28vw" alt="Initial workspace setup in Estrobo" width="2774" height="2122" loading="lazy" />
+          </figure>
+          <span>01</span>
+          <div><h3>Choose your workspace</h3><p>Add the groups you use and assign at least one flash model.</p></div>
+        </li>
+        <li data-reveal>
+          <figure>
+            <img src={appImages.conexion.src} srcset={appImages.conexion.srcset} sizes="(max-width: 62rem) calc(100vw - 2.5rem), 30vw" alt="Screen for finding a compatible trigger and entering its code" width="2774" height="2122" loading="lazy" />
+          </figure>
+          <span>02</span>
+          <div><h3>Find the trigger</h3><p>Close other apps, find the trigger, and enter its six-digit code.</p></div>
+        </li>
+        <li class="workflow-outcome" data-reveal>
+          <figure>
+            <img src={appImages.canales.src} srcset={appImages.canales.srcset} sizes="(max-width: 62rem) calc(100vw - 2.5rem), 38vw" alt="Connected workspace ready to adjust two groups" width="2774" height="2122" loading="lazy" />
+          </figure>
+          <span>03</span>
+          <div><h3>Work in sync</h3><p>Adjust power, mode, and modeling lights from your Mac.</p></div>
+        </li>
+      </ol>
+
+      <div class="sync-warning" data-reveal>
+        <p><i class="ph ph-warning-circle" aria-hidden="true"></i> <strong>Sync applies</strong> Estrobo’s local state; it does not import the trigger’s state.</p>
+        <a class="text-link text-link-light" href="/en/guide/#sincronizar">Open the full guide <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+      </div>
+    </section>
+
+    <section class="section section-guide-preview section-dark" aria-labelledby="guide-preview-title">
+      <div class="guide-preview-grid">
+        <figure data-reveal>
+          <img src={appImages.primerInicio.src} srcset={appImages.primerInicio.srcset} sizes="(max-width: 68rem) calc(100vw - 2.5rem), 48vw" alt="First step in the guide: setting up the workspace" width="2774" height="2122" loading="lazy" />
+        </figure>
+        <div class="guide-preview-copy" data-reveal>
+          <p class="eyebrow">User guide</p>
+          <h2 id="guide-preview-title">From download to your first adjustment.</h2>
+          <p class="section-lede section-lede-light">Install Estrobo like any other Mac app, set up your workspace, and sync deliberately.</p>
+          <ol class="guide-index">
+            <li><span>01</span><strong>Download</strong><small>Get the signed DMG from the official release</small></li>
+            <li><span>02</span><strong>Open</strong><small>Mount the disk image</small></li>
+            <li><span>03</span><strong>Install</strong><small>Drag Estrobo to Applications</small></li>
+            <li><span>04</span><strong>Launch</strong><small>Open Estrobo from Applications</small></li>
+          </ol>
+          <p class="install-note"><i class="ph ph-check-circle" aria-hidden="true"></i> Installation follows the standard macOS process: open the DMG and drag Estrobo to Applications.</p>
+          <div class="guide-links">
+            <a class="text-link text-link-light text-link-large" href="/en/guide/">Read the full guide <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+            <a class="text-link text-link-muted" href="/en/guide/#problemas">Troubleshooting</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-download" id="descargar" aria-labelledby="download-title">
+      <div class="download-inner" data-reveal>
+        <img src="/images/brand/app-icon-light.svg" alt="" width="64" height="64" />
+        <p class="eyebrow eyebrow-ink">Signed public beta for macOS</p>
+        <h2 id="download-title">Make your studio respond.</h2>
+        <p>Universal DMG for Apple Silicon and Intel, signed and notarized by Apple.</p>
+        <div class="download-actions">
+          <DownloadButton label={`Download DMG ${release.version}`} locale="en" className="button button-dark button-large" />
+          <a class="button button-kofi" href="https://ko-fi.com/loomitz68613">
+            <i class="ph ph-coffee" aria-hidden="true"></i>
+            <span>Like Estrobo? Buy me a coffee on Ko-fi</span>
+          </a>
+        </div>
+        <a class="text-link text-link-ink" href="/en/guide/#instalar">Read before installing</a>
+        <p class="download-trust">macOS 13+ · Developer ID · Apple-notarized · No account</p>
+        <small>Standard macOS installation: open the DMG and drag Estrobo to Applications.</small>
+      </div>
+      <SiteFooter locale="en" />
+    </section>
+  </main>
+
+  <script>
+    const heroProduct = document.querySelector<HTMLElement>("[data-hero-product]");
+    if (heroProduct && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      let ticking = false;
+      const updateProduct = () => {
+        const offset = Math.min(window.scrollY * 0.08, 36);
+        heroProduct.style.setProperty("--hero-drift", `${offset}px`);
+        ticking = false;
+      };
+      window.addEventListener("scroll", () => {
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(updateProduct);
+      }, { passive: true });
+    }
+  </script>
+</BaseLayout>

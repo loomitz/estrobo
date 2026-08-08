@@ -2,11 +2,14 @@
 import "@fontsource-variable/instrument-sans";
 import "@phosphor-icons/web/regular";
 import "../styles/global.css";
+import { localeMeta, type Locale } from "../i18n/config";
 
 interface Props {
   title: string;
   description: string;
+  locale?: Locale;
   canonicalPath?: string | null;
+  alternatePath?: string;
   image?: string;
   imageAlt?: string;
   imageWidth?: number;
@@ -19,9 +22,11 @@ interface Props {
 const {
   title,
   description,
+  locale = "es",
   canonicalPath = Astro.url.pathname,
-  image = "/og/estrobo-social-v1.jpg",
-  imageAlt = "Estrobo controlando grupos de flash desde una Mac en un estudio fotográfico",
+  alternatePath,
+  image,
+  imageAlt,
   imageWidth = 1200,
   imageHeight = 630,
   imageType = "image/jpeg",
@@ -30,11 +35,19 @@ const {
 } = Astro.props;
 
 const canonical = canonicalPath === null ? null : new URL(canonicalPath, Astro.site);
-const socialImage = new URL(image, Astro.site);
+const alternate = alternatePath ? new URL(alternatePath, Astro.site) : null;
+const defaultLocaleUrl = locale === "es" ? canonical : alternate;
+const resolvedImage = image ?? (locale === "en" ? "/og/estrobo-social-en-v1.jpg" : "/og/estrobo-social-v1.jpg");
+const resolvedImageAlt = imageAlt ?? (locale === "en"
+  ? "Estrobo controlling flash groups from a Mac in a photography studio"
+  : "Estrobo controlando grupos de flash desde una Mac en un estudio fotográfico");
+const socialImage = new URL(resolvedImage, Astro.site);
+const otherLocale: Locale = locale === "es" ? "en" : "es";
+const skipLabel = locale === "en" ? "Skip to content" : "Saltar al contenido";
 ---
 
 <!doctype html>
-<html lang="es">
+<html lang={localeMeta[locale].htmlLang}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -43,7 +56,8 @@ const socialImage = new URL(image, Astro.site);
     <meta name="robots" content={robots} />
     <meta name="theme-color" content="#081727" />
     <meta property="og:type" content="website" />
-    <meta property="og:locale" content="es_MX" />
+    <meta property="og:locale" content={localeMeta[locale].ogLocale} />
+    {alternate && <meta property="og:locale:alternate" content={localeMeta[otherLocale].ogLocale} />}
     <meta property="og:site_name" content="Estrobo" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -53,20 +67,28 @@ const socialImage = new URL(image, Astro.site);
     <meta property="og:image:type" content={imageType} />
     <meta property="og:image:width" content={String(imageWidth)} />
     <meta property="og:image:height" content={String(imageHeight)} />
-    <meta property="og:image:alt" content={imageAlt} />
+    <meta property="og:image:alt" content={resolvedImageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={socialImage} />
-    <meta name="twitter:image:alt" content={imageAlt} />
+    <meta name="twitter:image:alt" content={resolvedImageAlt} />
     {canonical && <link rel="canonical" href={canonical} />}
+    {canonical && alternate && (
+      <>
+        <link rel="alternate" hreflang={locale} href={canonical} />
+        <link rel="alternate" hreflang={otherLocale} href={alternate} />
+        {defaultLocaleUrl && <link rel="alternate" hreflang="x-default" href={defaultLocaleUrl} />}
+      </>
+    )}
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
     <link rel="icon" type="image/svg+xml" href="/images/brand/app-icon-light.svg" />
     <script is:inline>document.documentElement.classList.add("js");</script>
     <title>{title}</title>
     <slot name="head" />
   </head>
   <body class={pageClass}>
-    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+    <a class="skip-link" href="#contenido">{skipLabel}</a>
     <slot />
     <script>
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

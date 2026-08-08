@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="text-safe" x1="0" y1="315" x2="745" y2="315" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06111E" stop-opacity="0.98"/>
+      <stop offset="0.58" stop-color="#06111E" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#06111E" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="bottom-shade" x1="600" y1="390" x2="600" y2="630" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#06111E" stop-opacity="0"/>
+      <stop offset="1" stop-color="#06111E" stop-opacity="0.42"/>
+    </linearGradient>
+  </defs>
+
+  <image x="0" y="0" width="1200" height="630" preserveAspectRatio="xMidYMid slice" xlink:href="estrobo-og-base-v1.png"/>
+  <rect width="790" height="630" fill="url(#text-safe)"/>
+  <rect width="1200" height="630" fill="url(#bottom-shade)"/>
+
+  <image x="58" y="58" width="287" height="60" xlink:href="estrobo-wordmark-white.png"/>
+
+  <text x="58" y="278" fill="#FFFFFF" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="62" font-weight="700" letter-spacing="-2.2">Your flashes.</text>
+  <text x="58" y="342" fill="#FFFFFF" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="62" font-weight="700" letter-spacing="-2.2">In sync.</text>
+  <text x="61" y="401" fill="#C5CFDB" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" font-weight="400">Control power, mode, and modeling lights</text>
+  <text x="61" y="434" fill="#C5CFDB" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="24" font-weight="400">from your Mac.</text>
+
+  <rect x="58" y="501" width="268" height="45" rx="8" fill="#FF9D00"/>
+  <text x="82" y="530" fill="#081727" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="16" font-weight="700">Public beta · macOS 13+</text>
+  <text x="58" y="585" fill="#8FA0B4" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="17" font-weight="500">Free · Native · No account · No telemetry</text>
+</svg>

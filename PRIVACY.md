@@ -1,5 +1,7 @@
 # Privacidad
 
+<p align="center"><strong>Español</strong> &nbsp;·&nbsp; <a href="PRIVACY.en.md">English</a></p>
+
 Estrobo controla un transmisor por Bluetooth de forma local. La aplicación no crea cuentas, no tiene backend, no solicita acceso de red, no incorpora analítica ni telemetría y no envía datos a Internet.
 
 Esta política describe `0.1.x` beta. El navegador, GitHub, macOS y cualquier otra app que uses para descargar, reportar o diagnosticar tienen sus propias prácticas; no forman parte del tráfico de Estrobo.

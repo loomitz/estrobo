@@ -1,21 +1,25 @@
 ---
 import { releaseDownloads } from "../config/release";
+import type { Locale } from "../i18n/config";
 
 interface Props {
   label?: string;
   className?: string;
   href?: string;
   icon?: "download" | "arrow-down";
+  locale?: Locale;
 }
 
 const {
-  label = "Descargar gratis",
+  label,
   className = "button button-primary",
   href = releaseDownloads.dmg,
   icon = "download",
+  locale = "es",
 } = Astro.props;
 
 const iconClass = icon === "arrow-down" ? "ph ph-arrow-down" : "ph ph-download-simple";
+const resolvedLabel = label ?? (locale === "en" ? "Download for free" : "Descargar gratis");
 ---
 
 <a
@@ -23,5 +27,5 @@ const iconClass = icon === "arrow-down" ? "ph ph-arrow-down" : "ph ph-download-s
   href={href}
 >
   <i class={iconClass} aria-hidden="true"></i>
-  <span>{label}</span>
+  <span>{resolvedLabel}</span>
 </a>

@@ -3,6 +3,10 @@
 Sitio estático de Estrobo construido con Astro y publicado en
 [`https://estrobo.app`](https://estrobo.app) mediante Cloudflare Pages.
 
+El sitio se publica en español en `/` y `/guia/`, con versiones inglesas
+equivalentes en `/en/` y `/en/guide/`. Cada par declara canonical y `hreflang`
+recíprocos; el sitemap se genera en `/sitemap.xml`.
+
 ## Desarrollo
 
 Requiere Node.js `22.12.x` o `24.x` y pnpm.
