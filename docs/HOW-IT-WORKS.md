@@ -19,7 +19,7 @@ El transmisor no ofrece una lectura completa que permita reconstruir su estado. 
 
 ## Ciclo de una sesión
 
-1. **Preparar el espacio de trabajo.** Se elige un perfil, los grupos de trabajo y uno o más modelos de flash por grupo. El rango manual disponible es la intersección segura de esos modelos.
+1. **Preparar el espacio de trabajo.** En la primera apertura no hay grupos preseleccionados: la persona elige explícitamente la compatibilidad del transmisor, sus grupos de trabajo y uno o más modelos de flash por grupo. El rango manual disponible es la intersección segura de esos modelos.
 2. **Buscar y seleccionar.** Estrobo muestra nombre BLE, RSSI y un sufijo corto del UUID. Prioriza el UUID recordado. Si hay nombres duplicados no elige uno arbitrariamente.
 3. **Preparar BLE.** CoreBluetooth conecta, descubre `FFF0`/`FEC0`, localiza `FFF1`, `FFF4`, `FEC7` y `FEC8`, y activa notificaciones o indicaciones.
 4. **Validar el Código del radio.** Un reto local `Psub` viaja por BLE y la app valida temporalmente una respuesta `PWOK`. No interviene una cuenta ni un servicio remoto. El código no constituye autenticación fuerte.

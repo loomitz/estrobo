@@ -12,7 +12,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     @Published var selectedDeviceID: UUID?
     @Published var radioCode = ""
     @Published var rememberSelectedRadio = false
-    @Published private(set) var savedRadio: SavedRadio?
+    @Published private(set) var savedRadios: [SavedRadio]
     @Published private(set) var connectedDeviceName: String?
     @Published private(set) var groups: [GodoxGroup: GroupDraft]
     @Published private(set) var transmitterProfile: TransmitterProfile
@@ -20,6 +20,10 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     @Published private(set) var defaultTransmitterProfileID: String
     @Published private(set) var groupConfigurations: [GodoxGroup: GroupConfiguration]
     @Published private(set) var hasCompletedOnboarding = false
+    /// Distingue una instalación nueva de una configuración guardada que se
+    /// está editando o reanudando. `hasCompletedOnboarding` no basta porque se
+    /// vuelve temporalmente falso mientras se abre la reconfiguración.
+    private(set) var hasStoredWorkspaceConfiguration = false
     @Published private(set) var isReconfiguringWorkspace = false
     @Published private(set) var workingGroups: [GodoxGroup]
     @Published private(set) var visibleGroups: [GodoxGroup]
@@ -279,13 +283,13 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         let savedRadioLoadWasInvalid: Bool
         switch initialSavedRadioStore.load() {
         case .none:
-            savedRadio = nil
+            savedRadios = []
             savedRadioLoadWasInvalid = false
-        case .record(let radio):
-            savedRadio = radio
+        case .records(let radios):
+            savedRadios = radios
             savedRadioLoadWasInvalid = false
         case .invalid:
-            savedRadio = nil
+            savedRadios = []
             savedRadioLoadWasInvalid = true
         }
 
@@ -444,6 +448,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         initialGlobalSnapshot.multiHertz = initialMultiFlashSettings.hertzByte
         initialGlobalSnapshot.multiPowerByte = initialMultiFlashSettings.powerByte
         globalRadioSnapshot = initialGlobalSnapshot
+        hasStoredWorkspaceConfiguration = restoredWorkspace != nil
         hasCompletedOnboarding = restoredWorkspace?.onboardingCompleted ?? false
         super.init()
 
@@ -506,13 +511,17 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         devices.first { $0.id == selectedDeviceID }
     }
 
-    var isSavedRadioDiscovered: Bool {
-        guard let savedRadio else { return false }
-        return devices.contains { $0.id == savedRadio.deviceID }
+    func isSavedRadioDiscovered(_ deviceID: UUID) -> Bool {
+        devices.contains { $0.id == deviceID }
     }
 
     var isSelectedDeviceSaved: Bool {
-        selectedDeviceID != nil && selectedDeviceID == savedRadio?.deviceID
+        guard let selectedDeviceID else { return false }
+        return savedRadio(for: selectedDeviceID) != nil
+    }
+
+    func savedRadio(for deviceID: UUID) -> SavedRadio? {
+        savedRadios.first { $0.deviceID == deviceID }
     }
 
     var isRadioCodeValid: Bool {
@@ -566,6 +575,12 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     /// sólo puede cambiar cuando no existe una sesión con un radio.
     var canConfigureHardwareProfile: Bool {
         canConfigureWorkspace && phase == .idle
+    }
+
+    /// Borrar identidad/código local no puede competir con un handshake,
+    /// escaneo, write, Test ni recuperación en curso.
+    var canForgetSavedRadios: Bool {
+        canConfigureWorkspace
     }
 
     @discardableResult
@@ -1835,6 +1850,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         let previousConfigurations = groupConfigurations
         let previousGroups = groups
         let previousOnboardingState = hasCompletedOnboarding
+        let previousStoredWorkspaceState = hasStoredWorkspaceConfiguration
         let previousReconfigurationState = isReconfiguringWorkspace
         let previousActivePresetID = activePresetID
         let previousAutomaticSuppression = automaticApplySuppressedForLocalPreset
@@ -1967,6 +1983,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         groups = nextGroups
         guard normalizeMultiFlashDraftForCurrentGroups() else { return false }
 
+        hasStoredWorkspaceConfiguration = true
         hasCompletedOnboarding = true
         isReconfiguringWorkspace = false
         activePresetID = nil
@@ -1979,6 +1996,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             groups = previousGroups
             multiFlashDraft = previousMultiFlashDraft
             hasCompletedOnboarding = previousOnboardingState
+            hasStoredWorkspaceConfiguration = previousStoredWorkspaceState
             isReconfiguringWorkspace = previousReconfigurationState
             activePresetID = previousActivePresetID
             automaticApplySuppressedForLocalPreset = previousAutomaticSuppression
@@ -2449,22 +2467,23 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
         selectedDeviceID = deviceID
         selectedDeviceWasChosenExplicitly = explicitly
-        if let savedRadio, savedRadio.deviceID == deviceID {
+        if let deviceID, let savedRadio = savedRadio(for: deviceID) {
             radioCode = savedRadio.radioCode
         } else {
             radioCode = ""
         }
     }
 
-    func forgetSavedRadio() {
-        guard let savedRadio else { return }
-        guard savedRadioStore.clear() else {
+    func forgetSavedRadio(_ deviceID: UUID) {
+        guard canForgetSavedRadios else { return }
+        guard savedRadio(for: deviceID) != nil else { return }
+        guard savedRadioStore.remove(deviceID: deviceID) else {
             addActivity(.error, "No se pudo eliminar el radio guardado")
             return
         }
-        self.savedRadio = nil
-        rememberSelectedRadio = false
-        if selectedDeviceID == savedRadio.deviceID {
+        savedRadios.removeAll { $0.deviceID == deviceID }
+        if selectedDeviceID == deviceID {
+            rememberSelectedRadio = false
             radioCode = ""
         }
         addActivity(.info, "Radio guardado eliminado de este Mac")
@@ -3402,10 +3421,14 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 devices.append(device)
             }
             devices.sort { $0.rssi > $1.rssi }
-            if device.id == savedRadio?.deviceID {
-                selectDeviceAutomatically(device.id)
+            if let preferredSavedRadio = savedRadios.first(where: { saved in
+                devices.contains { $0.id == saved.deviceID }
+            }), !selectedDeviceWasChosenExplicitly {
+                // El orden persistido decide entre varios radios recordados que
+                // estén visibles; una elección explícita del usuario siempre gana.
+                selectDeviceAutomatically(preferredSavedRadio.deviceID)
             } else if let selectedDevice,
-                      savedRadio?.deviceID != selectedDevice.id,
+                      savedRadio(for: selectedDevice.id) == nil,
                       !selectedDeviceWasChosenExplicitly,
                       isDeviceNameDuplicated(selectedDevice) {
                 // Scanning revealed that a previously unique display name was
@@ -4061,8 +4084,12 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
               ) else {
             return
         }
-        if savedRadioStore.save(radio) {
-            savedRadio = radio
+        if savedRadioStore.upsert(radio) {
+            if let index = savedRadios.firstIndex(where: { $0.deviceID == radio.deviceID }) {
+                savedRadios[index] = radio
+            } else {
+                savedRadios.append(radio)
+            }
             addActivity(.success, "Radio y código guardados localmente en este Mac")
         } else {
             addActivity(.warning, "El radio conectó, pero no se pudo guardar para la próxima vez")

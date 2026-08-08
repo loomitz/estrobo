@@ -4,14 +4,14 @@ Empieza por anotar la versión/build de Estrobo, versión de macOS, arquitectura
 
 ## macOS no abre la app
 
-Es esperado: el beta no tiene Developer ID ni notarización Apple.
+La beta oficial tiene Developer ID y notarización Apple. Gatekeeper debe aceptar tanto el DMG como la app sin usar **Abrir de todos modos**.
 
-1. Verifica primero el SHA-256 del ZIP contra `SHA256SUMS` del mismo GitHub Release.
-2. Intenta abrir Estrobo una vez.
-3. Ve a **Configuración del Sistema → Privacidad y seguridad → Seguridad → Abrir de todos modos**.
-4. Autentícate y confirma **Abrir**.
+1. Verifica primero el SHA-256 del DMG contra `SHA256SUMS` del mismo GitHub Release.
+2. Confirma que descargaste `estrobo-v0.1.0-beta.3-macos-universal.dmg` desde el release oficial y no una copia reenviada.
+3. Abre el DMG, arrastra `estrobo.app` a Aplicaciones y expulsa la imagen antes de abrir la app instalada.
+4. Si macOS muestra la confirmación normal de una app descargada de Internet, confirma **Abrir**. Este aviso no es el bloqueo por desarrollador no identificado.
 
-El botón aparece durante un tiempo limitado después del intento. Sigue la [guía oficial de Apple](https://support.apple.com/guide/mac-help/mh40617/mac). No desactives Gatekeeper, no borres la cuarentena y no instales/confíes manualmente en el certificado autosignado.
+Si macOS indica que no puede verificar al desarrollador, que el archivo está dañado o que Gatekeeper lo rechaza, no desactives Gatekeeper ni borres la cuarentena. Elimina esa copia, vuelve a descargarla y verifica el checksum. Si el digest coincide y el problema persiste, abre un issue con la versión de macOS y el mensaje exacto, sin adjuntar el DMG.
 
 Si `codesign --verify --deep --strict` o el checksum fallan, no abras la app: elimina esa copia y vuelve a descargar el asset oficial.
 

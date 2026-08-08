@@ -599,10 +599,42 @@ enum InteractiveEditingCheck {
         defer { window.orderOut(nil) }
 
         let point = NSPoint(x: 282, y: 32)
+        guard let queuedMouseUp = NSEvent.mouseEvent(
+            with: .leftMouseUp,
+            location: point,
+            modifierFlags: [],
+            timestamp: ProcessInfo.processInfo.systemUptime + 0.01,
+            windowNumber: window.windowNumber,
+            context: nil,
+            eventNumber: 16,
+            clickCount: 1,
+            pressure: 0
+        ) else {
+            fail("Could not create the queued AppKit mouse-up event")
+        }
+
+        // A native slider may synchronously track from mouse-down until it
+        // receives mouse-up, so the release must already be in AppKit's queue.
+        app.postEvent(queuedMouseUp, atStart: true)
         sendMouse(.leftMouseDown, to: window, at: point, eventNumber: 15, app: app)
-        pump(0.03)
-        expect(fixture.controller.isInteractiveEditActive)
-        sendMouse(.leftMouseUp, to: window, at: point, eventNumber: 16, app: app)
+
+        if let pendingMouseUp = app.nextEvent(
+            matching: .leftMouseUp,
+            until: Date(),
+            inMode: .default,
+            dequeue: true
+        ) {
+            expect(
+                pendingMouseUp.windowNumber == window.windowNumber
+                    && pendingMouseUp.eventNumber == queuedMouseUp.eventNumber,
+                "The queued mouse-up was replaced by an unexpected event"
+            )
+            app.sendEvent(pendingMouseUp)
+        } else {
+            // NSDragEventTracker may consume the queued event without routing
+            // it through NSApplication, so let the local monitor see release.
+            app.sendEvent(queuedMouseUp)
+        }
         pump(0.05)
 
         expect(!fixture.controller.isInteractiveEditActive)

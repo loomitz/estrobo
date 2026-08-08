@@ -145,27 +145,24 @@ private struct WorkspaceConfigurationFlow: View {
     @State private var modelFilter = ""
     @State private var completionFailed = false
     @State private var showsGroupPicker = false
-    @State private var showsProfileManager = false
+    @State private var showsSavedTransmitters = false
 
     init(controller: GodoxSessionController) {
         self.controller = controller
         let profile = controller.transmitterProfile
-        var initialGroups = Set(
-            controller.workingGroups.filter(profile.supportedGroups.contains)
-        )
-        if initialGroups.isEmpty {
-            initialGroups = Set(profile.supportedGroups.filter { [.b, .c].contains($0) })
-        }
-        if initialGroups.isEmpty, let first = profile.supportedGroups.first {
-            initialGroups = [first]
-        }
+        let startsEmpty = !controller.hasStoredWorkspaceConfiguration
+        let initialGroups = startsEmpty
+            ? Set<GodoxGroup>()
+            : Set(controller.workingGroups.filter(profile.supportedGroups.contains))
 
         let catalogIDs = Set(profile.flashCatalog.map(\.id))
         let assignments = Dictionary(uniqueKeysWithValues: profile.supportedGroups.map { group in
             (
                 group,
-                controller.groupConfiguration(group).assignedFlashModelIDs
-                    .intersection(catalogIDs)
+                startsEmpty
+                    ? Set<String>()
+                    : controller.groupConfiguration(group).assignedFlashModelIDs
+                        .intersection(catalogIDs)
             )
         })
 
@@ -202,7 +199,9 @@ private struct WorkspaceConfigurationFlow: View {
                             .font(.system(size: 28, weight: .semibold))
                             .foregroundStyle(PrototypePalette.primaryText)
                         Text(languageStore.language.localized(
-                            "Organiza el transmisor, los grupos y sus flashes en un solo lugar."
+                            controller.isReconfiguringWorkspace
+                                ? "Organiza el transmisor, los grupos y sus flashes en un solo lugar."
+                                : "Antes de conectar, elige tus grupos y asigna sus flashes."
                         ))
                             .font(.callout)
                             .foregroundStyle(PrototypePalette.secondaryText)
@@ -254,8 +253,8 @@ private struct WorkspaceConfigurationFlow: View {
                 onAdd: addWorkingGroups
             )
         }
-        .sheet(isPresented: $showsProfileManager) {
-            TransmitterProfileManagerSheet(controller: controller)
+        .sheet(isPresented: $showsSavedTransmitters) {
+            SavedTransmittersSheet(controller: controller)
         }
     }
 
@@ -336,14 +335,14 @@ private struct WorkspaceConfigurationFlow: View {
 
     private var profileToolbar: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(languageStore.language.localized("Perfil del transmisor").uppercased())
+            Text(languageStore.language.localized("Compatibilidad de grupos").uppercased())
                 .font(.caption2.weight(.bold))
                 .tracking(0.8)
                 .foregroundStyle(PrototypePalette.secondaryText)
 
             HStack(spacing: 12) {
                 Picker(
-                    languageStore.language.localized("Perfil del transmisor"),
+                    languageStore.language.localized("Compatibilidad de grupos"),
                     selection: $profileID
                 ) {
                     ForEach(controller.availableTransmitterProfiles) { profile in
@@ -356,8 +355,8 @@ private struct WorkspaceConfigurationFlow: View {
                 .frame(maxWidth: 360, alignment: .leading)
                 .help(languageStore.language.localized(
                     controller.canConfigureHardwareProfile
-                        ? "Elige el perfil del transmisor."
-                        : "Desconecta para cambiar el perfil del transmisor."
+                        ? "Elige la compatibilidad de grupos para tu transmisor."
+                        : "Desconecta para cambiar la compatibilidad de grupos."
                 ))
 
                 if profileID == controller.defaultTransmitterProfileID {
@@ -379,16 +378,16 @@ private struct WorkspaceConfigurationFlow: View {
                 Spacer(minLength: 12)
 
                 Button {
-                    showsProfileManager = true
+                    showsSavedTransmitters = true
                 } label: {
                     Label(
-                        languageStore.language.localized("Administrar perfiles…"),
-                        systemImage: "slider.horizontal.3"
+                        languageStore.language.localized("Transmisores guardados…"),
+                        systemImage: "externaldrive.badge.wifi"
                     )
                 }
                 .buttonStyle(QuietButtonStyle())
                 .accessibilityHint(languageStore.language.localized(
-                    "Elige el perfil predeterminado o restaura perfiles incluidos."
+                    "Revisa los transmisores que se han guardado en este Mac."
                 ))
             }
         }
@@ -449,15 +448,33 @@ private struct WorkspaceConfigurationFlow: View {
     @ViewBuilder
     private var flashDetailPane: some View {
         if orderedSelectedGroups.isEmpty {
-            VStack(spacing: 9) {
-                Image(systemName: "square.grid.3x3")
-                    .font(.system(size: 24, weight: .medium))
+            VStack(spacing: 12) {
+                Image(systemName: "square.grid.3x3.fill")
+                    .font(.system(size: 26, weight: .medium))
                     .foregroundStyle(PrototypePalette.muted)
                 Text(languageStore.language.localized(
-                    "Selecciona un grupo para asignar sus flashes."
+                    "Aún no hay grupos de trabajo"
+                ))
+                    .font(.headline)
+                    .foregroundStyle(PrototypePalette.primaryText)
+                Text(languageStore.language.localized(
+                    "Estrobo no selecciona grupos por ti. Añade los que realmente utilizas y asigna sus modelos de flash."
                 ))
                     .font(.callout)
                     .foregroundStyle(PrototypePalette.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 390)
+
+                Button {
+                    showsGroupPicker = true
+                } label: {
+                    Label(
+                        languageStore.language.localized("Elegir grupos"),
+                        systemImage: "plus"
+                    )
+                }
+                .buttonStyle(WorkspacePrimaryButtonStyle())
+                .disabled(unselectedSupportedGroups.isEmpty)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -497,12 +514,8 @@ private struct WorkspaceConfigurationFlow: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .disabled(selectedGroups.count <= 1)
-                    .opacity(selectedGroups.count <= 1 ? 0.42 : 1)
                     .help(languageStore.language.localized(
-                        selectedGroups.count <= 1
-                            ? "Debe quedar al menos un grupo de trabajo."
-                            : "Quita este grupo del espacio de trabajo."
+                        "Quita este grupo del espacio de trabajo."
                     ))
                 }
 
@@ -833,7 +846,7 @@ private struct WorkspaceConfigurationFlow: View {
     }
 
     private func removeWorkingGroup(_ group: GodoxGroup) {
-        guard selectedGroups.count > 1, selectedGroups.contains(group) else { return }
+        guard selectedGroups.contains(group) else { return }
         completionFailed = false
         selectedGroups.remove(group)
         if configuredGroup == group {
@@ -848,12 +861,6 @@ private struct WorkspaceConfigurationFlow: View {
         completionFailed = false
         let supported = Set(selectedProfile.supportedGroups)
         selectedGroups.formIntersection(supported)
-        if selectedGroups.isEmpty {
-            let defaults = selectedProfile.supportedGroups.filter { [.b, .c].contains($0) }
-            selectedGroups = Set(defaults.isEmpty
-                ? Array(selectedProfile.supportedGroups.prefix(1))
-                : defaults)
-        }
 
         let catalogIDs = Set(selectedProfile.flashCatalog.map(\.id))
         for group in selectedProfile.supportedGroups {
@@ -1062,20 +1069,21 @@ private struct AddWorkingGroupsSheet: View {
 }
 
 @MainActor
-private struct TransmitterProfileManagerSheet: View {
+private struct SavedTransmittersSheet: View {
     @ObservedObject var controller: GodoxSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
     @Environment(\.dismiss) private var dismiss
+    @State private var radioPendingForget: SavedRadio?
 
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .topTrailing) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(languageStore.language.localized("Administrar perfiles"))
+                    Text(languageStore.language.localized("Transmisores guardados"))
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(PrototypePalette.primaryText)
                     Text(languageStore.language.localized(
-                        "Elige el perfil predeterminado y quita los que no uses en este Mac."
+                        "Radios que se han conectado y guardado en este Mac."
                     ))
                         .font(.callout)
                         .foregroundStyle(PrototypePalette.secondaryText)
@@ -1099,36 +1107,27 @@ private struct TransmitterProfileManagerSheet: View {
             Divider().overlay(PrototypePalette.dividerStrong)
 
             ScrollView {
-                LazyVStack(spacing: 10) {
-                    ForEach(controller.availableTransmitterProfiles) { profile in
-                        profileRow(profile)
+                if controller.savedRadios.isEmpty {
+                    emptyState
+                } else {
+                    LazyVStack(spacing: 10) {
+                        ForEach(controller.savedRadios, id: \.deviceID) { radio in
+                            transmitterRow(radio)
+                        }
                     }
+                    .padding(24)
                 }
-                .padding(24)
             }
 
             Divider().overlay(PrototypePalette.dividerStrong)
 
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Button {
-                        controller.restoreTransmitterProfiles()
-                    } label: {
-                        Label(
-                            languageStore.language.localized("Restaurar perfiles incluidos"),
-                            systemImage: "arrow.clockwise"
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(PrototypePalette.primaryText)
-
-                    Text(languageStore.language.localized(
-                        "Quitar un perfil sólo lo oculta en este Mac; puedes restaurarlo después."
-                    ))
-                        .font(.caption)
-                        .foregroundStyle(PrototypePalette.secondaryText)
-                }
+            HStack(alignment: .center, spacing: 16) {
+                Text(languageStore.language.localized(
+                    "Los códigos guardados permanecen en este Mac y no se muestran en esta lista."
+                ))
+                    .font(.caption)
+                    .foregroundStyle(PrototypePalette.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
 
@@ -1146,12 +1145,73 @@ private struct TransmitterProfileManagerSheet: View {
         }
         .frame(width: 720, height: 540)
         .background(PrototypePalette.windowBackground)
+        .alert(
+            languageStore.language.localized("¿Olvidar este transmisor?"),
+            isPresented: Binding(
+                get: { radioPendingForget != nil },
+                set: { isPresented in
+                    if !isPresented { radioPendingForget = nil }
+                }
+            ),
+            presenting: radioPendingForget
+        ) { radio in
+            Button(languageStore.language.localized("Cancelar"), role: .cancel) {
+                radioPendingForget = nil
+            }
+            Button(languageStore.language.localized("Olvidar"), role: .destructive) {
+                controller.forgetSavedRadio(radio.deviceID)
+                radioPendingForget = nil
+            }
+        } message: { _ in
+            Text(languageStore.language.localized(
+                "Se eliminarán el transmisor y su Código del radio guardados en este Mac."
+            ))
+        }
     }
 
-    private func profileRow(_ profile: TransmitterProfile) -> some View {
-        let isActive = profile.id == controller.transmitterProfile.id
-        let isDefault = profile.id == controller.defaultTransmitterProfileID
-        let canRemove = !isActive && controller.availableTransmitterProfiles.count > 1
+    private var emptyState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "externaldrive.badge.wifi")
+                .font(.system(size: 32, weight: .medium))
+                .foregroundStyle(PrototypePalette.secondaryText)
+                .accessibilityHidden(true)
+
+            Text(languageStore.language.localized("Aún no hay transmisores guardados"))
+                .font(.headline)
+                .foregroundStyle(PrototypePalette.primaryText)
+
+            Text(languageStore.language.localized(
+                "Activa Recordar antes de conectar; se guardará sólo al completar autenticación y Sync."
+            ))
+                .font(.callout)
+                .foregroundStyle(PrototypePalette.secondaryText)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, minHeight: 340)
+        .padding(24)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func transmitterRow(_ radio: SavedRadio) -> some View {
+        let isConnected = controller.showsControlWorkspace &&
+            controller.selectedDeviceID == radio.deviceID
+        let isDiscovered = controller.isSavedRadioDiscovered(radio.deviceID)
+        let statusTitle: String
+        let statusImage: String
+        let statusColor: Color
+        if isConnected {
+            statusTitle = "Conectado"
+            statusImage = "link.circle.fill"
+            statusColor = PrototypePalette.success
+        } else if isDiscovered {
+            statusTitle = "Encontrado en la última búsqueda"
+            statusImage = "dot.radiowaves.left.and.right"
+            statusColor = PrototypePalette.accent
+        } else {
+            statusTitle = "Guardado en este Mac"
+            statusImage = "bookmark.fill"
+            statusColor = PrototypePalette.secondaryText
+        }
 
         return HStack(spacing: 16) {
             Image(systemName: "dot.radiowaves.left.and.right")
@@ -1165,72 +1225,43 @@ private struct TransmitterProfileManagerSheet: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 5) {
-                Text(languageStore.language.localized(profile.name))
+                Text(radio.name)
                     .font(.headline)
                     .foregroundStyle(PrototypePalette.primaryText)
+
                 Text(languageStore.language.localizedFormat(
-                    "%lld grupos disponibles",
-                    profile.supportedGroups.count
+                    "Identificador …%@",
+                    identifierSuffix(radio.deviceID)
                 ))
-                    .font(.caption)
+                    .font(.caption.monospaced())
                     .foregroundStyle(PrototypePalette.secondaryText)
 
-                HStack(spacing: 6) {
-                    if isActive {
-                        profileBadge(
-                            languageStore.language.localized("En uso"),
-                            systemImage: "checkmark.circle.fill",
-                            color: PrototypePalette.success
-                        )
-                    }
-                    if isDefault {
-                        profileBadge(
-                            languageStore.language.localized("Predeterminado"),
-                            systemImage: "star.fill",
-                            color: PrototypePalette.secondaryText
-                        )
-                    }
-                }
+                Label(
+                    languageStore.language.localized(statusTitle),
+                    systemImage: statusImage
+                )
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(statusColor)
             }
 
             Spacer(minLength: 12)
 
-            if !isDefault {
-                Button {
-                    _ = controller.setDefaultTransmitterProfile(profile.id)
-                } label: {
-                    Label(
-                        languageStore.language.localized("Usar como predeterminado"),
-                        systemImage: "star"
-                    )
-                }
-                .buttonStyle(QuietButtonStyle())
+            Button(role: .destructive) {
+                radioPendingForget = radio
+            } label: {
+                Label(
+                    languageStore.language.localized("Olvidar"),
+                    systemImage: "trash"
+                )
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PrototypePalette.error)
             }
-
-            if canRemove {
-                Button(role: .destructive) {
-                    _ = controller.removeTransmitterProfile(profile.id)
-                } label: {
-                    Label(
-                        languageStore.language.localized("Quitar"),
-                        systemImage: "trash"
-                    )
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(PrototypePalette.error)
-                }
-                .buttonStyle(.plain)
-                .accessibilityHint(languageStore.language.localized(
-                    "Oculta este perfil en este Mac."
-                ))
-            } else if isActive {
-                Text(languageStore.language.localized(
-                    "No puedes quitar el perfil que usa este espacio de trabajo."
-                ))
-                    .font(.caption)
-                    .foregroundStyle(PrototypePalette.secondaryText)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 170, alignment: .trailing)
-            }
+            .buttonStyle(.plain)
+            .disabled(!controller.canForgetSavedRadios)
+            .accessibilityLabel(languageStore.language.localizedFormat(
+                "Olvidar transmisor %@",
+                radio.name
+            ))
         }
         .padding(16)
         .background(
@@ -1244,20 +1275,8 @@ private struct TransmitterProfileManagerSheet: View {
         .accessibilityElement(children: .contain)
     }
 
-    private func profileBadge(
-        _ title: String,
-        systemImage: String,
-        color: Color
-    ) -> some View {
-        Label(title, systemImage: systemImage)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(color)
-            .padding(.horizontal, 7)
-            .frame(height: 22)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(color.opacity(0.10))
-            )
+    private func identifierSuffix(_ deviceID: UUID) -> String {
+        String(deviceID.uuidString.replacingOccurrences(of: "-", with: "").suffix(6))
     }
 }
 
@@ -2994,7 +3013,7 @@ private struct LocalConfigurationPopover: View {
     @Binding var variant: PrototypeVariant
     @EnvironmentObject private var languageStore: AppLanguageStore
     @Environment(\.dismiss) private var dismiss
-    @State private var showsProfileManager = false
+    @State private var showsSavedTransmitters = false
 
     private let groupColumns = [
         GridItem(.adaptive(minimum: 42, maximum: 48), spacing: 8)
@@ -3090,34 +3109,48 @@ private struct LocalConfigurationPopover: View {
 
                     SettingsDivider()
 
-                    SettingsRow(title: "Perfil del transmisor") {
+                    SettingsRow(title: "Compatibilidad de grupos", alignment: .top) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(languageStore.language.localized(
+                                controller.transmitterProfile.name
+                            ))
+                                .font(.callout.weight(.medium))
+                                .foregroundStyle(PrototypePalette.primaryText)
+
+                            Text(languageStore.language.localized(
+                                "Define los grupos y funciones disponibles; no representa un transmisor guardado."
+                            ))
+                                .font(.caption)
+                                .foregroundStyle(PrototypePalette.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    SettingsDivider()
+
+                    SettingsRow(title: "Transmisores guardados", alignment: .top) {
                         HStack(spacing: 12) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(languageStore.language.localized(
-                                    controller.transmitterProfile.name
-                                ))
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(savedTransmittersSummary)
                                     .font(.callout.weight(.medium))
                                     .foregroundStyle(PrototypePalette.primaryText)
 
-                                if controller.transmitterProfile.id ==
-                                    controller.defaultTransmitterProfileID {
-                                    Label(
-                                        languageStore.language.localized("Predeterminado"),
-                                        systemImage: "star.fill"
-                                    )
-                                        .font(.caption2.weight(.semibold))
-                                        .foregroundStyle(PrototypePalette.secondaryText)
-                                }
+                                Text(languageStore.language.localized(
+                                    "Administra los radios que se han conectado y guardado en este Mac."
+                                ))
+                                    .font(.caption)
+                                    .foregroundStyle(PrototypePalette.secondaryText)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
 
                             Spacer(minLength: 8)
 
                             Button {
-                                showsProfileManager = true
+                                showsSavedTransmitters = true
                             } label: {
                                 Label(
-                                    languageStore.language.localized("Administrar perfiles…"),
-                                    systemImage: "slider.horizontal.3"
+                                    languageStore.language.localized("Transmisores guardados…"),
+                                    systemImage: "externaldrive.badge.wifi"
                                 )
                             }
                             .buttonStyle(QuietButtonStyle())
@@ -3202,8 +3235,8 @@ private struct LocalConfigurationPopover: View {
         }
         .frame(width: 760, height: 600)
         .background(PrototypePalette.windowBackground)
-        .sheet(isPresented: $showsProfileManager) {
-            TransmitterProfileManagerSheet(controller: controller)
+        .sheet(isPresented: $showsSavedTransmitters) {
+            SavedTransmittersSheet(controller: controller)
         }
     }
 
@@ -3221,6 +3254,16 @@ private struct LocalConfigurationPopover: View {
         case .manual:
             "Los cambios esperan hasta que pulses Aplicar."
         }
+    }
+
+    private var savedTransmittersSummary: String {
+        if controller.savedRadios.count == 1 {
+            return languageStore.language.localized("1 transmisor guardado")
+        }
+        return languageStore.language.localizedFormat(
+            "%lld transmisores guardados",
+            controller.savedRadios.count
+        )
     }
 
 }
@@ -3433,6 +3476,7 @@ private struct ConnectionPanel: View {
 private struct ConnectionSetupFlow: View {
     @ObservedObject var controller: GodoxSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
+    @State private var showsSavedTransmitters = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -3454,38 +3498,8 @@ private struct ConnectionSetupFlow: View {
                 valueSynchronizationProgress
             }
 
-            if let savedRadio = controller.savedRadio {
-                HStack(spacing: 10) {
-                    Image(systemName: controller.isSavedRadioDiscovered ? "dot.radiowaves.left.and.right" : "bookmark.fill")
-                        .foregroundStyle(
-                            controller.isSavedRadioDiscovered
-                                ? PrototypePalette.success
-                                : PrototypePalette.secondaryText
-                        )
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(savedRadio.name)
-                            .font(.system(size: 12, weight: .semibold))
-                        Text(languageStore.language.localized(
-                            controller.isSavedRadioDiscovered
-                                ? "Radio guardado encontrado · código cargado"
-                                : "Radio guardado · pulsa Buscar para encontrarlo"
-                        ))
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    }
-
-                    Spacer(minLength: 8)
-
-                    Button {
-                        controller.forgetSavedRadio()
-                    } label: {
-                        Text(languageStore.language.localized("Olvidar"))
-                    }
-                    .buttonStyle(QuietButtonStyle())
-                    .disabled(connectionLocked)
-                }
-                .padding(.vertical, 4)
+            if !controller.savedRadios.isEmpty {
+                savedTransmittersCard
             }
 
             HStack(spacing: 8) {
@@ -3580,6 +3594,9 @@ private struct ConnectionSetupFlow: View {
         .padding(20)
         .frame(maxWidth: 440)
         .prototypePanel(padding: 0)
+        .sheet(isPresented: $showsSavedTransmitters) {
+            SavedTransmittersSheet(controller: controller)
+        }
     }
 
     private var devicePlaceholder: String {
@@ -3595,7 +3612,73 @@ private struct ConnectionSetupFlow: View {
 
     private var searchButtonTitle: String {
         if controller.phase == .scanning { return "Escaneando…" }
-        return controller.savedRadio == nil ? "Buscar radios" : "Buscar radio guardado"
+        return "Buscar radios"
+    }
+
+    private var savedTransmittersCard: some View {
+        HStack(spacing: 10) {
+            Image(systemName: discoveredSavedTransmitterCount > 0
+                ? "dot.radiowaves.left.and.right"
+                : "externaldrive.badge.wifi")
+                .foregroundStyle(
+                    discoveredSavedTransmitterCount > 0
+                        ? PrototypePalette.success
+                        : PrototypePalette.secondaryText
+                )
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(savedTransmittersSummary)
+                    .font(.system(size: 12, weight: .semibold))
+                Text(savedTransmittersDiscoverySummary)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                showsSavedTransmitters = true
+            } label: {
+                Text(languageStore.language.localized("Ver transmisores…"))
+            }
+            .buttonStyle(QuietButtonStyle())
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var discoveredSavedTransmitterCount: Int {
+        controller.savedRadios.filter {
+            controller.isSavedRadioDiscovered($0.deviceID)
+        }.count
+    }
+
+    private var savedTransmittersSummary: String {
+        if controller.savedRadios.count == 1 {
+            return languageStore.language.localized("1 transmisor guardado")
+        }
+        return languageStore.language.localizedFormat(
+            "%lld transmisores guardados",
+            controller.savedRadios.count
+        )
+    }
+
+    private var savedTransmittersDiscoverySummary: String {
+        if discoveredSavedTransmitterCount == 0 {
+            return languageStore.language.localized(
+                "Pulsa Buscar para encontrarlos."
+            )
+        }
+        if discoveredSavedTransmitterCount == 1 {
+            return languageStore.language.localized(
+                "1 encontrado en la última búsqueda"
+            )
+        }
+        return languageStore.language.localizedFormat(
+            "%lld encontrados en la última búsqueda",
+            discoveredSavedTransmitterCount
+        )
     }
 
     private var connectionButtonTitle: String {

@@ -48,6 +48,10 @@ jobs:
       - name: Test
         run: make mac-prototype-test TARGET_ARCH="$EXPECTED_ARCH"
 
+      - name: Test Developer ID tooling without credentials
+        if: ${{ matrix.expected_arch == 'arm64' }}
+        run: make mac-prototype-developer-id-tools-test
+
       - name: Build native bundle
         run: make mac-prototype-build TARGET_ARCH="$EXPECTED_ARCH"
 

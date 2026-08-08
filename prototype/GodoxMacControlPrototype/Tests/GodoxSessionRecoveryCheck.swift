@@ -233,6 +233,7 @@ private final class MemoryTransmitterProfilePreferencesStorage {
 @MainActor
 enum GodoxSessionRecoveryCheck {
     static func main() async {
+        checkFirstLaunchRequiresExplicitGroupSelection()
         checkControlsRequireReadySession()
         checkSavedRadioReconnectFlow()
         checkDuplicateRadioNamesRequireExplicitSelection()
@@ -248,6 +249,7 @@ enum GodoxSessionRecoveryCheck {
         checkLocalPresetLoadNeverSchedulesAutomaticDelivery()
         checkPresetCompatibilityFollowsCurrentModels()
         checkWorkspaceAndPresetsSurviveControllerRestart()
+        checkInterruptedWorkspaceConfigurationRestoresItsDraft()
         checkTransmitterProfileAvailabilityAndDefault()
         checkWorkingGroupsKeepAtLeastOneFlashModel()
         checkWorkspaceReconfigurationCanBeCancelled()
@@ -290,6 +292,24 @@ enum GodoxSessionRecoveryCheck {
         checkReadySessionAppliesNormalChanges()
         checkUncertainWriteRequiresPersistedRecovery()
         print("Conexión, debounce, cola de cambios y recuperación incierta verificadas sin Bluetooth")
+    }
+
+    private static func checkFirstLaunchRequiresExplicitGroupSelection() {
+        let memory = MemoryStudioLibraryStorage()
+        let fixture = makeFixture(studioLibraryStore: memory.makeStore())
+
+        expect(!fixture.controller.hasCompletedOnboarding)
+        expect(!fixture.controller.hasStoredWorkspaceConfiguration)
+        expect(memory.object == nil)
+
+        expect(!fixture.controller.completeWorkspaceConfiguration(
+            profileID: TransmitterProfile.observedGDBH.id,
+            selectedGroups: [],
+            assignedFlashModelIDs: [:]
+        ))
+        expect(!fixture.controller.hasCompletedOnboarding)
+        expect(!fixture.controller.hasStoredWorkspaceConfiguration)
+        expect(memory.object == nil)
     }
 
     private static func checkManualAndAutoTTLModeTransitions() {
@@ -1731,6 +1751,31 @@ enum GodoxSessionRecoveryCheck {
         )
         expect(restored.controller.presets.first?.id == presetID)
         expect(restored.controller.presets.first?.name == "Producto")
+    }
+
+    private static func checkInterruptedWorkspaceConfigurationRestoresItsDraft() {
+        let memory = MemoryStudioLibraryStorage()
+        let configured = makeFixture(studioLibraryStore: memory.makeStore())
+        completeDefaultWorkspace(configured)
+        configured.controller.setGroupVisible(.b, isVisible: false)
+        configured.controller.beginWorkspaceConfiguration()
+        expect(!configured.controller.hasCompletedOnboarding)
+        expect(configured.controller.isReconfiguringWorkspace)
+
+        let resumed = makeFixture(studioLibraryStore: memory.makeStore())
+        expect(!resumed.controller.hasCompletedOnboarding)
+        expect(resumed.controller.hasStoredWorkspaceConfiguration)
+        expect(!resumed.controller.isReconfiguringWorkspace)
+        expect(resumed.controller.workingGroups == [.b, .c])
+        expect(resumed.controller.visibleGroups == [.c])
+        expect(
+            resumed.controller.groupConfiguration(.b).assignedFlashModelIDs ==
+                ["ad600pro-ii"]
+        )
+        expect(
+            resumed.controller.groupConfiguration(.c).assignedFlashModelIDs ==
+                ["ad400pro"]
+        )
     }
 
     private static func checkTransmitterProfileAvailabilityAndDefault() {
@@ -3540,7 +3585,10 @@ enum GodoxSessionRecoveryCheck {
         expect(rememberedStore.save(rememberedRadio))
         let rememberedFixture = makeFixture(savedRadioStore: rememberedStore)
 
-        expect(rememberedFixture.controller.savedRadio == rememberedRadio)
+        expect(rememberedFixture.controller.savedRadios == [rememberedRadio])
+        expect(
+            rememberedFixture.controller.savedRadio(for: rememberedRadio.deviceID) == rememberedRadio
+        )
         expect(rememberedFixture.controller.radioCode.isEmpty)
         rememberedFixture.controller.startScanning()
         rememberedFixture.transport.emit(.discovered(otherTestDevice))
@@ -3565,6 +3613,7 @@ enum GodoxSessionRecoveryCheck {
 
         let newStorage = MemorySavedRadioStorage()
         let newStore = newStorage.makeStore()
+        expect(newStore.upsert(rememberedRadio))
         let newFixture = makeFixture(savedRadioStore: newStore)
         let newPassword = dummyPassword(6)
         newFixture.controller.rememberSelectedRadio = true
@@ -3573,12 +3622,21 @@ enum GodoxSessionRecoveryCheck {
         newFixture.controller.radioCode = newPassword
         newFixture.controller.connectSelectedDevice()
 
-        expect(newStore.load() == .none, "Seleccionar o conectar no debe guardar todavía")
+        expect(
+            newStore.load() == .records([rememberedRadio]),
+            "Seleccionar o conectar no debe cambiar la biblioteca todavía"
+        )
         newFixture.transport.emit(.stateChanged(.ready(otherTestDevice)))
         newFixture.transport.emit(.readyForAuthentication)
-        expect(newStore.load() == .none, "Enviar el reto PWOK no debe guardar todavía")
+        expect(
+            newStore.load() == .records([rememberedRadio]),
+            "Enviar el reto PWOK no debe cambiar la biblioteca todavía"
+        )
         newFixture.transport.emit(.notification(.authentication, validAuthenticationResponse()))
-        expect(newStore.load() == .none, "Autenticar sin completar Sync no debe guardar todavía")
+        expect(
+            newStore.load() == .records([rememberedRadio]),
+            "Autenticar sin completar Sync no debe cambiar la biblioteca todavía"
+        )
         newFixture.transport.emit(.commandSent(.sync))
 
         guard let expectedNewRadio = SavedRadio(
@@ -3588,8 +3646,11 @@ enum GodoxSessionRecoveryCheck {
         ) else {
             preconditionFailure("No se pudo construir el segundo radio sintético")
         }
-        expect(newStore.load() == .record(expectedNewRadio))
-        expect(newFixture.controller.savedRadio == expectedNewRadio)
+        expect(newStore.load() == .records([rememberedRadio, expectedNewRadio]))
+        expect(newFixture.controller.savedRadios == [rememberedRadio, expectedNewRadio])
+        expect(
+            newFixture.controller.savedRadio(for: expectedNewRadio.deviceID) == expectedNewRadio
+        )
         expect(newFixture.controller.radioCode.isEmpty)
         expect(
             !newFixture.controller.activity.contains { $0.message.contains(newPassword) },
@@ -3599,11 +3660,65 @@ enum GodoxSessionRecoveryCheck {
         newFixture.controller.selectDevice(nil)
         newFixture.controller.selectDevice(otherTestDevice.id)
         expect(newFixture.controller.radioCode == newPassword)
-        newFixture.controller.forgetSavedRadio()
-        expect(newStore.load() == .none)
-        expect(newFixture.controller.savedRadio == nil)
+        newFixture.controller.forgetSavedRadio(otherTestDevice.id)
+        expect(newStore.load() == .records([rememberedRadio]))
+        expect(newFixture.controller.savedRadios == [rememberedRadio])
+        expect(newFixture.controller.savedRadio(for: rememberedRadio.deviceID) == rememberedRadio)
         expect(newFixture.controller.radioCode.isEmpty)
         expect(!newFixture.controller.rememberSelectedRadio)
+
+        let firstLibraryCode = dummyPassword(3)
+        let secondLibraryCode = dummyPassword(7)
+        guard let firstLibraryRadio = SavedRadio(
+            deviceID: testDevice.id,
+            name: testDevice.name,
+            radioCode: firstLibraryCode
+        ), let secondLibraryRadio = SavedRadio(
+            deviceID: otherTestDevice.id,
+            name: otherTestDevice.name,
+            radioCode: secondLibraryCode
+        ) else {
+            preconditionFailure("No se pudo construir la biblioteca sintética")
+        }
+        let libraryStorage = MemorySavedRadioStorage()
+        let libraryStore = libraryStorage.makeStore()
+        expect(libraryStore.upsert(firstLibraryRadio))
+        expect(libraryStore.upsert(secondLibraryRadio))
+        let libraryFixture = makeFixture(savedRadioStore: libraryStore)
+
+        expect(
+            libraryFixture.controller.savedRadios == [firstLibraryRadio, secondLibraryRadio]
+        )
+        libraryFixture.controller.startScanning()
+        libraryFixture.transport.emit(.discovered(otherTestDevice))
+        expect(libraryFixture.controller.selectedDeviceID == otherTestDevice.id)
+        expect(libraryFixture.controller.radioCode == secondLibraryCode)
+        expect(libraryFixture.controller.isSavedRadioDiscovered(otherTestDevice.id))
+        expect(!libraryFixture.controller.isSavedRadioDiscovered(testDevice.id))
+
+        libraryFixture.transport.emit(.discovered(testDevice))
+        libraryFixture.controller.selectDevice(testDevice.id)
+        expect(libraryFixture.controller.radioCode == firstLibraryCode)
+        libraryFixture.controller.selectDevice(otherTestDevice.id)
+        expect(libraryFixture.controller.radioCode == secondLibraryCode)
+        expect(!libraryFixture.controller.canForgetSavedRadios)
+        libraryFixture.controller.forgetSavedRadio(otherTestDevice.id)
+        expect(
+            libraryFixture.controller.savedRadios == [firstLibraryRadio, secondLibraryRadio],
+            "Olvidar debe quedar bloqueado mientras el escaneo está en curso"
+        )
+        libraryFixture.controller.cancelConnectionAttempt()
+        expect(libraryFixture.controller.canForgetSavedRadios)
+
+        libraryFixture.controller.forgetSavedRadio(testDevice.id)
+        expect(libraryFixture.controller.savedRadios == [secondLibraryRadio])
+        expect(libraryStore.load() == .records([secondLibraryRadio]))
+        expect(libraryFixture.controller.radioCode == secondLibraryCode)
+
+        libraryFixture.controller.forgetSavedRadio(otherTestDevice.id)
+        expect(libraryFixture.controller.savedRadios.isEmpty)
+        expect(libraryStore.load() == .none)
+        expect(libraryFixture.controller.radioCode.isEmpty)
 
         let rejectedStorage = MemorySavedRadioStorage()
         let rejectedStore = rejectedStorage.makeStore()
@@ -3870,6 +3985,7 @@ enum GodoxSessionRecoveryCheck {
             ]
         ))
         expect(fixture.controller.hasCompletedOnboarding)
+        expect(fixture.controller.hasStoredWorkspaceConfiguration)
         expect(fixture.controller.workingGroups == [.b, .c])
         expect(fixture.controller.workingConfigurationIssue == nil)
     }

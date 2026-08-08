@@ -30,7 +30,7 @@ Incluye de forma privada:
 - si aplica, modelo/firmware sin UUID completo ni información personal;
 - evidencia redactada y una propuesta de mitigación si la tienes.
 
-Nunca incluyas un Código del radio real, payload `Psub`/`PWOK`, token, private key, P12, password de secret, certificado privado, datos personales o un comando que pueda disparar equipo sin advertencia.
+Nunca incluyas un Código del radio real, payload `Psub`/`PWOK`, token, private key, P12, API key `.p8`, credencial de notarización, password de secret, certificado privado, datos personales o un comando que pueda disparar equipo sin advertencia.
 
 ## Modelo de seguridad
 
@@ -63,17 +63,19 @@ GATT confirma transporte, no el efecto óptico. `FEC8` no identifica grupo ni de
 
 ### Distribución
 
-El beta no usa Developer ID ni notarización. El certificado autosignado estable ayuda a detectar cambios de identidad entre betas, pero no establece confianza Apple y no elimina Gatekeeper. Nunca instales ni confíes manualmente en ese certificado.
+La beta `0.1.0-beta.3` se distribuye en un DMG firmado con Apple Developer ID y notarizado. Tanto la app como la imagen llevan ticket adjunto y Gatekeeper debe identificarlas como `Notarized Developer ID`. Los certificados autosignados versionados se conservan sólo para verificar las betas 1 y 2 históricas; nunca deben sustituir la identidad Developer ID actual. El P12, claves privadas y credenciales de notarización permanecen fuera del repositorio y de los assets públicos.
 
 Verifica siempre:
 
 ```sh
-shasum -a 256 nombre-del-archivo.zip
+shasum -a 256 estrobo-v0.1.0-beta.3-macos-universal.dmg
+spctl --assess --type open --verbose=4 --context context:primary-signature estrobo-v0.1.0-beta.3-macos-universal.dmg
 codesign --verify --deep --strict --verbose=2 /ruta/a/estrobo.app
+spctl --assess --type execute --verbose=4 /ruta/a/estrobo.app
 lipo /ruta/a/estrobo.app/Contents/MacOS/estrobo -verify_arch arm64 x86_64
 ```
 
-Compara el digest con `SHA256SUMS` del mismo GitHub Release y la identidad con `release/signing/estrobo-beta-signing.cer` y `release/signing/estrobo-beta-signing.sha256`. El digest versionado corresponde a los bytes X.509 DER del `.cer`. Una advertencia de Gatekeeper sigue siendo esperada; un fallo de checksum o `codesign` no lo es.
+Compara el digest con `SHA256SUMS` del mismo GitHub Release y la identidad con `release/signing/estrobo-developer-id-application.cer` y `release/signing/estrobo-developer-id-application.sha256`. El digest versionado corresponde a los bytes X.509 DER del `.cer`. Gatekeeper debe aceptar el DMG y la app; una identidad distinta, un rechazo, o un fallo de checksum o `codesign` obliga a descartar esa copia.
 
 ## Alcance útil de reportes
 
@@ -83,7 +85,7 @@ Compara el digest con `SHA256SUMS` del mismo GitHub Release y la identidad con `
 - Bypass del gate de UUID o recuperación ante write incierto.
 - Escrituras inesperadas, reintento de Test o comandos durante conexión/cancelación.
 - Entitlements de red, telemetría o salida de sandbox no documentados.
-- Manipulación de ZIP, checksum, manifiesto, attestation, certificado o workflow de release.
+- Manipulación de DMG, checksum, manifiesto, ticket de notarización, certificado o workflow de release.
 - Comportamiento que permita publicar sin una slice, CI o aprobación requerida.
 
 Errores normales de compatibilidad o UX sin impacto de seguridad pertenecen a [Soporte](SUPPORT.md).
