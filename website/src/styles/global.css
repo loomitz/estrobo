@@ -1920,6 +1920,13 @@ html.js[data-error-locale="en"] .not-found-actions [data-error-copy="en"] {
     --header-height: 4.25rem;
   }
 
+  .site-header.is-scrolled {
+    /* Keep the fixed mobile nav relative to the viewport, not to the filtered header. */
+    background: rgba(255, 255, 255, 0.98);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
   .js .menu-button {
     display: inline-flex;
   }
@@ -1941,7 +1948,10 @@ html.js[data-error-locale="en"] .not-found-actions [data-error-copy="en"] {
   .js .site-nav {
     position: fixed;
     bottom: 0;
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
     opacity: 0;
+    overscroll-behavior: contain;
     pointer-events: none;
     transform: translateY(-1rem);
     visibility: hidden;
