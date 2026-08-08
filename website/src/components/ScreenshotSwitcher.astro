@@ -1,0 +1,110 @@
+---
+import { appImages } from "../config/app-images";
+
+const views = [
+  {
+    id: "canales",
+    label: "Canales",
+    description: "Compara los grupos de un vistazo.",
+    image: appImages.canales,
+    alt: "Vista Canales de Estrobo con los grupos B y C conectados en modo de simulación",
+  },
+  {
+    id: "inspector",
+    label: "Inspector",
+    description: "Afina un grupo con todo su contexto.",
+    image: appImages.inspector,
+    alt: "Vista Inspector de Estrobo mostrando el ajuste detallado del grupo B",
+  },
+  {
+    id: "matriz",
+    label: "Matriz",
+    description: "Reúne controles compactos en una misma superficie.",
+    image: appImages.matriz,
+    alt: "Vista Matriz de Estrobo con controles compactos para los grupos B y C",
+  },
+];
+---
+
+<div class="screenshot-switcher" data-screenshot-switcher>
+  <div class="view-tabs" role="tablist" aria-label="Vistas de Estrobo" aria-orientation="horizontal">
+    {views.map((view, index) => (
+      <button
+        type="button"
+        role="tab"
+        id={`tab-${view.id}`}
+        aria-controls={`panel-${view.id}`}
+        aria-selected={index === 0 ? "true" : "false"}
+        tabindex={index === 0 ? 0 : -1}
+        data-view-tab={view.id}
+      >
+        <span>{view.label}</span>
+        <small>{view.description}</small>
+      </button>
+    ))}
+  </div>
+
+  <div class="view-panels">
+    {views.map((view) => (
+      <figure
+        role="tabpanel"
+        id={`panel-${view.id}`}
+        aria-labelledby={`tab-${view.id}`}
+        aria-label={view.label}
+        tabindex="0"
+        data-view-panel={view.id}
+      >
+        <img
+          src={view.image.src}
+          srcset={view.image.srcset}
+          sizes="(max-width: 44rem) calc(100vw - 2.5rem), (max-width: 96rem) calc(100vw - 6rem), 92rem"
+          alt={view.alt}
+          width="2774"
+          height="2122"
+          loading="lazy"
+        />
+        <figcaption><strong>{view.label}</strong> · Captura real de una beta pública · transporte de simulación</figcaption>
+      </figure>
+    ))}
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-screenshot-switcher]").forEach((switcher) => {
+    const tabs = Array.from(switcher.querySelectorAll<HTMLButtonElement>("[data-view-tab]"));
+    const panels = Array.from(switcher.querySelectorAll<HTMLElement>("[data-view-panel]"));
+
+    const activate = (nextTab: HTMLButtonElement) => {
+      const target = nextTab.dataset.viewTab;
+      tabs.forEach((tab) => {
+        const active = tab === nextTab;
+        tab.setAttribute("aria-selected", String(active));
+        tab.tabIndex = active ? 0 : -1;
+      });
+      panels.forEach((panel) => {
+        panel.hidden = panel.dataset.viewPanel !== target;
+      });
+    };
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => activate(tab));
+      tab.addEventListener("keydown", (event) => {
+        const nextKey = "ArrowRight";
+        const previousKey = "ArrowLeft";
+        if (![nextKey, previousKey, "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const next = event.key === "Home"
+          ? tabs[0]
+          : event.key === "End"
+            ? tabs[tabs.length - 1]
+            : tabs[(index + (event.key === nextKey ? 1 : -1) + tabs.length) % tabs.length];
+        activate(next);
+        next.focus();
+      });
+    });
+
+    const firstTab = tabs[0];
+    if (firstTab) activate(firstTab);
+    switcher.classList.add("is-enhanced");
+  });
+</script>

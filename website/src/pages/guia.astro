@@ -1,0 +1,289 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import DownloadButton from "../components/DownloadButton.astro";
+import { appImages } from "../config/app-images";
+import { release, releaseDownloads } from "../config/release";
+
+const title = "Guía de uso — Estrobo";
+const description = "Instala Estrobo, configura tus grupos y conecta un disparador Godox compatible con Bluetooth con esta guía paso a paso.";
+---
+
+<BaseLayout title={title} description={description} canonicalPath="/guia/" pageClass="guide-page">
+  <SiteHeader active="guide" />
+
+  <main id="contenido">
+    <header class="guide-hero">
+      <div class="guide-hero-copy" data-reveal>
+        <p class="eyebrow">Guía de uso · Beta {release.version}</p>
+        <h1>De la descarga<br />al primer ajuste.</h1>
+        <p>Instala Estrobo como cualquier app de Mac, configura tu espacio y sincroniza sabiendo exactamente qué va a cambiar.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#instalar"><i class="ph ph-download-simple" aria-hidden="true"></i><span>Ver instalación</span></a>
+          <a class="text-link text-link-light" href="#requisitos">Ver requisitos <i class="ph ph-arrow-down" aria-hidden="true"></i></a>
+        </div>
+      </div>
+      <figure class="guide-hero-image" data-reveal>
+        <img src={appImages.primerInicio.src} srcset={appImages.primerInicio.srcset} sizes="(max-width: 68rem) 100vw, 68vw" alt="Pantalla de configuración inicial de Estrobo" width="2774" height="2122" fetchpriority="high" />
+        <figcaption>Captura real del release público · transporte de simulación</figcaption>
+      </figure>
+    </header>
+
+    <a class="guide-progress" href="#indice-guia" data-guide-progress aria-label="Volver al índice de la guía">
+      <span data-guide-progress-count>01 de 07</span>
+      <strong data-guide-progress-label>Antes de empezar</strong>
+      <i class="ph ph-list" aria-hidden="true"></i>
+    </a>
+
+    <div class="guide-shell">
+      <aside class="guide-toc" id="indice-guia" aria-label="Contenido de la guía">
+        <p>En esta guía</p>
+        <nav aria-label="Secciones de la guía" data-guide-toc>
+          <a href="#requisitos" data-guide-link data-step="01 de 07" data-label="Antes de empezar"><span>01</span> Antes de empezar</a>
+          <a href="#instalar" data-guide-link data-step="02 de 07" data-label="Instalar Estrobo"><span>02</span> Instalar Estrobo</a>
+          <a href="#configurar" data-guide-link data-step="03 de 07" data-label="Configurar grupos"><span>03</span> Configurar grupos</a>
+          <a href="#conectar" data-guide-link data-step="04 de 07" data-label="Conectar el radio"><span>04</span> Conectar el radio</a>
+          <a href="#sincronizar" data-guide-link data-step="05 de 07" data-label="Entender Sync"><span>05</span> Entender Sync</a>
+          <a href="#controles" data-guide-link data-step="06 de 07" data-label="Ajustar flashes"><span>06</span> Ajustar flashes</a>
+          <a href="#problemas" data-guide-link data-step="07 de 07" data-label="Resolver problemas"><span>07</span> Resolver problemas</a>
+        </nav>
+      </aside>
+
+      <article class="guide-content">
+        <section class="guide-section" data-reveal>
+          <p id="requisitos" class="guide-kicker">01 · Antes de empezar</p>
+          <h2>Prepara el Mac y el transmisor.</h2>
+          <p>Estrobo se conecta por Bluetooth al <strong>disparador compatible</strong>. Los flashes siguen recibiendo las órdenes mediante el sistema de radio del propio disparador.</p>
+
+          <dl class="requirements-list">
+            <div><dt><i class="ph ph-laptop" aria-hidden="true"></i> Sistema</dt><dd>macOS 13 o posterior, en Apple Silicon o Intel.</dd></div>
+            <div><dt><i class="ph ph-bluetooth" aria-hidden="true"></i> Bluetooth</dt><dd>Disponible en el Mac, con permiso concedido a Estrobo.</dd></div>
+            <div><dt><i class="ph ph-broadcast" aria-hidden="true"></i> Disparador</dt><dd>Bluetooth integrado y perfil BLE/GATT compatible.</dd></div>
+            <div><dt><i class="ph ph-plugs" aria-hidden="true"></i> Conexión exclusiva</dt><dd>Cierra Godox Flash u otra app conectada; el radio admite una sola conexión Bluetooth.</dd></div>
+          </dl>
+
+          <div class="guide-callout guide-callout-info">
+            <i class="ph ph-test-tube" aria-hidden="true"></i>
+            <div><strong>Configuración usada en pruebas</strong><p>Las pruebas se ejecutaron con un Godox X3Pro para Sony y flashes Godox AD400Pro II.</p></div>
+          </div>
+        </section>
+
+        <section class="guide-section" data-reveal>
+          <p id="instalar" class="guide-kicker">02 · Instalar Estrobo</p>
+          <h2>Arrastra Estrobo a Aplicaciones.</h2>
+          <p>Descarga el DMG oficial, ábrelo y arrastra Estrobo a Aplicaciones. Esta versión está firmada con Developer ID y notarizada por Apple; para instalarla no necesitas usar Terminal ni cambiar los ajustes de seguridad.</p>
+
+          <div class="guide-install-download">
+            <DownloadButton label={`Descargar DMG ${release.version}`} className="button button-dark button-large" />
+          </div>
+
+          <ol class="numbered-steps">
+            <li><span>1</span><div><strong>Abre el DMG descargado.</strong><p>macOS montará una imagen con Estrobo y un acceso a Aplicaciones.</p></div></li>
+            <li><span>2</span><div><strong>Arrastra Estrobo a Aplicaciones.</strong><p>Arrastra <code>estrobo.app</code> a la carpeta Aplicaciones del Mac.</p></div></li>
+            <li><span>3</span><div><strong>Expulsa la imagen y abre Estrobo.</strong><p>Expulsa el instalador y abre la app desde Aplicaciones, Launchpad o Spotlight.</p></div></li>
+            <li><span>4</span><div><strong>Concede acceso a Bluetooth.</strong><p>macOS solicitará el permiso la primera vez que Estrobo lo necesite.</p></div></li>
+          </ol>
+
+          <details class="verification-details">
+            <summary>Verificar manualmente la descarga (opcional) <i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div>
+              <p>Descarga también <code>SHA256SUMS</code> y el manifiesto desde el mismo release. Conserva el DMG y esos dos archivos juntos en Descargas.</p>
+              <div class="release-files">
+                <a href={releaseDownloads.checksums}><i class="ph ph-fingerprint" aria-hidden="true"></i><span>Checksums<small>{release.checksumName}</small></span><i class="ph ph-download-simple" aria-hidden="true"></i></a>
+                <a href={releaseDownloads.manifest}><i class="ph ph-brackets-curly" aria-hidden="true"></i><span>Manifiesto<small>{release.manifestName}</small></span><i class="ph ph-download-simple" aria-hidden="true"></i></a>
+              </div>
+              <div class="code-block">
+                <div><span>Terminal</span><button class="copy-command" type="button" data-copy-command><i class="ph ph-copy" aria-hidden="true"></i><span data-copy-label aria-live="polite">Copiar comando</span></button></div>
+                <pre><code data-command>cd ~/Downloads
+shasum -a 256 -c SHA256SUMS</code></pre>
+              </div>
+              <p>La verificación es correcta cuando tanto el DMG como el manifiesto muestran <strong>OK</strong>.</p>
+            </div>
+          </details>
+        </section>
+
+        <section class="guide-section guide-section-media" data-reveal>
+          <div class="guide-section-copy">
+            <p id="configurar" class="guide-kicker">03 · Configurar grupos</p>
+            <h2>Define tu espacio antes de conectar.</h2>
+            <ol class="plain-steps">
+              <li>Revisa el perfil de compatibilidad de grupos del transmisor.</li>
+              <li>Añade los grupos que realmente utilizas.</li>
+              <li>Asigna al menos un modelo de flash a cada grupo.</li>
+              <li>Comprueba el rango de potencia común que calcula Estrobo.</li>
+              <li>Guarda y continúa.</li>
+            </ol>
+            <p class="precise-note"><i class="ph ph-sliders-horizontal" aria-hidden="true"></i> Los valores mostrados son el estado local que Estrobo enviará al conectar.</p>
+          </div>
+          <figure>
+            <img src={appImages.primerInicio.src} srcset={appImages.primerInicio.srcset} sizes="(max-width: 44rem) calc(100vw - 2.5rem), 52vw" alt="Selección de grupos y modelos de flash durante el primer inicio" width="2774" height="2122" loading="lazy" />
+            <figcaption>El rango seguro se limita a lo que comparten los modelos asignados.</figcaption>
+          </figure>
+        </section>
+
+        <section class="guide-section guide-section-media media-reverse" data-reveal>
+          <div class="guide-section-copy">
+            <p id="conectar" class="guide-kicker">04 · Conectar el radio</p>
+            <h2>Busca, identifica y sincroniza.</h2>
+            <ol class="plain-steps">
+              <li>Enciende Bluetooth en el transmisor y cierra cualquier otra app conectada.</li>
+              <li>Pulsa <strong>Buscar radios</strong>.</li>
+              <li>Compara nombre, intensidad de señal y sufijo UUID antes de elegir.</li>
+              <li>Introduce el <strong>Código del radio de seis dígitos</strong>.</li>
+              <li>Activa Recordar sólo si aceptas guardar ese código localmente y sin cifrar.</li>
+              <li>Pulsa <strong>Conectar y sincronizar</strong> y espera el estado Listo.</li>
+            </ol>
+            <p class="precise-note"><i class="ph ph-shield-warning" aria-hidden="true"></i> El Código del radio es un PIN local de seis dígitos, no una credencial fuerte. No reutilices un PIN personal.</p>
+          </div>
+          <figure>
+            <img src={appImages.conexion.src} srcset={appImages.conexion.srcset} sizes="(max-width: 44rem) calc(100vw - 2.5rem), 52vw" alt="Pantalla de Estrobo para buscar un radio e introducir el código de seis dígitos" width="2774" height="2122" loading="lazy" />
+            <figcaption>Nombre, RSSI y UUID ayudan a distinguir radios, pero no los autentican.</figcaption>
+          </figure>
+        </section>
+
+        <section class="guide-section" data-reveal>
+          <p id="sincronizar" class="guide-kicker">05 · Entender Sync</p>
+          <h2>Sync aplica. No importa.</h2>
+          <p>El transmisor no entrega una instantánea completa que Estrobo pueda leer. Por eso el estado local es la fuente de verdad.</p>
+
+          <div class="sync-contract">
+            <div><i class="ph ph-check-circle" aria-hidden="true"></i><strong>Lo que sí hace</strong><p>Escribe el estado global y los grupos configurados desde Estrobo hacia el disparador.</p></div>
+            <div><i class="ph ph-x-circle" aria-hidden="true"></i><strong>Lo que no hace</strong><p>No lee, importa ni reconstruye la configuración que ya estaba en el transmisor.</p></div>
+          </div>
+
+          <div class="guide-callout guide-callout-warning">
+            <i class="ph ph-arrows-clockwise" aria-hidden="true"></i>
+            <div><strong>Conectar equivale a aceptar la sobrescritura.</strong><p>Al terminar la autenticación, Estrobo envía sus valores locales. Pulsar Sync después repite esa secuencia incluso si no hay cambios pendientes.</p></div>
+          </div>
+        </section>
+
+        <section class="guide-section" data-reveal>
+          <p id="controles" class="guide-kicker">06 · Ajustar flashes</p>
+          <h2>El mismo estado, tres formas de trabajar.</h2>
+          <figure class="guide-wide-image">
+            <img src={appImages.inspector.src} srcset={appImages.inspector.srcset} sizes="(max-width: 44rem) calc(100vw - 2.5rem), 62rem" alt="Vista Inspector con el control detallado de potencia y modelado" width="2774" height="2122" loading="lazy" />
+          </figure>
+
+          <dl class="control-list">
+            <div><dt>M</dt><dd>Potencia manual en pasos de 1/3 EV, dentro del rango común de los flashes asignados.</dd></div>
+            <div><dt>Auto · TTL</dt><dd>TTL con compensación neutra; el resultado físico depende del modelo y de la escena.</dd></div>
+            <div><dt>Modelado</dt><dd>Apagado, proporcional o fijo, según las capacidades configuradas.</dd></div>
+            <div><dt>Canales</dt><dd>Comparación directa de los grupos visibles.</dd></div>
+            <div><dt>Inspector</dt><dd>Un grupo a la vez, con referencia, borrador y confirmación.</dd></div>
+            <div><dt>Matriz</dt><dd>Controles compactos para revisar varios grupos en conjunto.</dd></div>
+          </dl>
+
+          <h3>Automático o Con botón</h3>
+          <div class="delivery-modes">
+            <div><span>Predeterminado</span><strong>Automático</strong><p>Envía 700 ms después del último cambio. Un slider transmite sólo el valor final al soltar.</p></div>
+            <div><span>Control manual</span><strong>Con botón</strong><p>Conserva el borrador hasta pulsar Enviar ahora. Descartar revierte únicamente lo que aún no se envía.</p></div>
+          </div>
+        </section>
+
+        <section class="guide-section" data-reveal>
+          <p id="problemas" class="guide-kicker">07 · Resolver problemas</p>
+          <h2>Vuelve a un estado conocido.</h2>
+          <div class="troubleshooting-list">
+            <details>
+              <summary>macOS no abre Estrobo <i class="ph ph-plus" aria-hidden="true"></i></summary>
+              <p>Confirma que Estrobo esté dentro de Aplicaciones y que lo descargaste del release oficial. Si macOS no puede verificar al desarrollador, no omitas la advertencia: elimina esa copia, verifica el checksum y descarga de nuevo el DMG oficial.</p>
+            </details>
+            <details>
+              <summary>No aparece el transmisor <i class="ph ph-plus" aria-hidden="true"></i></summary>
+              <p>Concede el permiso de Bluetooth, cierra otras apps, acerca el radio y busca de nuevo. Tener Bluetooth no basta: el perfil BLE/GATT debe ser compatible.</p>
+            </details>
+            <details>
+              <summary>El código del radio falla <i class="ph ph-plus" aria-hidden="true"></i></summary>
+              <p>Comprueba que tenga exactamente seis dígitos y que la fecha y hora del Mac sean correctas.</p>
+            </details>
+            <details>
+              <summary>El radio cambió al conectar <i class="ph ph-plus" aria-hidden="true"></i></summary>
+              <p>Es el comportamiento esperado: Estrobo aplica su estado local al terminar la conexión. No existe importación radio → app.</p>
+            </details>
+            <details>
+              <summary>La operación quedó en estado incierto <i class="ph ph-plus" aria-hidden="true"></i></summary>
+              <p>No compenses desde otra app. Reconecta el mismo UUID y sigue el flujo de recuperación hasta confirmar la escena completa.</p>
+            </details>
+          </div>
+          <p class="support-link">¿Sigue fallando? <a href="https://github.com/loomitz/estrobo/blob/main/SUPPORT.md">Consulta soporte y cómo reportarlo <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a></p>
+        </section>
+      </article>
+    </div>
+
+    <section class="guide-final-cta">
+      <div data-reveal>
+        <img src="/images/brand/app-icon-light.svg" alt="" width="56" height="56" />
+        <p class="eyebrow eyebrow-ink">Listo para empezar</p>
+        <h2>Descarga. Instala. Sincroniza.</h2>
+        <DownloadButton label={`Descargar DMG ${release.version}`} className="button button-dark button-large" />
+      </div>
+      <SiteFooter />
+    </section>
+  </main>
+
+  <script>
+    const copyButton = document.querySelector<HTMLButtonElement>("[data-copy-command]");
+    const command = document.querySelector<HTMLElement>("[data-command]");
+
+    copyButton?.addEventListener("click", async () => {
+      if (!command) return;
+      try {
+        await navigator.clipboard.writeText(command.textContent ?? "");
+        const label = copyButton.querySelector<HTMLElement>("[data-copy-label]");
+        const icon = copyButton.querySelector("i");
+        if (label) label.textContent = "Copiado";
+        icon?.classList.replace("ph-copy", "ph-check");
+        window.setTimeout(() => {
+          if (label) label.textContent = "Copiar comando";
+          icon?.classList.replace("ph-check", "ph-copy");
+        }, 1800);
+      } catch {
+        const label = copyButton.querySelector<HTMLElement>("[data-copy-label]");
+        if (label) label.textContent = "No se pudo copiar; selecciona el comando";
+      }
+    });
+
+    const guideLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>("[data-guide-link]"));
+    const guideSections = guideLinks
+      .map((link) => document.querySelector<HTMLElement>(link.hash))
+      .filter((section): section is HTMLElement => Boolean(section));
+    const progress = document.querySelector<HTMLAnchorElement>("[data-guide-progress]");
+    const progressCount = progress?.querySelector<HTMLElement>("[data-guide-progress-count]");
+    const progressLabel = progress?.querySelector<HTMLElement>("[data-guide-progress-label]");
+
+    const setCurrentSection = (id: string) => {
+      const activeLink = guideLinks.find((link) => link.hash === `#${id}`);
+      if (!activeLink) return;
+
+      guideLinks.forEach((link) => {
+        if (link === activeLink) link.setAttribute("aria-current", "location");
+        else link.removeAttribute("aria-current");
+      });
+
+      const step = activeLink.dataset.step ?? "";
+      const label = activeLink.dataset.label ?? activeLink.textContent?.trim() ?? "";
+      if (progressCount) progressCount.textContent = step;
+      if (progressLabel) progressLabel.textContent = label;
+      progress?.setAttribute("aria-label", `Volver al índice. Sección actual: ${label}`);
+    };
+
+    guideLinks.forEach((link) => {
+      link.addEventListener("click", () => setCurrentSection(link.hash.slice(1)));
+    });
+
+    const initialSection = window.location.hash.slice(1) || guideSections[0]?.id;
+    if (initialSection) setCurrentSection(initialSection);
+
+    if ("IntersectionObserver" in window) {
+      const sectionObserver = new IntersectionObserver((entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible?.target.id) setCurrentSection(visible.target.id);
+      }, { rootMargin: "-45% 0px -54%", threshold: 0 });
+
+      guideSections.forEach((section) => sectionObserver.observe(section));
+    }
+  </script>
+</BaseLayout>

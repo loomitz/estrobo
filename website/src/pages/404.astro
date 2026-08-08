@@ -1,0 +1,15 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+---
+
+<BaseLayout title="Página no encontrada — Estrobo" description="La página que buscas no existe." canonicalPath={null} robots="noindex, nofollow" pageClass="not-found-page">
+  <SiteHeader />
+  <main id="contenido" class="not-found">
+    <img src="/images/brand/app-icon-light.svg" alt="" width="72" height="72" />
+    <p class="eyebrow">Error 404</p>
+    <h1>Esta señal no llegó.</h1>
+    <p>La página que buscas no existe o cambió de lugar.</p>
+    <a class="button button-primary" href="/"><i class="ph ph-arrow-left" aria-hidden="true"></i> Volver a Estrobo</a>
+  </main>
+</BaseLayout>
