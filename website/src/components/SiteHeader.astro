@@ -1,0 +1,132 @@
+---
+import { release, releaseDownloads } from "../config/release";
+
+interface Props {
+  active?: "home" | "guide" | "other";
+}
+
+const { active = "other" } = Astro.props;
+---
+
+<header class="site-header" data-site-header>
+  <a class="brand-lockup" href="/" aria-label="Estrobo, inicio">
+    <img src="/images/brand/estrobo-gradient.svg" alt="" width="376" height="71" />
+  </a>
+
+  <button
+    class="menu-button"
+    type="button"
+    aria-label="Abrir menú"
+    aria-expanded="false"
+    aria-controls="site-nav"
+    data-menu-button
+  >
+    <i class="ph ph-list" aria-hidden="true"></i>
+  </button>
+
+  <nav class="site-nav" id="site-nav" aria-label="Navegación principal" data-site-nav>
+    <a href={active === "home" ? "#como-funciona" : "/#como-funciona"}>Cómo funciona</a>
+    <a href="/guia/" aria-current={active === "guide" ? "page" : undefined}>Guía</a>
+    <a class="nav-github" href={release.repositoryUrl}>
+      <i class="ph ph-github-logo" aria-hidden="true"></i>
+      <span>GitHub</span>
+    </a>
+    <a class="nav-download" href={releaseDownloads.dmg}>
+      Descargar
+      <i class="ph ph-arrow-down" aria-hidden="true"></i>
+    </a>
+  </nav>
+</header>
+
+<script>
+  const header = document.querySelector<HTMLElement>("[data-site-header]");
+  const menuButton = document.querySelector<HTMLButtonElement>("[data-menu-button]");
+  const nav = document.querySelector<HTMLElement>("[data-site-nav]");
+  const mobileNav = window.matchMedia("(max-width: 62rem)");
+
+  const isMenuOpen = () => menuButton?.getAttribute("aria-expanded") === "true";
+
+  const syncNavAvailability = () => {
+    nav?.toggleAttribute("inert", mobileNav.matches && !isMenuOpen());
+  };
+
+  const closeMenu = (restoreFocus = false) => {
+    menuButton?.setAttribute("aria-expanded", "false");
+    menuButton?.setAttribute("aria-label", "Abrir menú");
+    nav?.classList.remove("is-open");
+    document.body.classList.remove("menu-open");
+    const icon = menuButton?.querySelector("i");
+    icon?.classList.replace("ph-x", "ph-list");
+    syncNavAvailability();
+    if (restoreFocus) menuButton?.focus();
+  };
+
+  const openMenu = () => {
+    menuButton?.setAttribute("aria-expanded", "true");
+    menuButton?.setAttribute("aria-label", "Cerrar menú");
+    nav?.classList.add("is-open");
+    document.body.classList.add("menu-open");
+    const icon = menuButton?.querySelector("i");
+    icon?.classList.replace("ph-list", "ph-x");
+    syncNavAvailability();
+    window.requestAnimationFrame(() => nav?.querySelector<HTMLAnchorElement>("a")?.focus());
+  };
+
+  menuButton?.addEventListener("click", () => {
+    if (isMenuOpen()) {
+      closeMenu(true);
+      return;
+    }
+    openMenu();
+  });
+
+  nav?.querySelectorAll("a").forEach((link) => link.addEventListener("click", () => {
+    const href = link.getAttribute("href");
+    closeMenu(false);
+
+    if (!href?.startsWith("#")) return;
+    window.requestAnimationFrame(() => {
+      const target = document.querySelector<HTMLElement>(href);
+      const heading = target?.querySelector<HTMLElement>("h1, h2, h3");
+      if (!heading) return;
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+    });
+  }));
+
+  document.addEventListener("keydown", (event) => {
+    if (!mobileNav.matches || !isMenuOpen()) return;
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMenu(true);
+      return;
+    }
+
+    if (event.key !== "Tab") return;
+    const links = nav ? Array.from(nav.querySelectorAll<HTMLAnchorElement>("a")) : [];
+    const focusable = menuButton ? [menuButton, ...links] : links;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!first || !last) return;
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+
+  mobileNav.addEventListener("change", () => {
+    if (!mobileNav.matches) closeMenu(false);
+    syncNavAvailability();
+  });
+
+  syncNavAvailability();
+
+  const updateHeader = () => header?.classList.toggle("is-scrolled", window.scrollY > 24);
+  updateHeader();
+  window.addEventListener("scroll", updateHeader, { passive: true });
+</script>

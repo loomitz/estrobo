@@ -1,0 +1,27 @@
+---
+import { releaseDownloads } from "../config/release";
+
+interface Props {
+  label?: string;
+  className?: string;
+  href?: string;
+  icon?: "download" | "arrow-down";
+}
+
+const {
+  label = "Descargar gratis",
+  className = "button button-primary",
+  href = releaseDownloads.dmg,
+  icon = "download",
+} = Astro.props;
+
+const iconClass = icon === "arrow-down" ? "ph ph-arrow-down" : "ph ph-download-simple";
+---
+
+<a
+  class={className}
+  href={href}
+>
+  <i class={iconClass} aria-hidden="true"></i>
+  <span>{label}</span>
+</a>

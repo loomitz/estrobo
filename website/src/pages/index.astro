@@ -1,0 +1,234 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SiteHeader from "../components/SiteHeader.astro";
+import SiteFooter from "../components/SiteFooter.astro";
+import DownloadButton from "../components/DownloadButton.astro";
+import ScreenshotSwitcher from "../components/ScreenshotSwitcher.astro";
+import { appImages } from "../config/app-images";
+import { release, releaseDownloads } from "../config/release";
+
+const title = "Estrobo — Controla tus flashes Godox desde tu Mac";
+const description = "Aplicación gratuita y nativa para macOS que sincroniza grupos de flash mediante un disparador Godox compatible con Bluetooth. Sin cuenta, nube ni telemetría.";
+
+const softwareSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Estrobo",
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "macOS 13 or later",
+  softwareVersion: release.version,
+  downloadUrl: releaseDownloads.dmg,
+  url: "https://estrobo.app",
+  description,
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "MXN",
+  },
+};
+---
+
+<BaseLayout title={title} description={description} pageClass="home-page">
+  <script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(softwareSchema)}></script>
+  <SiteHeader active="home" />
+
+  <main id="contenido">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-backdrop" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <div class="hero-copy" data-reveal>
+          <p class="eyebrow">Beta pública gratuita para macOS</p>
+          <img class="hero-brand" src="/images/brand/estrobo-text-white.svg" alt="Estrobo" width="287" height="60" />
+          <h1 id="hero-title">Tus flashes.<br />En sincronía.</h1>
+          <p class="hero-lede">Controla grupos, potencia y modelado desde tu Mac, a través de un disparador Godox compatible con Bluetooth.</p>
+          <div class="hero-actions">
+            <DownloadButton href="#descargar" icon="arrow-down" />
+            <a class="text-link text-link-light" href="/guia/">Ver la guía <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+          </div>
+          <p class="trust-line"><span aria-hidden="true"></span> macOS 13+ · Apple Silicon + Intel · Todo permanece local</p>
+        </div>
+
+        <figure class="hero-product" data-reveal data-hero-product>
+          <img src={appImages.canales.src} srcset={appImages.canales.srcset} sizes="(max-width: 68rem) 100vw, 62vw" alt="Estrobo en la vista Canales, controlando dos grupos de flash en modo de simulación" width="2774" height="2122" fetchpriority="high" />
+          <figcaption>Interfaz real · beta pública</figcaption>
+        </figure>
+      </div>
+      <a class="scroll-cue" href="#local" aria-label="Continuar a la siguiente sección">
+        <span>Descubre</span>
+        <i class="ph ph-arrow-down" aria-hidden="true"></i>
+      </a>
+    </section>
+
+    <section class="section section-local" id="local" aria-labelledby="local-title">
+      <div class="section-grid local-grid">
+        <div class="section-copy" data-reveal>
+          <p class="eyebrow eyebrow-ink">Local por diseño</p>
+          <h2 id="local-title">Tu estudio no necesita una nube.</h2>
+          <p class="section-lede">Estrobo funciona sin cuenta, backend, anuncios, analítica ni telemetría.</p>
+
+          <ol class="proof-list" aria-label="Principios de privacidad">
+            <li><span>01</span>Sin Internet</li>
+            <li><span>02</span>Sin cuenta</li>
+            <li><span>03</span>Sin anuncios</li>
+            <li><span>04</span>Sin telemetría</li>
+          </ol>
+
+          <p class="precise-note"><i class="ph ph-hard-drives" aria-hidden="true"></i> Preferencias, presets y recuperación permanecen en el sandbox de este Mac.</p>
+        </div>
+
+        <figure class="local-visual" data-reveal>
+          <img src="/images/generated/local-desk.webp" alt="Laptop y disparador genérico separados sobre una mesa de estudio, representación visual de un flujo local" width="1586" height="992" loading="lazy" />
+          <figcaption>Representación visual · el flujo de la app permanece en el Mac</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section section-signal section-dark" id="como-funciona" aria-labelledby="signal-title">
+      <div class="narrow-heading" data-reveal>
+        <p class="eyebrow">Así funciona</p>
+        <h2 id="signal-title">Bluetooth hasta el disparador.<br />Radio hasta tus flashes.</h2>
+        <p>Estrobo no se conecta directamente a los flashes.</p>
+      </div>
+
+      <ol class="signal-flow" data-reveal>
+        <li>
+          <span class="signal-index">01</span>
+          <i class="ph ph-laptop" aria-hidden="true"></i>
+          <div><strong>Mac</strong><small>Estrobo prepara el estado local.</small></div>
+        </li>
+        <li class="signal-transfer signal-bluetooth" aria-label="Bluetooth">
+          <i class="ph ph-bluetooth" aria-hidden="true"></i>
+          <span>Bluetooth</span>
+          <i class="ph ph-arrow-right" aria-hidden="true"></i>
+        </li>
+        <li>
+          <span class="signal-index">02</span>
+          <i class="ph ph-broadcast" aria-hidden="true"></i>
+          <div><strong>Disparador</strong><small>Autentica y recibe los ajustes.</small></div>
+        </li>
+        <li class="signal-transfer signal-radio" aria-label="Radio del disparador">
+          <i class="ph ph-radio" aria-hidden="true"></i>
+          <span>Radio</span>
+          <i class="ph ph-arrow-right" aria-hidden="true"></i>
+        </li>
+        <li>
+          <span class="signal-index">03</span>
+          <i class="ph ph-lightning" aria-hidden="true"></i>
+          <div><strong>Flashes</strong><small>El disparador aplica la escena por grupos.</small></div>
+        </li>
+      </ol>
+
+      <p class="signal-note" data-reveal><i class="ph ph-info" aria-hidden="true"></i> El Bluetooth integrado es obligatorio, pero no garantiza compatibilidad por sí solo.</p>
+    </section>
+
+    <section class="section section-product" aria-labelledby="product-title">
+      <div class="product-heading" data-reveal>
+        <div>
+          <p class="eyebrow eyebrow-ink">Un estado, tres vistas</p>
+          <h2 id="product-title">Ajusta como prefieras mirar.</h2>
+        </div>
+        <p>Canales para comparar. Inspector para afinar. Matriz para ver el conjunto.</p>
+      </div>
+      <div data-reveal>
+        <ScreenshotSwitcher />
+      </div>
+    </section>
+
+    <section class="section section-workflow section-dark" aria-labelledby="workflow-title">
+      <div class="workflow-heading" data-reveal>
+        <p class="eyebrow">Listo en tres momentos</p>
+        <h2 id="workflow-title">Configura. Conecta. Ajusta.</h2>
+      </div>
+
+      <ol class="workflow-steps">
+        <li data-reveal>
+          <figure>
+            <img src={appImages.primerInicio.src} srcset={appImages.primerInicio.srcset} sizes="(max-width: 62rem) calc(100vw - 2.5rem), 28vw" alt="Configuración inicial del espacio de trabajo en Estrobo" width="2774" height="2122" loading="lazy" />
+          </figure>
+          <span>01</span>
+          <div><h3>Elige tu espacio</h3><p>Añade los grupos que usas y asigna al menos un modelo de flash.</p></div>
+        </li>
+        <li data-reveal>
+          <figure>
+            <img src={appImages.conexion.src} srcset={appImages.conexion.srcset} sizes="(max-width: 62rem) calc(100vw - 2.5rem), 30vw" alt="Pantalla para buscar un disparador compatible e introducir su código" width="2774" height="2122" loading="lazy" />
+          </figure>
+          <span>02</span>
+          <div><h3>Encuentra el radio</h3><p>Cierra otras apps, busca el disparador e introduce su código de seis dígitos.</p></div>
+        </li>
+        <li class="workflow-outcome" data-reveal>
+          <figure>
+            <img src={appImages.canales.src} srcset={appImages.canales.srcset} sizes="(max-width: 62rem) calc(100vw - 2.5rem), 38vw" alt="Espacio de trabajo conectado y listo para ajustar dos grupos" width="2774" height="2122" loading="lazy" />
+          </figure>
+          <span>03</span>
+          <div><h3>Trabaja en conjunto</h3><p>Ajusta potencia, modo y modelado desde el Mac.</p></div>
+        </li>
+      </ol>
+
+      <div class="sync-warning" data-reveal>
+        <p><i class="ph ph-warning-circle" aria-hidden="true"></i> <strong>Sync aplica</strong> el estado local de Estrobo; no importa el estado del transmisor.</p>
+        <a class="text-link text-link-light" href="/guia/#sincronizar">Abrir la guía completa <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+      </div>
+    </section>
+
+    <section class="section section-guide-preview section-dark" aria-labelledby="guide-preview-title">
+      <div class="guide-preview-grid">
+        <figure data-reveal>
+          <img src={appImages.primerInicio.src} srcset={appImages.primerInicio.srcset} sizes="(max-width: 68rem) calc(100vw - 2.5rem), 48vw" alt="Primer paso de la guía: configurar el espacio de trabajo" width="2774" height="2122" loading="lazy" />
+        </figure>
+        <div class="guide-preview-copy" data-reveal>
+          <p class="eyebrow">Guía de uso</p>
+          <h2 id="guide-preview-title">De la descarga al primer ajuste.</h2>
+          <p class="section-lede section-lede-light">Instala Estrobo como cualquier app de Mac, configura tu espacio y sincroniza con intención.</p>
+          <ol class="guide-index">
+            <li><span>01</span><strong>Descarga</strong><small>Obtén el DMG firmado del release oficial</small></li>
+            <li><span>02</span><strong>Abre</strong><small>Monta la imagen de disco</small></li>
+            <li><span>03</span><strong>Instala</strong><small>Arrastra Estrobo a Aplicaciones</small></li>
+            <li><span>04</span><strong>Inicia</strong><small>Abre Estrobo desde Aplicaciones</small></li>
+          </ol>
+          <p class="install-note"><i class="ph ph-check-circle" aria-hidden="true"></i> La instalación es la habitual de macOS: abre el DMG y arrastra Estrobo a Aplicaciones.</p>
+          <div class="guide-links">
+            <a class="text-link text-link-light text-link-large" href="/guia/">Leer la guía completa <i class="ph ph-arrow-right" aria-hidden="true"></i></a>
+            <a class="text-link text-link-muted" href="/guia/#problemas">Solución de problemas</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-download" id="descargar" aria-labelledby="download-title">
+      <div class="download-inner" data-reveal>
+        <img src="/images/brand/app-icon-light.svg" alt="" width="64" height="64" />
+        <p class="eyebrow eyebrow-ink">Beta pública firmada para macOS</p>
+        <h2 id="download-title">Haz que el estudio responda.</h2>
+        <p>DMG universal para Apple Silicon e Intel, firmado y notarizado por Apple.</p>
+        <div class="download-actions">
+          <DownloadButton label={`Descargar DMG ${release.version}`} className="button button-dark button-large" />
+          <a class="button button-kofi" href="https://ko-fi.com/loomitz68613">
+            <i class="ph ph-coffee" aria-hidden="true"></i>
+            <span>¿Te gustó Estrobo? Invítame un café en Ko-fi</span>
+          </a>
+        </div>
+        <a class="text-link text-link-ink" href="/guia/#instalar">Leer antes de instalar</a>
+        <p class="download-trust">macOS 13+ · Developer ID · Notarizada por Apple · Sin cuenta</p>
+        <small>Instalación estándar de macOS: abre el DMG y arrastra Estrobo a Aplicaciones.</small>
+      </div>
+      <SiteFooter />
+    </section>
+  </main>
+
+  <script>
+    const heroProduct = document.querySelector<HTMLElement>("[data-hero-product]");
+    if (heroProduct && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      let ticking = false;
+      const updateProduct = () => {
+        const offset = Math.min(window.scrollY * 0.08, 36);
+        heroProduct.style.setProperty("--hero-drift", `${offset}px`);
+        ticking = false;
+      };
+      window.addEventListener("scroll", () => {
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(updateProduct);
+      }, { passive: true });
+    }
+  </script>
+</BaseLayout>
