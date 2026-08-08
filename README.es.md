@@ -131,6 +131,7 @@ La cobertura de compatibilidad crecerá conforme se validen físicamente Multi y
 - [Privacidad](PRIVACY.md)
 - [Seguridad](SECURITY.md)
 - [Soporte](SUPPORT.md)
+- [Apoya Estrobo en Ko-fi](https://ko-fi.com/loomitz68613)
 - [Contribuir](CONTRIBUTING.md)
 - [Historial de cambios](CHANGELOG.md)
 - [Avisos de terceros](THIRD-PARTY-NOTICES.md)
