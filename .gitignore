@@ -21,8 +21,11 @@ DerivedData/
 # Signing secrets and temporary keychains
 *.p12
 *.pfx
+*.p8
 *.key
 *.pem
+*.mobileprovision
+*.provisionprofile
 *.keychain
 *.keychain-db
 *.keychain-password

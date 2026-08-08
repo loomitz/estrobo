@@ -1,13 +1,10 @@
-name: Release public beta
+name: Legacy self-signed beta rebuild
 
 on:
-  push:
-    tags:
-      - "v*-beta.*"
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing annotated beta tag to rebuild
+        description: Existing annotated self-signed beta.1 or beta.2 tag to rebuild
         required: true
         type: string
 
@@ -52,6 +49,14 @@ jobs:
               exit 1
             fi
           fi
+          case "$TAG" in
+            v0.1.0-beta.1|v0.1.0-beta.2)
+              ;;
+            *)
+              echo "Legacy self-signed rebuilds are restricted to v0.1.0-beta.1 and v0.1.0-beta.2; refusing $TAG" >&2
+              exit 1
+              ;;
+          esac
           if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]]; then
             echo "Invalid beta tag: $TAG" >&2
             exit 1
