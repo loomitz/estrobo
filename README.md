@@ -131,6 +131,7 @@ Compatibility coverage will expand as Multi and more trigger, flash, and firmwar
 - [Privacy](PRIVACY.md)
 - [Security](SECURITY.md)
 - [Support](SUPPORT.md)
+- [Support Estrobo on Ko-fi](https://ko-fi.com/loomitz68613)
 - [Contributing](CONTRIBUTING.md)
 - [Changelog](CHANGELOG.md)
 - [Third-party notices](THIRD-PARTY-NOTICES.md)
