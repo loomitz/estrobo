@@ -13,13 +13,14 @@ enum MenuBarAccessibilityCheck {
 
         let controller = MockRadioRuntime.makeController()
         controller.startScanning()
-        pump(0.35)
-        expect(controller.selectedDevice != nil, "The mock trigger must be discovered")
+        expect(
+            pumpUntil(timeout: 3) { controller.selectedDevice != nil },
+            "The mock trigger must be discovered"
+        )
         controller.radioCode = "123456"
         controller.connectSelectedDevice()
-        pump(3)
         expect(
-            controller.phase == .ready,
+            pumpUntil(timeout: 10) { controller.phase == .ready },
             "The accessibility fixture must reach Ready; current phase: \(controller.phase.title)"
         )
 
@@ -251,6 +252,20 @@ enum MenuBarAccessibilityCheck {
 
     private static func pump(_ seconds: TimeInterval) {
         RunLoop.main.run(until: Date().addingTimeInterval(seconds))
+    }
+
+    private static func pumpUntil(
+        timeout: TimeInterval,
+        interval: TimeInterval = 0.02,
+        condition: () -> Bool
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition(), Date() < deadline {
+            RunLoop.main.run(
+                until: min(deadline, Date().addingTimeInterval(interval))
+            )
+        }
+        return condition()
     }
 
     private static func expect(_ condition: @autoclosure () -> Bool, _ message: String) {
