@@ -4,10 +4,10 @@ Empieza por anotar la versión/build de Estrobo, versión de macOS, arquitectura
 
 ## macOS no abre la app
 
-La beta pública vigente, `0.1.0-beta.3`, tiene Developer ID y notarización Apple. El candidato beta 4 deberá cumplir el mismo contrato antes de publicarse. Gatekeeper debe aceptar tanto el DMG como la app sin usar **Abrir de todos modos**.
+La beta pública vigente, `0.1.0-beta.4`, tiene Developer ID y notarización Apple. Gatekeeper debe aceptar tanto el DMG como la app sin usar **Abrir de todos modos**.
 
 1. Verifica primero el SHA-256 del DMG contra `SHA256SUMS` del mismo GitHub Release.
-2. Para la beta pública vigente, confirma que descargaste `estrobo-v0.1.0-beta.3-macos-universal.dmg` desde el [release oficial de beta 3](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.3). Usa `estrobo-v0.1.0-beta.4-macos-universal.dmg` sólo después de que exista el prerelease oficial de beta 4. No uses copias reenviadas ni mezcles checksums entre versiones.
+2. Confirma que descargaste `estrobo-v0.1.0-beta.4-macos-universal.dmg` desde el [prerelease oficial de beta 4](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.4). No uses copias reenviadas ni mezcles checksums entre versiones.
 3. Abre el DMG, arrastra `estrobo.app` a Aplicaciones y expulsa la imagen antes de abrir la app instalada.
 4. Si macOS muestra la confirmación normal de una app descargada de Internet, confirma **Abrir**. Este aviso no es el bloqueo por desarrollador no identificado.
 

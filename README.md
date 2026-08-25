@@ -13,7 +13,7 @@
 Estrobo brings compatible Godox flash-trigger controls into one focused Mac workspace. Organize working groups and adjust power, mode, modeling light, and global controls without an account, backend, analytics, or telemetry.
 
 > [!IMPORTANT]
-> Public beta `0.1.0-beta.3` remains the current download. `0.1.0-beta.4` is a release candidate and is not an official build until its exact universal DMG is signed with Apple Developer ID, notarized and stapled by Apple, accepted by Gatekeeper, and published as a GitHub prerelease after the required clean-Mac and hardware smokes.
+> Public beta `0.1.0-beta.4` is the current download. Its exact universal DMG and bundled app are signed with Apple Developer ID, notarized and stapled by Apple, and accepted by Gatekeeper.
 
 ![Estrobo Channels view in simulated mode](prototype/GodoxMacControlPrototype/QA/channels-after-dark-final-en.png)
 
@@ -44,13 +44,9 @@ This is the only hardware matrix used for physical testing so far; the exact cam
 
 ### Current public beta
 
-Download `estrobo-v0.1.0-beta.3-macos-universal.dmg`, `SHA256SUMS`, and `estrobo-v0.1.0-beta.3-manifest.json` from the official [`0.1.0-beta.3` GitHub Release](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.3).
+Download `estrobo-v0.1.0-beta.4-macos-universal.dmg`, `SHA256SUMS`, and `estrobo-v0.1.0-beta.4-manifest.json` from the official [`0.1.0-beta.4` GitHub Release](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.4).
 
-### Beta 4 after publication
-
-Once the prerelease exists, download `estrobo-v0.1.0-beta.4-macos-universal.dmg`, `SHA256SUMS`, and `estrobo-v0.1.0-beta.4-manifest.json` from the official [`0.1.0-beta.4` GitHub Release](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.4). If that page or any of those assets is absent, there is no official beta 4 build yet.
-
-For either version, keep its three files together in Downloads, never mix assets between releases, and do not use builds from issues or third-party links.
+Keep the three files together in Downloads, never mix assets between releases, and do not use builds from issues or third-party links.
 
 1. Open Terminal and verify the release files before mounting the image:
 
@@ -63,9 +59,9 @@ For either version, keep its three files together in Downloads, never mix assets
 2. Double-click the DMG. In the window that opens, drag `estrobo.app` onto the **Applications** folder.
 3. Eject the Estrobo disk image, then open Estrobo from Applications. Confirm the normal macOS downloaded-app prompt if it appears and grant Bluetooth access when requested.
 
-After publication, the official beta 4 DMG and the app inside it must both be signed and notarized. If macOS reports that the developer cannot be verified, do not bypass Gatekeeper: delete that copy, verify `SHA256SUMS`, and download the asset again from the official prerelease.
+The official beta 4 DMG and the app inside it are both signed and notarized. If macOS reports that the developer cannot be verified, do not bypass Gatekeeper: delete that copy, verify `SHA256SUMS`, and download the asset again from the official prerelease.
 
-> **Release status:** `0.1.0-beta.4` is the candidate documented below. Until its prerelease and checksum assets exist, `0.1.0-beta.3` remains the current public beta.
+> **Release status:** `0.1.0-beta.4` is the current public beta. Published assets are immutable; verify all three files from the same GitHub prerelease.
 
 ## Quick start
 
