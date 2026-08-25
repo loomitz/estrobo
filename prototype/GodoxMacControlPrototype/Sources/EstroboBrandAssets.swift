@@ -16,9 +16,13 @@ enum EstroboBrandAssets {
         ResourceDescriptor(name: "EstroboMark", fileExtension: "pdf"),
         ResourceDescriptor(name: "EstroboMark@2x", fileExtension: "png"),
     ]
+    static let menuBarMarkResources = [
+        ResourceDescriptor(name: "EstroboMenuBarMark", fileExtension: "svg"),
+    ]
 
     static let lockupImage = loadLockup()
     static let markImage = loadMark()
+    static let menuBarMarkImage = loadMenuBarMark()
 
     static func loadLockup(in bundle: Bundle = .main) -> NSImage? {
         loadLockup { resource in
@@ -50,6 +54,26 @@ enum EstroboBrandAssets {
         resolving resolve: (ResourceDescriptor) -> URL?
     ) -> NSImage? {
         load(resources: markResources, resolving: resolve)
+    }
+
+    static func loadMenuBarMark(in bundle: Bundle = .main) -> NSImage? {
+        loadMenuBarMark { resource in
+            bundle.url(
+                forResource: resource.name,
+                withExtension: resource.fileExtension,
+                subdirectory: resourceSubdirectory
+            )
+        }
+    }
+
+    static func loadMenuBarMark(
+        resolving resolve: (ResourceDescriptor) -> URL?
+    ) -> NSImage? {
+        guard let image = load(resources: menuBarMarkResources, resolving: resolve) else {
+            return nil
+        }
+        image.isTemplate = true
+        return image
     }
 
     private static func load(

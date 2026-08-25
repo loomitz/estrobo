@@ -10,24 +10,52 @@ struct GodoxMacControlPrototypeApp: App {
     @NSApplicationDelegateAdaptor(PrototypeAppDelegate.self) private var appDelegate
     @StateObject private var controller: GodoxSessionController
     @StateObject private var appearanceStore: AppAppearanceStore
+    @StateObject private var languageStore: AppLanguageStore
+    @AppStorage(MenuBarVisibilityPreferences.storageKey)
+    private var isMenuBarIconVisible = MenuBarVisibilityPreferences.defaultIsVisible
 
     init() {
-        _controller = StateObject(
-            wrappedValue: MockRadioRuntime.makeControllerIfRequested()
-                ?? GodoxSessionController()
-        )
+        let sessionController = MockRadioRuntime.makeControllerIfRequested()
+            ?? GodoxSessionController()
+        _controller = StateObject(wrappedValue: sessionController)
         _appearanceStore = StateObject(wrappedValue: AppAppearanceStore())
+        _languageStore = StateObject(wrappedValue: AppLanguageStore())
+        appDelegate.controller = sessionController
+    }
+
+    private var menuBarIconInsertionBinding: Binding<Bool> {
+        Binding(
+            get: { isMenuBarIconVisible },
+            set: { newValue in
+                guard newValue != isMenuBarIconVisible else { return }
+                isMenuBarIconVisible = newValue
+            }
+        )
     }
 
     var body: some Scene {
-        WindowGroup("estrobo") {
+        WindowGroup("estrobo", id: "main") {
             PrototypeRootView(controller: controller)
                 .environmentObject(appearanceStore)
+                .environmentObject(languageStore)
+                .environment(\.locale, languageStore.locale)
                 .preferredColorScheme(appearanceStore.appearance.colorScheme)
-                .onAppear { appDelegate.controller = controller }
         }
         .defaultSize(width: 1180, height: 820)
         .windowResizability(.contentMinSize)
+
+        MenuBarExtra(isInserted: menuBarIconInsertionBinding) {
+            MenuBarControlView(controller: controller)
+                .environmentObject(appearanceStore)
+                .environmentObject(languageStore)
+                .environment(\.locale, languageStore.locale)
+                .preferredColorScheme(appearanceStore.appearance.colorScheme)
+        } label: {
+            MenuBarStatusLabel(controller: controller)
+                .environmentObject(languageStore)
+                .environment(\.locale, languageStore.locale)
+        }
+        .menuBarExtraStyle(.window)
     }
 }
 
@@ -36,15 +64,18 @@ final class PrototypeAppDelegate: NSObject, NSApplicationDelegate {
     weak var controller: GodoxSessionController?
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
+        false
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard let controller, !controller.restorationPoints.isEmpty else {
+        guard let controller,
+              let blockReason = controller.terminationBlockReason else {
             return .terminateNow
         }
-        controller.noteTerminationBlockedForRestoration()
+        controller.noteTerminationBlocked(blockReason)
         NSApplication.shared.activate(ignoringOtherApps: true)
+        NSApplication.shared.windows.first(where: { !($0 is NSPanel) })?
+            .makeKeyAndOrderFront(nil)
         return .terminateCancel
     }
 }

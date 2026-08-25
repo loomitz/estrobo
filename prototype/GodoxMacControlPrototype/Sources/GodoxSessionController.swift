@@ -165,7 +165,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     private var synchronizationDelay: Task<Void, Never>?
     private var synchronizationTimeout: Task<Void, Never>?
     private var controlTimeout: Task<Void, Never>?
-    private var heartbeatTimeouts: [UUID: SessionDeadlineToken] = [:]
+    private var pendingHeartbeatIntentID: UUID?
+    private var heartbeatTimeout: SessionDeadlineToken?
     private var radioResponseTimeouts: [GodoxGroup: Task<Void, Never>] = [:]
     private var controlIntents: [ControlIntent] = []
     private var submittingControlIntentID: UUID?
@@ -2490,10 +2491,13 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     func noteTerminationBlockedForRestoration() {
-        addActivity(
-            .error,
+        noteTerminationBlocked(
             "No se puede cerrar: recupera el ajuste anterior antes de salir"
         )
+    }
+
+    func noteTerminationBlocked(_ reason: String) {
+        addActivity(.error, reason)
     }
 
     func adjust(_ group: GodoxGroup, direction: Int) {
@@ -3414,7 +3418,15 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         case .discoveryReset:
             devices.removeAll()
 
-        case .discovered(let device):
+        case .discovered(let discoveredDevice):
+            guard let canonicalName = GodoxBluetoothDeviceName.canonicalName(
+                from: discoveredDevice.name
+            ) else { return }
+            let device = BluetoothClient.Device(
+                id: discoveredDevice.id,
+                name: canonicalName,
+                rssi: discoveredDevice.rssi
+            )
             if let index = devices.firstIndex(where: { $0.id == device.id }) {
                 devices[index] = device
             } else {
@@ -3684,7 +3696,14 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 addActivity(.warning, "Heartbeat ignorado fuera de una sesión identificada")
                 return
             }
+            guard pendingHeartbeatIntentID == nil else {
+                // FEC8 can repeat the same heartbeat while its response is queued.
+                // One pending reply is sufficient and keeps the serialized control
+                // queue and its deadline bounded for the active session.
+                return
+            }
             let intentID = UUID()
+            pendingHeartbeatIntentID = intentID
             controlIntents.append(.heartbeat(
                 deviceID: sessionDeviceID,
                 sessionID: sessionID,
@@ -3799,8 +3818,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 scheduleAutomaticApplyIfNeeded()
             }
         case .heartbeat(let deviceID, let intentSessionID, let intentID):
-            heartbeatTimeouts[intentID]?.cancel()
-            heartbeatTimeouts[intentID] = nil
+            completePendingHeartbeat(intentID: intentID)
             guard deviceID == sessionDeviceID, intentSessionID == sessionID else {
                 addActivity(.warning, "Acuse de heartbeat de una sesión anterior ignorado")
                 return
@@ -3922,8 +3940,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                     "El resultado del write de \(group.label) es incierto; reconecta el mismo radio y recupera el ajuste anterior"
                 )
             case .heartbeat(_, _, let intentID):
-                heartbeatTimeouts[intentID]?.cancel()
-                heartbeatTimeouts[intentID] = nil
+                completePendingHeartbeat(intentID: intentID)
                 addActivity(.warning, "No se pudo responder el heartbeat")
                 if activeGroupChange == nil {
                     if queuedGroupChanges.isEmpty {
@@ -3944,20 +3961,28 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     private func scheduleHeartbeatTimeout(for intentID: UUID) {
-        heartbeatTimeouts[intentID]?.cancel()
-        heartbeatTimeouts[intentID] = deadlineScheduler.schedule(.heartbeat) { [weak self] in
+        heartbeatTimeout?.cancel()
+        heartbeatTimeout = deadlineScheduler.schedule(.heartbeat) { [weak self] in
             guard let self,
+                  self.pendingHeartbeatIntentID == intentID,
                   self.controlIntents.contains(where: {
                       if case .heartbeat(_, _, let candidateID) = $0 {
                           return candidateID == intentID
                       }
                       return false
-                  }) else {
+            }) else {
                 return
             }
-            self.heartbeatTimeouts[intentID] = nil
+            self.heartbeatTimeout = nil
             self.invalidateSession("El heartbeat del radio no confirmó en 5 segundos")
         }
+    }
+
+    private func completePendingHeartbeat(intentID: UUID) {
+        guard pendingHeartbeatIntentID == intentID else { return }
+        heartbeatTimeout?.cancel()
+        heartbeatTimeout = nil
+        pendingHeartbeatIntentID = nil
     }
 
     private func markFailed(_ group: GodoxGroup, message: String) {
@@ -4158,8 +4183,9 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         valueSynchronizationSettleDeadline = nil
         controlTimeout?.cancel()
         controlTimeout = nil
-        heartbeatTimeouts.values.forEach { $0.cancel() }
-        heartbeatTimeouts.removeAll()
+        heartbeatTimeout?.cancel()
+        heartbeatTimeout = nil
+        pendingHeartbeatIntentID = nil
         radioResponseTimeouts.values.forEach { $0.cancel() }
         radioResponseTimeouts.removeAll()
     }

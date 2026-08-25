@@ -76,6 +76,9 @@
 "Sin conexión Bluetooth ni comandos físicos de flash" = "No Bluetooth connection or physical flash commands";
 "Configurar" = "Settings";
 "Configuración" = "Settings";
+"Barra de menús" = "Menu bar";
+"Mostrar icono de Estrobo" = "Show Estrobo icon";
+"Ocultarlo no cierra Estrobo. Vuélvelo a mostrar desde Configuración." = "Hiding it does not quit Estrobo. Show it again in Settings.";
 "CONTROL GLOBAL" = "GLOBAL CONTROL";
 "Sin grupos manuales activos" = "No active manual groups";
 "1 grupo manual · incluye ocultos" = "1 manual group · includes hidden groups";
@@ -510,7 +513,8 @@
 "%lld modelos asignados al grupo %@" = "%lld models assigned to group %@";
 "%lld presets guardados" = "%lld saved presets";
 "1 modelo asignado al grupo %@" = "1 model assigned to group %@";
-"Al conectar, Estrobo enviará sus valores al radio: %@." = "When connecting, Estrobo will send its values to the trigger: %@.";
+"Al conectar se aplicará: %@" = "On connect: %@";
+"Estrobo sobrescribirá A0/A1 del radio; no importará su estado actual." = "Estrobo will overwrite the trigger's A0/A1 state; it will not import its current state.";
 "Arrastra verticalmente o pulsa una marca; cada paso equivale a un tercio EV" = "Drag vertically or select a mark; each step equals one-third EV";
 "Asigna uno o más modelos a cada grupo para calcular un rango seguro." = "Assign one or more models to each group to calculate a safe range.";
 "Aún no tienes presets" = "You do not have any presets yet";
@@ -542,7 +546,6 @@
 "Guardar valores actuales" = "Save current values";
 "La configuración está lista para guardarse en este Mac." = "The configuration is ready to be saved on this Mac.";
 "La configuración se abre a pantalla completa y no cambia el radio hasta volver a conectar." = "Configuration opens full screen and does not change the trigger until you reconnect.";
-"La dirección es Estrobo → radio; la app no lee el estado completo del transmisor." = "The direction is Estrobo → trigger; the app does not read the transmitter's complete state.";
 "NO COMPATIBLE" = "NOT COMPATIBLE";
 "No cierres Estrobo ni apagues el radio durante esta operación." = "Do not close Estrobo or turn off the trigger during this operation.";
 "No se pudo cargar el preset. Revisa el perfil y los grupos de trabajo." = "The preset could not be loaded. Check the profile and working groups.";
@@ -607,8 +610,6 @@
 "Desactiva el grupo %@ para dejar de dispararlo; el cambio queda pendiente de envío." = "Deactivate group %@ to stop firing it; the change remains pending until sent.";
 "El grupo %@ está en %@ y no puede pasar automáticamente a Manual." = "Group %@ is in %@ and cannot switch to Manual automatically.";
 "Activa el grupo %@ para editar potencia y modelado." = "Activate group %@ to edit power and modeling light.";
-"El grupo %@ se sincronizará apagado. Podrás activarlo después de conectar." = "Group %@ will sync as off. You can activate it after connecting.";
-"Los grupos %@ se sincronizarán apagados. Podrás activarlos después de conectar." = "Groups %@ will sync as off. You can activate them after connecting.";
 "Cambia la vista del espacio de trabajo." = "Change the workspace view.";
 "El cambio se aplica de inmediato y se conserva para la próxima sesión." = "The change applies immediately and is kept for the next session.";
 "Selecciona todos los flashes que usará cada grupo." = "Select every flash model this group will use.";
@@ -823,3 +824,40 @@
 "No se pudo guardar la escena anterior completa; no se transmitió A1" = "The complete previous scene could not be saved; A1 was not transmitted";
 "El registro anterior no incluía A0; se reconstruyó un estado global conservador" = "The older recovery record did not include A0; a conservative global state was reconstructed";
 "No se pudo preparar A0 para la recuperación segura" = "A0 could not be prepared for safe recovery";
+
+/* Menu bar controls */
+"menubar.connected" = "Connected";
+"menubar.noGroups.title" = "No visible groups yet";
+"menubar.noGroups.detail" = "Open Estrobo to choose the groups you want to control from the menu bar.";
+"menubar.openApp" = "Open Estrobo";
+"menubar.quit" = "Quit Estrobo";
+"menubar.quitShort" = "Quit";
+"menubar.standby" = "Standby is active · resume the groups in Estrobo to edit them";
+"menubar.applying" = "Applying changes…";
+"menubar.automaticPending" = "Automatic delivery pending";
+"menubar.pendingOne" = "1 pending change";
+"menubar.pendingMany" = "%lld pending changes";
+"menubar.reviewPending" = "Review the pending changes in Estrobo";
+"menubar.apply" = "Apply";
+"menubar.pending" = "PENDING";
+"menubar.locked" = "LOCKED";
+"menubar.decreaseGroup" = "Lower group %@ by one third EV";
+"menubar.increaseGroup" = "Raise group %@ by one third EV";
+"menubar.powerGroup" = "Group %@ power";
+"menubar.choosePower" = "Choose an allowed power directly";
+"menubar.connectToEdit" = "Connect and sync the trigger to edit this group";
+"menubar.manualOnly" = "The group is in %@ mode; power can only be edited in Manual";
+"menubar.openForDetails" = "Open Estrobo to review why this group is locked";
+"menubar.minimumPower" = "This group is already at its minimum allowed power";
+"menubar.maximumPower" = "This group is already at its maximum allowed power";
+"menubar.turnOnGroup" = "Turn on group %@";
+"menubar.turnOffGroup" = "Turn off group %@";
+"menubar.groupOn" = "On";
+"menubar.groupOff" = "Off";
+"menubar.togglePendingHint" = "The change follows the selected delivery mode";
+"No se puede cerrar mientras se sincronizan valores con el radio" = "Estrobo cannot quit while values are being synchronized with the trigger";
+"No se puede cerrar mientras se aplican cambios al radio" = "Estrobo cannot quit while changes are being applied to the trigger";
+"No se puede cerrar mientras se entrega la orden Test" = "Estrobo cannot quit while the Test command is being delivered";
+"No se puede cerrar durante un ajuste de potencia" = "Estrobo cannot quit during a power adjustment";
+"No se puede cerrar mientras el envío automático está pendiente" = "Estrobo cannot quit while automatic delivery is pending";
+"No se puede cerrar: aplica o descarta los cambios pendientes" = "Estrobo cannot quit: apply or discard the pending changes";

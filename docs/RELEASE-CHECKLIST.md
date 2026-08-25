@@ -17,7 +17,7 @@ Este checklist es un gate, no una guía opcional. Un release permanece **draft**
 ## 2. Higiene del repositorio
 
 - [ ] `.gitignore` cubre `.DS_Store`, `Build/`, `Dist/`, `.swiftpm/`, `DerivedData/`, `*.af~lock~`, ZIP/DMG/ejecutables, `.p12`, `.p8`, `.key`, provisioning profiles y temporales de keychain.
-- [ ] Lo staged no contiene builds, ejecutables, PoC/tests compilados, lockfiles, APKs o artefactos de terceros no publicables.
+- [ ] Lo staged no contiene builds, ejecutables, PoC/tests compilados, lockfiles temporales o de editor, APKs ni artefactos de terceros no publicables; los lockfiles versionados de dependencias, como `website/pnpm-lock.yaml`, se conservan sincronizados para instalaciones reproducibles con `--frozen-lockfile`.
 - [ ] No hay nombres de estación, PII, claves, certificados privados, contraseñas, tokens ni Códigos del radio.
 - [ ] Las identidades públicas versionadas contienen sólo `estrobo-beta-signing.cer` + digest para betas 1/2 y `estrobo-developer-id-application.cer` + digest para beta 3+; nunca `.p12`, `.p8`, private key o password.
 - [ ] `git diff --cached --check` pasa.
@@ -165,7 +165,7 @@ Conserva la cuarentena original del DMG descargado.
 - [ ] Para el carril autosignado, Gatekeeper muestra la advertencia esperada, rechaza y se usa **Abrir de todos modos** sin confiar ni instalar el certificado.
 - [ ] Para Developer ID, Gatekeeper acepta el DMG y la app con fuente `Notarized Developer ID`; **Abrir de todos modos** no forma parte del camino esperado.
 - [ ] `--mock-radio` funciona sin Bluetooth ni comandos físicos en ambas arquitecturas.
-- [ ] La actualización `beta.2` → `beta.3` conserva preferencias y la identidad del contenedor, y migra el único transmisor recordado a la biblioteca plural; se registra el baseline y el resultado real en Macs limpios, sin asumirlo a partir del bundle identifier.
+- [ ] La actualización `beta.3` → `beta.4` conserva preferencias, biblioteca de transmisores guardados, workspace, presets e identidad del contenedor; se registra el baseline y el resultado real en Macs limpios, sin asumirlo a partir del bundle identifier ni de las pruebas automatizadas.
 
 ## 9. Smoke físico manual
 

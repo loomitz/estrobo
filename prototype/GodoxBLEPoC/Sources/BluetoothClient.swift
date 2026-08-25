@@ -708,10 +708,6 @@ final class BluetoothClient: NSObject {
         delegate?.bluetoothClient(didReceive: event)
     }
 
-    private static func isCompatibleName(_ name: String) -> Bool {
-        name.contains("-") && (name.hasPrefix("GD") || name.hasPrefix("Ami-"))
-    }
-
     private static func description(for state: CBManagerState) -> String {
         switch state {
         case .unknown:
@@ -794,9 +790,9 @@ extension BluetoothClient: @preconcurrency CBCentralManagerDelegate {
         guard central === centralManager, central.isScanning else { return }
 
         let advertisedName = advertisementData[CBAdvertisementDataLocalNameKey] as? String
-        let candidateName = (advertisedName ?? peripheral.name ?? "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard Self.isCompatibleName(candidateName) else { return }
+        guard let candidateName = GodoxBluetoothDeviceName.compatibleName(
+            from: advertisedName ?? peripheral.name ?? ""
+        ) else { return }
 
         let device = Device(id: peripheral.identifier, name: candidateName, rssi: RSSI.intValue)
         peripheralsByID[device.id] = peripheral

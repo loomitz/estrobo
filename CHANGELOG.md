@@ -2,9 +2,49 @@
 
 Todos los cambios relevantes de Estrobo se documentan aquí. Mientras el proyecto esté en beta, las interfaces y la matriz de compatibilidad pueden cambiar entre prereleases.
 
-## Sin publicar
+## 0.1.0-beta.4 — candidato sin publicar
 
-No hay cambios acumulados después de `0.1.0-beta.3`.
+### Añadido
+
+- Control compacto opcional desde la barra de menús para encender o apagar los
+  grupos visibles y ajustar su potencia Manual sin abrir el workspace.
+- Preferencia persistente para ocultar el icono de la barra de menús y
+  recuperarlo desde Configuración.
+- Comprobación aislada de arranque y respuesta a eventos de activación en modo
+  simulado, integrada en la suite canónica.
+- Contrato automatizado de accesibilidad para el panel compacto y smoke AX
+  nativo manual documentado sobre roles, etiquetas, valores, ayudas, estados
+  deshabilitados y acciones de ajuste publicadas por macOS.
+
+### Cambiado
+
+- La conexión vuelve a declarar explícitamente que Estrobo sobrescribe A0/A1
+  desde el estado local y no importa el estado previo del radio.
+- El sitio usa Astro `7.2.6` y un árbol de dependencias sin avisos conocidos de
+  seguridad.
+
+### Seguridad
+
+- El cierre se bloquea durante Sync, Apply, Test, gestos, debounce, restauración
+  y borradores que aún pueden aplicarse o descartarse, sin atrapar estados
+  derivados ya persistidos que sólo pueden resincronizarse al reconectar.
+- Las respuestas a heartbeats Bluetooth repetidos se coalescen a una sola
+  operación en vuelo por sesión, con timeout y limpieza deterministas.
+- Los nombres anunciados por Bluetooth se validan antes de usarse para
+  compatibilidad, selección o presentación, evitando controles Unicode que
+  puedan suplantar visualmente otro transmisor.
+
+### Distribución
+
+- Versión `0.1.0`, build `4`, tag previsto `v0.1.0-beta.4`.
+- El candidato universal conserva App Sandbox, Hardened Runtime y únicamente el
+  entitlement Bluetooth; el release sólo puede publicarse después de firma
+  Developer ID, notarización, Gatekeeper y smoke del asset exacto.
+- Notas públicas bilingües y manifiesto/checksums del artefacto exacto como
+  fuentes de instalación y verificación.
+
+Consulta las [notas en inglés](docs/releases/v0.1.0-beta.4.md) o la
+[traducción al español](docs/releases/v0.1.0-beta.4.es.md).
 
 ## 0.1.0-beta.3 — 2026-08-08
 

@@ -1,6 +1,6 @@
 # Beta pública limitada
 
-Estrobo `0.1.0-beta.3` es una prueba pública acotada para validar instalación, actualización, interfaz, Multi global y compatibilidad física en una matriz pequeña de Macs, transmisores, flashes y firmware. No es una afirmación de compatibilidad general con la línea Godox.
+Estrobo `0.1.0-beta.4` es un candidato para una prueba pública acotada de instalación, actualización, interfaz, controles de barra de menús, Multi global y compatibilidad física en una matriz pequeña de Macs, transmisores, flashes y firmware. No es una afirmación de compatibilidad general con la línea Godox. Mientras no exista su prerelease público con los assets exactos, `0.1.0-beta.3` sigue siendo la beta pública vigente.
 
 ## Antes de participar
 
@@ -12,15 +12,17 @@ Estrobo `0.1.0-beta.3` es una prueba pública acotada para validar instalación,
 - Test puede disparar los grupos que estén activos en el transmisor. Úsalo sólo cuando el entorno físico sea seguro.
 - No uses un PIN personal como Código del radio. El protocolo lo transmite por BLE y no ofrece autenticación fuerte.
 
-Esta beta está firmada con Apple Developer ID y notarizada. Eso permite que Gatekeeper verifique su procedencia e integridad, pero no convierte la matriz limitada de hardware en compatibilidad comercial garantizada.
+El candidato sólo podrá publicarse después de que su DMG exacto esté firmado con Apple Developer ID, notarizado y engrapado por Apple, y aceptado por Gatekeeper. Eso permitirá verificar su procedencia e integridad, pero no convertirá la matriz limitada de hardware en compatibilidad comercial garantizada.
 
 ## Descarga e integridad
 
-Usa únicamente los assets del prerelease en GitHub Releases:
+Mientras beta 3 siga siendo la versión pública, descarga sus tres assets exactos desde el [release oficial `v0.1.0-beta.3`](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.3) y usa las instrucciones versionadas de ese release. No mezcles checksums ni manifiestos entre versiones.
 
-- `estrobo-v0.1.0-beta.3-macos-universal.dmg`;
+Cuando beta 4 esté publicada, usa únicamente estos assets de su prerelease en GitHub Releases:
+
+- `estrobo-v0.1.0-beta.4-macos-universal.dmg`;
 - `SHA256SUMS`;
-- `estrobo-v0.1.0-beta.3-manifest.json` con versión, firma, notarización y procedencia.
+- `estrobo-v0.1.0-beta.4-manifest.json` con versión, firma, notarización y procedencia.
 
 Conserva los tres archivos juntos en Descargas y compruébalos antes de montar el DMG:
 
@@ -31,7 +33,7 @@ shasum -a 256 -c SHA256SUMS
 
 El DMG y el manifiesto deben mostrar `OK`. Si alguno falla, no abras la app.
 
-La app usa el certificado **Developer ID Application** del equipo `XG96FAV89U`, Hardened Runtime y un sello de tiempo seguro. El certificado público DER está en `release/signing/estrobo-developer-id-application.cer` y el SHA-256 de esos bytes en `release/signing/estrobo-developer-id-application.sha256`. Apple aceptó la notarización y el ticket está adjunto tanto a la app como al DMG para verificación incluso sin conexión. Los archivos `estrobo-beta-signing.*` se conservan sólo como identidad histórica de `beta.1` y `beta.2`.
+El candidato debe usar el certificado **Developer ID Application** del equipo `XG96FAV89U`, Hardened Runtime y un sello de tiempo seguro. El certificado público DER está en `release/signing/estrobo-developer-id-application.cer` y el SHA-256 de esos bytes en `release/signing/estrobo-developer-id-application.sha256`. Antes de publicarlo, Apple debe aceptar la notarización y el ticket debe quedar adjunto tanto a la app como al DMG para verificación incluso sin conexión. Los archivos `estrobo-beta-signing.*` se conservan sólo como identidad histórica de `beta.1` y `beta.2`.
 
 ## Instalar y abrir
 
@@ -40,13 +42,13 @@ La app usa el certificado **Developer ID Application** del equipo `XG96FAV89U`, 
 3. Expulsa la imagen de disco y abre Estrobo desde Aplicaciones.
 4. Confirma el aviso normal de app descargada si macOS lo presenta y concede acceso a Bluetooth cuando se solicite.
 
-Gatekeeper debe aceptar el DMG y la app como `Notarized Developer ID`; **Abrir de todos modos** no forma parte de esta instalación. Si macOS dice que no puede verificar al desarrollador, no retires la cuarentena ni desactives Gatekeeper: elimina esa copia y vuelve a descargar el asset oficial.
+Una vez publicado, Gatekeeper debe aceptar el DMG de beta 4 y la app como `Notarized Developer ID`; **Abrir de todos modos** no forma parte de esta instalación. Si macOS dice que no puede verificar al desarrollador, no retires la cuarentena ni desactives Gatekeeper: elimina esa copia y vuelve a descargar el asset oficial.
 
 ## Identidad local y actualización
 
-Beta 3 usa el identificador `mx.loo.estrobo`, versión `0.1.0` y build `3`. El identificador anterior pertenecía al prototipo, por lo que no se migran automáticamente radios, códigos, espacios de trabajo ni presets de aquella identidad. La actualización desde `beta.2` conserva el mismo bundle identifier y tiene pruebas automatizadas de migración, pero cada instalación debe confirmar su transmisor guardado y workspace después de actualizar.
+Beta 4 usa el identificador `mx.loo.estrobo`, versión `0.1.0` y build `4`. Conserva el mismo bundle identifier de beta 3 y está diseñada para preservar preferencias, biblioteca de transmisores, workspace y presets, pero cada instalación debe confirmar esos valores después de actualizar. El identificador anterior al de las betas públicas pertenecía al prototipo, por lo que no se migran automáticamente radios, códigos, espacios de trabajo ni presets de aquella identidad.
 
-Beta 3 sustituye el único radio recordado por una biblioteca local de transmisores guardados. El registro existente de `beta.2` migra automáticamente y cada transmisor puede olvidarse por separado. Los transmisores nuevos sólo entran a la biblioteca cuando la persona activa el opt-in y termina autenticación + Sync; nombre, UUID y Código del radio permanecen locales en este Mac.
+La biblioteca local de transmisores guardados introducida en beta 3 continúa en beta 4. El registro histórico único de `beta.2` migra automáticamente y cada transmisor puede olvidarse por separado. Los transmisores nuevos sólo entran a la biblioteca cuando la persona activa el opt-in y termina autenticación + Sync; nombre, UUID y Código del radio permanecen locales en este Mac.
 
 En una instalación limpia configura:
 
@@ -75,7 +77,7 @@ Pendientes de ampliar mediante pruebas físicas controladas:
 - todos los grupos `0–9`/`A–F` que la UI puede configurar;
 - reconexión y actualización entre betas en Macs limpios Intel y Apple Silicon.
 
-Beta 3 incluye Multi global como función experimental para grupos compatibles `A–E`: un único botón junto a Beep activa o desactiva la escena, muestra una consola inline y edita potencia en pasos completos hasta `1/4`, conteo y frecuencia. Los límites de software, la persistencia y la recuperación tienen pruebas automatizadas, pero Multi continúa **sin validación óptica** hasta observar la secuencia solicitada con el asset exacto y la combinación concreta de transmisor, flashes y firmware. HSS no está disponible en Multi. Tampoco están disponibles el canal global, la compensación TTL no neutra, el cambio de Código del radio, firmware u OAD.
+Beta 4 conserva Multi global como función experimental para grupos compatibles `A–E`: un único botón junto a Beep activa o desactiva la escena, muestra una consola inline y edita potencia en pasos completos hasta `1/4`, conteo y frecuencia. También añade controles compactos opcionales en la barra de menús para los grupos visibles del workspace; comparten el mismo controlador, borradores, modo de envío y sesión Bluetooth que la app completa. Los límites de software, la persistencia y la recuperación tienen pruebas automatizadas, pero Multi continúa **sin validación óptica** hasta observar la secuencia solicitada con el asset exacto y la combinación concreta de transmisor, flashes y firmware. HSS no está disponible en Multi. Tampoco están disponibles el canal global, la compensación TTL no neutra, el cambio de Código del radio, firmware u OAD.
 
 ## Qué probar
 
@@ -85,9 +87,9 @@ Con hardware, sigue únicamente el gate manual coordinado del [Checklist de rele
 
 ## Estado del release
 
-El proceso de beta 3 prepara primero un release **draft** con el DMG exacto firmado y notarizado. Debe permanecer en draft hasta cerrar CI por arquitectura, checksums, firma, notarización, los smokes aplicables y la autorización humana del tag exacto. Sólo entonces puede publicarse como **prerelease** inmutable. Las versiones futuras deben repetir el mismo orden y nunca sustituir assets después de publicar.
+El proceso de beta 4 prepara primero un release **draft** con el DMG exacto firmado y notarizado. Debe permanecer en draft hasta cerrar CI por arquitectura, checksums, firma, notarización, los smokes aplicables y la autorización humana del tag exacto. Sólo entonces puede publicarse como **prerelease** inmutable. Hasta ese momento es un candidato, no una versión publicada, y nunca deben sustituirse assets después de publicar.
 
-Las notas canónicas en inglés están en [releases/v0.1.0-beta.3.md](releases/v0.1.0-beta.3.md) y su traducción en [releases/v0.1.0-beta.3.es.md](releases/v0.1.0-beta.3.es.md).
+Las notas canónicas del candidato en inglés están en [releases/v0.1.0-beta.4.md](releases/v0.1.0-beta.4.md) y su traducción en [releases/v0.1.0-beta.4.es.md](releases/v0.1.0-beta.4.es.md).
 
 ## Comentarios y reportes
 
