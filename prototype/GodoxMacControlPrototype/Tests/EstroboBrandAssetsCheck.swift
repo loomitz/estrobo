@@ -83,6 +83,26 @@ enum EstroboBrandAssetsCheck {
         )
         expect(!rasterImage.isTemplate, "The PNG fallback must preserve brand colours")
 
+        var menuBarMarkRequests: [String] = []
+        let menuBarMarkImage = EstroboBrandAssets.loadMenuBarMark { resource in
+            menuBarMarkRequests.append(fileName(for: resource))
+            return brandURL
+                .appendingPathComponent(resource.name)
+                .appendingPathExtension(resource.fileExtension)
+        }
+
+        guard let menuBarMarkImage else {
+            throw BrandAssetCheckError.missingMenuBarMark
+        }
+        expect(
+            menuBarMarkRequests == ["EstroboMenuBarMark.svg"],
+            "The Menu Bar must load the supplied solid vector mark"
+        )
+        expect(
+            menuBarMarkImage.isTemplate,
+            "The solid Menu Bar mark must adapt automatically to light and dark menu bars"
+        )
+
         guard
             let appBundlePath = CommandLine.arguments.dropFirst().first,
             let appBundle = Bundle(path: appBundlePath)
@@ -125,7 +145,25 @@ enum EstroboBrandAssetsCheck {
             "The built app must resolve the vector mark before the PNG fallback"
         )
 
-        print("Estrobo vector lockup, mark fallback, and bundled brand assets verified")
+        guard
+            let bundledMenuBarMarkURL = appBundle.url(
+                forResource: "EstroboMenuBarMark",
+                withExtension: "svg",
+                subdirectory: EstroboBrandAssets.resourceSubdirectory
+            ),
+            FileManager.default.fileExists(atPath: bundledMenuBarMarkURL.path)
+        else {
+            throw BrandAssetCheckError.missingBundledMenuBarMark
+        }
+        guard let bundledMenuBarMark = EstroboBrandAssets.loadMenuBarMark(in: appBundle) else {
+            throw BrandAssetCheckError.unreadableBundledMenuBarMark
+        }
+        expect(
+            bundledMenuBarMark.isTemplate,
+            "The bundled solid Menu Bar mark must preserve template rendering"
+        )
+
+        print("Estrobo lockup, colour mark, and solid Menu Bar template verified")
     }
 
     private static func fileName(
@@ -152,4 +190,7 @@ private enum BrandAssetCheckError: Error {
     case unreadableBundledLockup
     case missingBundledVectorMark
     case unreadableBundledMark
+    case missingMenuBarMark
+    case missingBundledMenuBarMark
+    case unreadableBundledMenuBarMark
 }

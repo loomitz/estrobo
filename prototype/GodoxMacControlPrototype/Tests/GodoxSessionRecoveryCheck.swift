@@ -236,6 +236,7 @@ enum GodoxSessionRecoveryCheck {
         checkFirstLaunchRequiresExplicitGroupSelection()
         checkControlsRequireReadySession()
         checkSavedRadioReconnectFlow()
+        checkBluetoothDeviceNamesAreCanonicalBeforeSelection()
         checkDuplicateRadioNamesRequireExplicitSelection()
         checkSilentConnectionRecovers()
         checkRejectedPasswordRecoversWithoutCallback()
@@ -265,6 +266,7 @@ enum GodoxSessionRecoveryCheck {
         checkMultiFlashUnsupportedGroups()
         checkVerifiedMultiFlashCountLimit()
         checkMultiFlashModelChangeKeepsSafePendingDraft()
+        checkUnresolvablePersistedMultiDraftDoesNotTrapTermination()
         checkStoredMultiFlashLimitMigrationPersists()
         checkBeepIncludesGlobalA0Gate()
         checkGlobalStandbyPreservesGroups()
@@ -282,6 +284,7 @@ enum GodoxSessionRecoveryCheck {
         checkAutomaticDebounceCancelsAndRearms()
         checkManualModeCancelsAutomaticSend()
         checkAutomaticSerializesTwoGroups()
+        checkHeartbeatFloodIsCoalescedPerSession()
         checkSynchronousHeartbeatFailuresPreserveAutomaticBatch()
         checkHeartbeatTimeoutStopsAutomaticBatch()
         checkControlFailureStopsAutomaticBatch()
@@ -1177,6 +1180,71 @@ enum GodoxSessionRecoveryCheck {
         expect(fixture.controller.multiFlashBaseline.count == 2)
         expect(fixture.controller.pendingCount == 0)
         expect(fixture.controller.canSendTest)
+    }
+
+    private static func checkUnresolvablePersistedMultiDraftDoesNotTrapTermination() {
+        let deliveryMemory = MemoryChangeDeliveryStorage()
+        let preferences = deliveryMemory.makePreferences()
+        preferences.save(.manual)
+        let studioMemory = MemoryStudioLibraryStorage()
+        let fixture = makeFixture(
+            changeDeliveryPreferences: preferences,
+            studioLibraryStore: studioMemory.makeStore()
+        )
+
+        fixture.controller.beginWorkspaceConfiguration()
+        expect(fixture.controller.completeWorkspaceConfiguration(
+            profileID: TransmitterProfile.observedGDBH.id,
+            selectedGroups: [.b],
+            assignedFlashModelIDs: [.b: ["generic-512"]]
+        ))
+        prepareConfiguredReadyConnection(fixture)
+
+        guard let oneOver4 = ManualPower.value(decimal: 80) else {
+            preconditionFailure("Falta 1/4 para probar el cierre con un borrador Multi derivado")
+        }
+        fixture.controller.setGlobalMultiFlashEnabled(true)
+        fixture.controller.setMultiFlashPower(oneOver4)
+        fixture.controller.setMultiFlashHertz(100)
+        fixture.controller.setMultiFlashCount(100)
+        fixture.controller.applyPendingChanges()
+        confirmCurrentGroup(fixture)
+
+        fixture.controller.setFlashModel("ad400pro-ii", assigned: true, to: .b)
+        expect(fixture.controller.multiFlashDraft.count == 2)
+        expect(fixture.controller.multiFlashBaseline.count == 100)
+        expect(fixture.controller.hasPendingMultiFlashChange)
+        expect(fixture.controller.canApply)
+        expect(!fixture.controller.canDiscardPendingChanges)
+        expect(
+            fixture.controller.terminationBlockReason != nil,
+            "A connected derived Multi draft must block quit while Apply can resolve it"
+        )
+
+        fixture.controller.disconnect()
+        expect(fixture.controller.phase == .disconnecting)
+        fixture.scheduler.fire(.disconnectRecovery)
+        expect(fixture.controller.phase == .idle)
+        expect(fixture.controller.hasPendingMultiFlashChange)
+        expect(!fixture.controller.canApply)
+        expect(!fixture.controller.canDiscardPendingChanges)
+        expect(
+            fixture.controller.terminationBlockReason == nil,
+            "A persisted derived Multi draft must not trap quit after disconnect"
+        )
+
+        let relaunched = makeFixture(
+            changeDeliveryPreferences: preferences,
+            studioLibraryStore: studioMemory.makeStore()
+        )
+        expect(relaunched.controller.multiFlashDraft.count == 2)
+        expect(relaunched.controller.multiFlashBaseline.count == 2)
+        expect(relaunched.controller.pendingCount == 0)
+        expect(relaunched.controller.groupDraft(.b).draft.operatingMode == .multi)
+        prepareConfiguredReadyConnection(relaunched)
+        expect(relaunched.controller.phase == .ready)
+        expect(relaunched.controller.multiFlashBaseline.count == 2)
+        expect(relaunched.controller.pendingCount == 0)
     }
 
     private static func checkStoredMultiFlashLimitMigrationPersists() {
@@ -2929,6 +2997,45 @@ enum GodoxSessionRecoveryCheck {
         expect(restorationStore.load() == .none)
     }
 
+    private static func checkHeartbeatFloodIsCoalescedPerSession() {
+        let fixture = makeFixture()
+        prepareReadyConnection(fixture)
+        let heartbeat = Data([0xF0, 0xE0, 0x00, 0x00, 0x00, 0x00])
+
+        for _ in 0..<256 {
+            fixture.transport.emit(.notification(.control, heartbeat))
+        }
+
+        expect(
+            fixture.transport.controlPayloads == [Data([0xF0, 0xE0])],
+            "Una ráfaga FEC8 debe producir una sola respuesta de heartbeat pendiente"
+        )
+        expect(
+            fixture.scheduler.activeCount(.heartbeat) == 1,
+            "La sesión debe conservar como máximo un deadline de heartbeat"
+        )
+
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        expect(fixture.controller.phase == .ready)
+        expect(fixture.scheduler.activeCount(.heartbeat) == 0)
+        expect(
+            !fixture.scheduler.fireNext(.heartbeat),
+            "Confirmar la respuesta debe cancelar su único deadline"
+        )
+
+        fixture.transport.emit(.notification(.control, heartbeat))
+        expect(
+            fixture.transport.controlPayloads == [Data([0xF0, 0xE0]), Data([0xF0, 0xE0])],
+            "Un heartbeat posterior debe poder rearmarse en la misma sesión"
+        )
+        expect(fixture.scheduler.activeCount(.heartbeat) == 1)
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.controlWriteCompleted)
+        expect(fixture.scheduler.activeCount(.heartbeat) == 0)
+        expect(fixture.controller.phase == .ready)
+    }
+
     private static func checkHeartbeatTimeoutStopsAutomaticBatch() {
         let deliveryMemory = MemoryChangeDeliveryStorage()
         let preferences = deliveryMemory.makePreferences()
@@ -2958,10 +3065,12 @@ enum GodoxSessionRecoveryCheck {
         expect(fixture.controller.applySequenceStatus?.remainingGroups == [.c])
         expect(restorationStore.load() == .batch(points: expectedRestorations))
 
-        fixture.transport.emit(.notification(
-            .control,
-            Data([0xF0, 0xE0, 0x00, 0x00, 0x00, 0x00])
-        ))
+        for _ in 0..<256 {
+            fixture.transport.emit(.notification(
+                .control,
+                Data([0xF0, 0xE0, 0x00, 0x00, 0x00, 0x00])
+            ))
+        }
         expect(fixture.transport.controlPayloads.count == 2)
         expect(fixture.transport.controlPayloads[1] == Data([0xF0, 0xE0]))
         expect(
@@ -3764,6 +3873,64 @@ enum GodoxSessionRecoveryCheck {
             "Una selección explícita por RSSI y UUID no debe borrarse"
         )
         expect(fixture.controller.deviceIdentifierSuffix(duplicate) == "555555")
+    }
+
+    private static func checkBluetoothDeviceNamesAreCanonicalBeforeSelection() {
+        let fixture = makeFixture()
+        fixture.controller.startScanning()
+
+        let unsafe = BluetoothClient.Device(
+            id: UUID(uuidString: "77777777-8888-9999-AAAA-BBBBBBBBBBBB")!,
+            name: "GDBH-\u{202E}TSET\u{202C}",
+            rssi: -10
+        )
+        fixture.transport.emit(.discovered(unsafe))
+        expect(
+            fixture.controller.devices.isEmpty,
+            "Un transporte no debe poder inyectar controles de dirección en selección o UI"
+        )
+
+        let decomposed = BluetoothClient.Device(
+            id: UUID(uuidString: "66666666-7777-8888-9999-AAAAAAAAAAAA")!,
+            name: "  GDBH-Cafe\u{301}  ",
+            rssi: -30
+        )
+        fixture.transport.emit(.discovered(decomposed))
+        expect(fixture.controller.devices.map(\.name) == ["GDBH-Café"])
+        expect(fixture.controller.selectedDeviceID == decomposed.id)
+
+        let composedDuplicate = BluetoothClient.Device(
+            id: UUID(uuidString: "55555555-6666-7777-8888-999999999999")!,
+            name: "GDBH-Café",
+            rssi: -20
+        )
+        fixture.transport.emit(.discovered(composedDuplicate))
+        expect(fixture.controller.hasDuplicateDeviceNames)
+        expect(
+            fixture.controller.selectedDeviceID == nil,
+            "Nombres canónicamente equivalentes deben exigir selección humana por UUID"
+        )
+
+        let widthFixture = makeFixture()
+        widthFixture.controller.startScanning()
+        let asciiWidth = BluetoothClient.Device(
+            id: UUID(uuidString: "44444444-5555-6666-7777-888888888888")!,
+            name: "GD-1",
+            rssi: -30
+        )
+        let fullWidth = BluetoothClient.Device(
+            id: UUID(uuidString: "33333333-4444-5555-6666-777777777777")!,
+            name: "GD-１",
+            rssi: -20
+        )
+        widthFixture.transport.emit(.discovered(asciiWidth))
+        widthFixture.transport.emit(.discovered(fullWidth))
+        expect(widthFixture.controller.devices.map(\.name) == ["GD-1", "GD-1"])
+        expect(widthFixture.controller.hasDuplicateDeviceNames)
+        expect(
+            widthFixture.controller.selectedDeviceID == nil,
+            "Nombres equivalentes por ancho deben compartir identidad visible"
+        )
     }
 
     private static func checkControlsRequireReadySession() {

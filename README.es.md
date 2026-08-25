@@ -13,7 +13,7 @@
 Estrobo reúne los controles de disparadores de flash Godox compatibles en un espacio de trabajo enfocado para Mac. Organiza grupos y ajusta potencia, modo, luz de modelado y controles globales sin cuenta, backend, analítica ni telemetría.
 
 > [!IMPORTANT]
-> La beta pública `0.1.0-beta.3` está firmada con Apple Developer ID y notarizada por Apple. Gatekeeper acepta el DMG oficial, por lo que ya no se necesita el procedimiento **Abrir de todos modos** de las betas anteriores. macOS todavía puede mostrar la confirmación normal para una app descargada de Internet y solicitará permiso de Bluetooth en el primer uso.
+> La beta pública `0.1.0-beta.3` sigue siendo la descarga vigente. `0.1.0-beta.4` es un candidato y no será un build oficial hasta que su DMG universal exacto esté firmado con Apple Developer ID, notarizado y engrapado por Apple, aceptado por Gatekeeper y publicado como prerelease de GitHub después de los smokes requeridos en Macs limpios y con hardware.
 
 ![Vista Canales de Estrobo en modo simulado](prototype/GodoxMacControlPrototype/QA/channels-after-dark-final-es.png)
 
@@ -40,10 +40,19 @@ El Bluetooth integrado debe estar activado, pero tener Bluetooth no garantiza po
 
 Esta es la única matriz de hardware utilizada en pruebas físicas hasta ahora; no se registraron la variante exacta de cámara ni las revisiones de firmware, y no todas las funciones se han validado ópticamente. Otros disparadores con Bluetooth que expongan el perfil BLE/GATT de Godox Flash compatible, y otros flashes del sistema Godox X controlados mediante el disparador, también podrían ser compatibles, pero Estrobo no declara soporte hasta verificar físicamente cada combinación de disparador, flash y firmware.
 
-## Instalar esta beta
+## Instalar
 
-1. Descarga `estrobo-v0.1.0-beta.3-macos-universal.dmg`, `SHA256SUMS` y `estrobo-v0.1.0-beta.3-manifest.json` desde el [GitHub Release `0.1.0-beta.3`](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.3). Conserva los tres archivos juntos en Descargas y no uses builds publicados en issues ni enlaces de terceros.
-2. Abre Terminal y verifica los archivos del release antes de montar la imagen:
+### Beta pública vigente
+
+Descarga `estrobo-v0.1.0-beta.3-macos-universal.dmg`, `SHA256SUMS` y `estrobo-v0.1.0-beta.3-manifest.json` desde el [GitHub Release oficial `0.1.0-beta.3`](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.3).
+
+### Beta 4 después de su publicación
+
+Cuando exista el prerelease, descarga `estrobo-v0.1.0-beta.4-macos-universal.dmg`, `SHA256SUMS` y `estrobo-v0.1.0-beta.4-manifest.json` desde el [GitHub Release oficial `0.1.0-beta.4`](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.4). Si esa página o alguno de esos assets no existe, todavía no hay un build oficial de beta 4.
+
+Para cualquiera de las versiones, conserva juntos sus tres archivos en Descargas, nunca mezcles assets entre releases y no uses builds publicados en issues ni enlaces de terceros.
+
+1. Abre Terminal y verifica los archivos del release antes de montar la imagen:
 
    ```sh
    cd ~/Downloads
@@ -51,12 +60,12 @@ Esta es la única matriz de hardware utilizada en pruebas físicas hasta ahora; 
    ```
 
    Continúa únicamente si tanto el DMG como el manifiesto muestran `OK`.
-3. Haz doble clic en el DMG. En la ventana que se abre, arrastra `estrobo.app` sobre la carpeta **Applications**.
-4. Expulsa la imagen de disco de Estrobo y abre la app desde Aplicaciones. Confirma el aviso normal de macOS para una app descargada si aparece y concede acceso a Bluetooth cuando se solicite.
+2. Haz doble clic en el DMG. En la ventana que se abre, arrastra `estrobo.app` sobre la carpeta **Applications**.
+3. Expulsa la imagen de disco de Estrobo y abre la app desde Aplicaciones. Confirma el aviso normal de macOS para una app descargada si aparece y concede acceso a Bluetooth cuando se solicite.
 
-Tanto el DMG oficial como la app que contiene están firmados y notarizados. Si macOS indica que no puede verificar al desarrollador, no eludas Gatekeeper: elimina esa copia, verifica `SHA256SUMS` y vuelve a descargar el asset desde este repositorio.
+Después de la publicación, tanto el DMG oficial de beta 4 como la app que contiene deben estar firmados y notarizados. Si macOS indica que no puede verificar al desarrollador, no eludas Gatekeeper: elimina esa copia, verifica `SHA256SUMS` y vuelve a descargar el asset desde el prerelease oficial.
 
-> **Beta pública actual:** `0.1.0-beta.3` incluye la biblioteca de transmisores guardados y Multi global experimental descritos abajo.
+> **Estado del release:** `0.1.0-beta.4` es el candidato documentado abajo. Mientras no existan su prerelease y sus assets de checksum, `0.1.0-beta.3` sigue siendo la beta pública vigente.
 
 ## Inicio rápido
 
@@ -67,7 +76,7 @@ Tanto el DMG oficial como la app que contiene están firmados y notarizados. Si 
 5. La opción para recordarlo comienza apagada. Si la activas, Estrobo añade ese transmisor a su biblioteca local de transmisores guardados sólo después de completar `PWOK` y la sincronización; su código permanece sin cifrar en este Mac y nunca se envía a Internet. **Olvidar** elimina únicamente ese transmisor y código guardados.
 6. El handshake BLE sigue siendo obligatorio. Una vez completado, Estrobo actúa como fuente de verdad y sobrescribe deliberadamente el estado global A0 y los A1 de todos los grupos configurados. No importa el estado previo del transmisor.
 7. En **Automático**, un cambio se envía 700 ms después del último ajuste. Un arrastre no transmite valores intermedios: el plazo comienza al soltar. También puedes elegir **Con botón** y usar **Enviar ahora** o **Descartar**.
-8. En Beta 3, pulsa **MULTI**, junto a Beep, para activar o desactivar Multi global; no abre ningún menú. Al activarlo se muestra la consola inline y todos los grupos activos compatibles pasan juntos a Multi. Los grupos que no participan quedan Off y aparecen desactivados mediante un overlay; desde ahí o desde la consola puedes volver a añadir los compatibles. El último participante sólo se puede cerrar con el botón global. Al desactivar **MULTI**, todos los grupos del workspace —incluidos los que antes estaban Off o en TTL— quedan activos en Manual; no se restaura la escena M/TTL/Off anterior. Los grupos fuera del workspace no reciben A1. Multi excluye HSS; usa **Test** sólo después de revisar los grupos activos y el límite de modelo mostrado, y considera el resultado óptico no validado hasta que la matriz exacta de hardware supere el smoke físico.
+8. En beta 4, pulsa **MULTI**, junto a Beep, para activar o desactivar Multi global; no abre ningún menú. Al activarlo se muestra la consola inline y todos los grupos activos compatibles pasan juntos a Multi. Los grupos que no participan quedan Off y aparecen desactivados mediante un overlay; desde ahí o desde la consola puedes volver a añadir los compatibles. El último participante sólo se puede cerrar con el botón global. Al desactivar **MULTI**, todos los grupos del workspace —incluidos los que antes estaban Off o en TTL— quedan activos en Manual; no se restaura la escena M/TTL/Off anterior. Los grupos fuera del workspace no reciben A1. Multi excluye HSS; usa **Test** sólo después de revisar los grupos activos y el límite de modelo mostrado, y considera el resultado óptico no validado hasta que la matriz exacta de hardware supere el smoke físico.
 
 Lee [Sincronización automática](docs/AUTOMATIC-SYNC.md) antes de conectar hardware.
 
@@ -98,6 +107,7 @@ La app muestra **Radio simulado** de forma explícita. Nunca activa este modo co
 - Ajuste de potencia global con relación entre grupos conservada.
 - Biblioteca local de transmisores guardados con reconexión por UUID y olvido individual. El único transmisor recordado por `beta.2` migra automáticamente; cada entrada nueva todavía exige opt-in explícito seguido de autenticación + Sync.
 - Vistas Canales, Inspector y Matriz; presets locales; español e inglés; apariencia clara y oscura.
+- Controles compactos opcionales en la barra de menús para los grupos visibles del workspace, con encendido/apagado localizado, ajuste Manual en tercios EV, selección directa de potencia, acciones seguras Aplicar/Descartar y una preferencia persistente de visibilidad.
 - Entrega automática con debounce de 700 ms o modo **Con botón**.
 - Recuperación fail-closed con journal atómico de la escena: conserva A0 y todos los A1 afectados, los reenvía en orden y no borra el lote hasta que cada grupo confirma GATT + `FEC8`.
 

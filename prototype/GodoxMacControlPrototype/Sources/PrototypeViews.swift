@@ -8,7 +8,7 @@ import AppKit
 struct PrototypeRootView: View {
     @ObservedObject var controller: GodoxSessionController
 
-    @StateObject private var languageStore = AppLanguageStore()
+    @EnvironmentObject private var languageStore: AppLanguageStore
     @State private var variant: PrototypeVariant
     @State private var selectedGroup: GodoxGroup = .b
     private let workspaceViewPreferences: WorkspaceViewPreferences
@@ -3014,6 +3014,8 @@ private struct LocalConfigurationPopover: View {
     @EnvironmentObject private var languageStore: AppLanguageStore
     @Environment(\.dismiss) private var dismiss
     @State private var showsSavedTransmitters = false
+    @AppStorage(MenuBarVisibilityPreferences.storageKey)
+    private var isMenuBarIconVisible = MenuBarVisibilityPreferences.defaultIsVisible
 
     private let groupColumns = [
         GridItem(.adaptive(minimum: 42, maximum: 48), spacing: 8)
@@ -3062,6 +3064,28 @@ private struct LocalConfigurationPopover: View {
                             Text(languageStore.language.localized("appearance.help"))
                                 .font(.caption)
                                 .foregroundStyle(PrototypePalette.secondaryText)
+                        }
+                    }
+
+                    SettingsDivider()
+
+                    SettingsRow(title: "Barra de menús", alignment: .top) {
+                        VStack(alignment: .leading, spacing: 7) {
+                            Toggle(isOn: $isMenuBarIconVisible) {
+                                Text(languageStore.language.localized(
+                                    "Mostrar icono de Estrobo"
+                                ))
+                                    .font(.callout.weight(.medium))
+                                    .foregroundStyle(PrototypePalette.primaryText)
+                            }
+                            .toggleStyle(.switch)
+
+                            Text(languageStore.language.localized(
+                                "Ocultarlo no cierra Estrobo. Vuélvelo a mostrar desde Configuración."
+                            ))
+                                .font(.caption)
+                                .foregroundStyle(PrototypePalette.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
 
@@ -3691,57 +3715,30 @@ private struct ConnectionSetupFlow: View {
     }
 
     private var workingGroupsSummary: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "arrow.right.circle.fill")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(PrototypePalette.accent)
+        HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "arrow.right")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(PrototypePalette.secondaryText)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(languageStore.language.localizedFormat(
-                    "Al conectar, Estrobo enviará sus valores al radio: %@.",
-                    controller.workingGroups.map(\.label).joined(separator: ", ")
+                    "Al conectar se aplicará: %@",
+                    workingGroupStateSummary
                 ))
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(PrototypePalette.primaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(workingGroupStateSummary)
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .tracking(0.25)
-                    .foregroundStyle(PrototypePalette.primaryText)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if !offWorkingGroups.isEmpty {
-                    Text(offWorkingGroupsMessage)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(PrototypePalette.warning)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(PrototypePalette.secondaryText)
 
                 Text(languageStore.language.localized(
-                    "La dirección es Estrobo → radio; la app no lee el estado completo del transmisor."
+                    "Estrobo sobrescribirá A0/A1 del radio; no importará su estado actual."
                 ))
                     .font(.system(size: 10))
                     .foregroundStyle(PrototypePalette.secondaryText)
-                    .fixedSize(horizontal: false, vertical: true)
             }
+            .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(PrototypePalette.accent.opacity(0.08))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(PrototypePalette.accent.opacity(0.22), lineWidth: 1)
-                }
-        )
+        .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
-    }
-
-    private var offWorkingGroups: [GodoxGroup] {
-        controller.workingGroups.filter {
-            !controller.groupDraft($0).draft.isEnabledOnRadio
-        }
     }
 
     private var workingGroupStateSummary: String {
@@ -3749,23 +3746,9 @@ private struct ConnectionSetupFlow: View {
             let state = controller.groupDraft(group).draft.isEnabledOnRadio
                 ? languageStore.language.localized("Activo")
                 : languageStore.language.localized("Apagado")
-            return "\(group.label) · \(state.uppercased())"
+            return "\(group.label) \(state.lowercased())"
         }
-        .joined(separator: "    ")
-    }
-
-    private var offWorkingGroupsMessage: String {
-        let labels = offWorkingGroups.map(\.label).joined(separator: ", ")
-        if offWorkingGroups.count == 1 {
-            return languageStore.language.localizedFormat(
-                "El grupo %@ se sincronizará apagado. Podrás activarlo después de conectar.",
-                labels
-            )
-        }
-        return languageStore.language.localizedFormat(
-            "Los grupos %@ se sincronizarán apagados. Podrás activarlos después de conectar.",
-            labels
-        )
+        .joined(separator: " · ")
     }
 
     @ViewBuilder
@@ -7048,7 +7031,7 @@ private func compactConfirmationLabel(_ confirmation: GroupConfirmation) -> Stri
     }
 }
 
-private enum PrototypePalette {
+enum PrototypePalette {
     static let windowBackground = adaptive(light: 0xF7F4EE, dark: 0x18191B)
     static let surface = adaptive(light: 0xFFFEFA, dark: 0x1D1F22)
     static let surfaceRaised = adaptive(light: 0xEAEDEF, dark: 0x292C31)

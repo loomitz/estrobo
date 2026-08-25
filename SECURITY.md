@@ -63,13 +63,18 @@ GATT confirma transporte, no el efecto óptico. `FEC8` no identifica grupo ni de
 
 ### Distribución
 
-La beta `0.1.0-beta.3` se distribuye en un DMG firmado con Apple Developer ID y notarizado. Tanto la app como la imagen llevan ticket adjunto y Gatekeeper debe identificarlas como `Notarized Developer ID`. Los certificados autosignados versionados se conservan sólo para verificar las betas 1 y 2 históricas; nunca deben sustituir la identidad Developer ID actual. El P12, claves privadas y credenciales de notarización permanecen fuera del repositorio y de los assets públicos.
+La beta pública vigente `0.1.0-beta.3` se distribuye en un DMG firmado con Apple Developer ID y notarizado. El candidato `0.1.0-beta.4` deberá cumplir el mismo contrato antes de publicarse: tanto la app como la imagen llevarán ticket adjunto y Gatekeeper deberá identificarlas como `Notarized Developer ID`. Si el prerelease o sus archivos de checksum no existen, todavía no hay un build oficial de beta 4. Los certificados autosignados versionados se conservan sólo para verificar las betas 1 y 2 históricas; nunca deben sustituir la identidad Developer ID actual. El P12, claves privadas y credenciales de notarización permanecen fuera del repositorio y de los assets públicos.
 
 Verifica siempre:
 
 ```sh
+# Beta pública vigente
 shasum -a 256 estrobo-v0.1.0-beta.3-macos-universal.dmg
 spctl --assess --type open --verbose=4 --context context:primary-signature estrobo-v0.1.0-beta.3-macos-universal.dmg
+
+# Candidato beta 4, sólo después de que exista el prerelease oficial
+shasum -a 256 estrobo-v0.1.0-beta.4-macos-universal.dmg
+spctl --assess --type open --verbose=4 --context context:primary-signature estrobo-v0.1.0-beta.4-macos-universal.dmg
 codesign --verify --deep --strict --verbose=2 /ruta/a/estrobo.app
 spctl --assess --type execute --verbose=4 /ruta/a/estrobo.app
 lipo /ruta/a/estrobo.app/Contents/MacOS/estrobo -verify_arch arm64 x86_64

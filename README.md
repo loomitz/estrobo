@@ -13,7 +13,7 @@
 Estrobo brings compatible Godox flash-trigger controls into one focused Mac workspace. Organize working groups and adjust power, mode, modeling light, and global controls without an account, backend, analytics, or telemetry.
 
 > [!IMPORTANT]
-> Public beta `0.1.0-beta.3` is signed with Apple Developer ID and notarized by Apple. Gatekeeper accepts the official DMG, so the **Open Anyway** workaround used by earlier betas is no longer required. macOS may still show its normal confirmation for an app downloaded from the Internet and will request Bluetooth permission on first use.
+> Public beta `0.1.0-beta.3` remains the current download. `0.1.0-beta.4` is a release candidate and is not an official build until its exact universal DMG is signed with Apple Developer ID, notarized and stapled by Apple, accepted by Gatekeeper, and published as a GitHub prerelease after the required clean-Mac and hardware smokes.
 
 ![Estrobo Channels view in simulated mode](prototype/GodoxMacControlPrototype/QA/channels-after-dark-final-en.png)
 
@@ -40,10 +40,19 @@ Built-in Bluetooth must be turned on, but Bluetooth alone does not guarantee com
 
 This is the only hardware matrix used for physical testing so far; the exact camera variant and firmware revisions were not recorded, and not every feature has been optically validated. Other Bluetooth-enabled triggers exposing the supported Godox Flash BLE/GATT profile, and other Godox X-system flashes controlled through the trigger, may also be compatible, but Estrobo does not claim support until each trigger, flash, and firmware combination is physically verified.
 
-## Install this beta
+## Install
 
-1. Download `estrobo-v0.1.0-beta.3-macos-universal.dmg`, `SHA256SUMS`, and `estrobo-v0.1.0-beta.3-manifest.json` from the [`0.1.0-beta.3` GitHub Release](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.3). Keep the three files together in Downloads and do not use builds from issues or third-party links.
-2. Open Terminal and verify the release files before mounting the image:
+### Current public beta
+
+Download `estrobo-v0.1.0-beta.3-macos-universal.dmg`, `SHA256SUMS`, and `estrobo-v0.1.0-beta.3-manifest.json` from the official [`0.1.0-beta.3` GitHub Release](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.3).
+
+### Beta 4 after publication
+
+Once the prerelease exists, download `estrobo-v0.1.0-beta.4-macos-universal.dmg`, `SHA256SUMS`, and `estrobo-v0.1.0-beta.4-manifest.json` from the official [`0.1.0-beta.4` GitHub Release](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.4). If that page or any of those assets is absent, there is no official beta 4 build yet.
+
+For either version, keep its three files together in Downloads, never mix assets between releases, and do not use builds from issues or third-party links.
+
+1. Open Terminal and verify the release files before mounting the image:
 
    ```sh
    cd ~/Downloads
@@ -51,12 +60,12 @@ This is the only hardware matrix used for physical testing so far; the exact cam
    ```
 
    Continue only if the DMG and manifest both report `OK`.
-3. Double-click the DMG. In the window that opens, drag `estrobo.app` onto the **Applications** folder.
-4. Eject the Estrobo disk image, then open Estrobo from Applications. Confirm the normal macOS downloaded-app prompt if it appears and grant Bluetooth access when requested.
+2. Double-click the DMG. In the window that opens, drag `estrobo.app` onto the **Applications** folder.
+3. Eject the Estrobo disk image, then open Estrobo from Applications. Confirm the normal macOS downloaded-app prompt if it appears and grant Bluetooth access when requested.
 
-The official DMG and the app inside it are both signed and notarized. If macOS reports that the developer cannot be verified, do not bypass Gatekeeper: delete that copy, verify `SHA256SUMS`, and download the asset again from this repository.
+After publication, the official beta 4 DMG and the app inside it must both be signed and notarized. If macOS reports that the developer cannot be verified, do not bypass Gatekeeper: delete that copy, verify `SHA256SUMS`, and download the asset again from the official prerelease.
 
-> **Current public beta:** `0.1.0-beta.3` includes the saved-transmitter library and experimental Global Multi described below.
+> **Release status:** `0.1.0-beta.4` is the candidate documented below. Until its prerelease and checksum assets exist, `0.1.0-beta.3` remains the current public beta.
 
 ## Quick start
 
@@ -67,7 +76,7 @@ The official DMG and the app inside it are both signed and notarized. If macOS r
 5. The option to remember it starts off. If enabled, Estrobo adds that transmitter to its local saved-transmitter library only after completing `PWOK` and synchronization; its code remains unencrypted on this Mac and is never sent over the Internet. **Forget** removes only that saved transmitter and code.
 6. The BLE handshake is still required. Once it completes, Estrobo acts as the source of truth and deliberately overwrites global A0 and every configured group's A1. The transmitter's previous state does not matter.
 7. In **Automatic**, a change is sent 700 ms after the last adjustment. Dragging does not transmit intermediate values: the delay starts when you release the control. You can also choose **On Apply** and use **Send now** or **Discard**.
-8. In beta 3, press **MULTI** beside Beep to turn Global Multi on or off; it opens no menu. Turning it on displays the inline console and atomically places every active compatible group in Multi. Non-participating groups remain Off and appear disabled behind an overlay; compatible groups can be added again there or from the console. The last participant can only be closed with the global button. Turning **MULTI** off makes every workspace group—including groups previously Off or TTL—active in Manual; the previous M/TTL/Off scene is not restored. Groups outside the workspace do not receive A1. Multi excludes HSS; use **Test** only after reviewing the active groups and the displayed model limit, and treat the optical result as unvalidated until the exact hardware matrix passes physical smoke.
+8. In beta 4, press **MULTI** beside Beep to turn Global Multi on or off; it opens no menu. Turning it on displays the inline console and atomically places every active compatible group in Multi. Non-participating groups remain Off and appear disabled behind an overlay; compatible groups can be added again there or from the console. The last participant can only be closed with the global button. Turning **MULTI** off makes every workspace group—including groups previously Off or TTL—active in Manual; the previous M/TTL/Off scene is not restored. Groups outside the workspace do not receive A1. Multi excludes HSS; use **Test** only after reviewing the active groups and the displayed model limit, and treat the optical result as unvalidated until the exact hardware matrix passes physical smoke.
 
 Read [Automatic synchronization](docs/AUTOMATIC-SYNC.md) before connecting hardware.
 
@@ -98,6 +107,7 @@ The app displays **Simulated radio** explicitly. It never enables this mode as a
 - Global power adjustment that preserves the relationship between groups.
 - A local library of saved transmitters with UUID-based reconnection and individual forgetting. The single remembered transmitter from `beta.2` migrates automatically; new entries still require explicit remember opt-in followed by authentication + Sync.
 - Channels, Inspector, and Matrix views; local presets; Spanish and English; light and dark appearance.
+- Optional compact menu-bar controls for visible workspace groups, with localized on/off, one-third-EV Manual power adjustment, direct power selection, safe Apply/Discard actions, and a persistent visibility preference.
 - Automatic delivery with a 700 ms debounce or **On Apply** mode.
 - Fail-closed recovery with an atomic scene journal: it retains A0 plus every affected A1, resends them in order, and keeps the batch until every group confirms GATT + `FEC8`.
 

@@ -16,6 +16,7 @@ enum SafeGodoxProtocolFrameCheck {
         try checkCapabilityValidation()
         checkOperationRecoveryState()
         checkPendingRestorationStore()
+        checkBluetoothDeviceNameValidation()
         checkSavedRadioStore()
         checkDraftDiscard()
         checkVisibleGroupPersistence()
@@ -49,6 +50,45 @@ enum SafeGodoxProtocolFrameCheck {
             SafeGodoxProtocol.synchronizationPayload(now: now, calendar: calendar) ==
                 Data("42000,Sync".utf8)
         )
+    }
+
+    private static func checkBluetoothDeviceNameValidation() {
+        let unsafeNames = [
+            "GDBH-\u{001B}[31mTEST",
+            "GDBH-TEST\nSECOND",
+            "GDBH-\u{061C}TEST",
+            "GDBH-\u{200E}TEST",
+            "GDBH-\u{200F}TEST",
+            "GDBH-\u{202A}TEST\u{202C}",
+            "GDBH-\u{202B}TEST\u{202C}",
+            "GDBH-\u{202D}TEST\u{202C}",
+            "GDBH-\u{202E}TEST\u{202C}",
+            "GDBH-\u{2066}TEST\u{2069}",
+            "GDBH-\u{2067}TEST\u{2069}",
+            "GDBH-\u{2068}TEST\u{2069}",
+            "GDBH-\u{200B}TEST",
+            "GDBH-\u{200D}TEST",
+            "GDBH-\u{034F}TEST",
+            "GDBH-\u{180B}TEST",
+            "GDBH-TEST\u{FE0F}",
+            "GDBH-\u{FEFF}TEST",
+        ]
+        for name in unsafeNames {
+            expect(GodoxBluetoothDeviceName.canonicalName(from: name) == nil)
+            expect(GodoxBluetoothDeviceName.compatibleName(from: name) == nil)
+        }
+
+        expect(
+            GodoxBluetoothDeviceName.compatibleName(from: "  GDBH-TEST  ") == "GDBH-TEST"
+        )
+        expect(GodoxBluetoothDeviceName.compatibleName(from: "Ami-XPRO") == "Ami-XPRO")
+        expect(GodoxBluetoothDeviceName.compatibleName(from: "GD-1") == "GD-1")
+        expect(GodoxBluetoothDeviceName.compatibleName(from: "Godox-X") == nil)
+        expect(GodoxBluetoothDeviceName.canonicalName(from: "ESTROBO MOCK") == "ESTROBO MOCK")
+        expect(GodoxBluetoothDeviceName.compatibleName(from: "ESTROBO MOCK") == nil)
+        expect(GodoxBluetoothDeviceName.compatibleName(from: "GDBH-Cafe\u{301}") == "GDBH-Café")
+        expect(GodoxBluetoothDeviceName.compatibleName(from: "GD-１") == "GD-1")
+        expect(GodoxBluetoothDeviceName.compatibleName(from: "ＧＤ－１") == "GD-1")
     }
 
     private static func checkExactAuthenticationRequest() throws {
@@ -1251,6 +1291,21 @@ enum SafeGodoxProtocolFrameCheck {
         expect(SavedRadio(deviceID: firstID, name: "", radioCode: "123456") == nil)
         expect(SavedRadio(deviceID: firstID, name: "GDBH-TEST", radioCode: "12345") == nil)
         expect(SavedRadio(deviceID: firstID, name: "GDBH-TEST", radioCode: "12345A") == nil)
+        expect(
+            SavedRadio(
+                deviceID: firstID,
+                name: "GDBH-\u{202E}TSET\u{202C}",
+                radioCode: "123456"
+            ) == nil
+        )
+        guard let widthNormalized = SavedRadio(
+            deviceID: replacementID,
+            name: "GD-１",
+            radioCode: "654321"
+        ) else {
+            preconditionFailure("No se pudo normalizar el nombre de ancho completo")
+        }
+        expect(widthNormalized.name == "GD-1")
         guard let first = SavedRadio(
             deviceID: firstID,
             name: "  GDBH-TEST  ",
@@ -1320,6 +1375,14 @@ enum SafeGodoxProtocolFrameCheck {
             #"{"version":2,"deviceID":"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE","name":"Ami-TEST","password":"654321"}"#.utf8
         )
         expect(store.load() == .invalid)
+        memory.objects[currentKey] = Data(
+            #"{"version":2,"radios":[{"deviceID":"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE","name":"GDBH-\u202ETSET\u202C","radioCode":"654321"}]}"#.utf8
+        )
+        expect(store.load() == .invalid)
+        memory.objects[currentKey] = Data(
+            #"{"version":2,"radios":[{"deviceID":"AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE","name":"GD-\uFF11","radioCode":"654321"}]}"#.utf8
+        )
+        expect(store.load() == .records([widthNormalized]))
 
         memory.objects.removeAll()
         memory.objects[legacyKey] = Data(

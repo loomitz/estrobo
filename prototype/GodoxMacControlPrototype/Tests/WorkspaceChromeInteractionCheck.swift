@@ -8,8 +8,419 @@ import SwiftUI
 enum WorkspaceChromeInteractionCheck {
     static func main() {
         checkWorkspaceChromeSourceContract()
+        checkMenuBarSourceContract()
+        checkMenuBarRuntimeContract()
+        checkMenuBarPendingPolicy()
+        checkTerminationSafety()
+        checkMenuBarStrings()
         checkLanguagePickerHitTargets()
-        print("Settings-only view switching, shared controls, header, footer, and language hit targets verified")
+        print("Settings-only view switching, shared Menu Bar controls, header, footer, and language hit targets verified")
+    }
+
+    private static func checkMenuBarSourceContract() {
+        expect(
+            MenuBarVisibilityPreferences.defaultIsVisible &&
+                MenuBarVisibilityPreferences.storageKey == "Estrobo.menuBarIconVisible.v1",
+            "The Menu Bar icon preference must default to visible and use a stable storage key"
+        )
+
+        let projectURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let sourcesURL = projectURL.appendingPathComponent("Sources")
+        let appURL = sourcesURL.appendingPathComponent("GodoxMacControlPrototypeApp.swift")
+        let menuBarURL = sourcesURL.appendingPathComponent("MenuBarControlView.swift")
+
+        guard let appSource = try? String(contentsOf: appURL, encoding: .utf8),
+              let menuBarSource = try? String(contentsOf: menuBarURL, encoding: .utf8) else {
+            fail("Could not read the Menu Bar source contract")
+        }
+
+        expect(
+            appSource.contains("WindowGroup(\"estrobo\", id: \"main\")") &&
+                appSource.contains("@AppStorage(MenuBarVisibilityPreferences.storageKey)") &&
+                appSource.contains("MenuBarExtra(isInserted: menuBarIconInsertionBinding)") &&
+                appSource.contains("guard newValue != isMenuBarIconVisible else { return }") &&
+                appSource.contains("MenuBarControlView(controller: controller)") &&
+                appSource.contains("MenuBarStatusLabel(controller: controller)") &&
+                appSource.contains(".menuBarExtraStyle(.window)") &&
+                appSource.contains("@StateObject private var languageStore") &&
+                appSource.contains("appDelegate.controller = sessionController") &&
+                appSource.contains("controller.terminationBlockReason") &&
+                !appSource.contains(".onAppear { appDelegate.controller = controller }") &&
+                appSource.contains(
+                    "func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {\n        false"
+                ),
+            "The Menu Bar extra and main window must share controller/language state and survive closing the window"
+        )
+
+        expect(
+            menuBarSource.contains("controller.visibleGroups.filter") &&
+                menuBarSource.contains("controller.workingGroups.contains") &&
+                menuBarSource.contains("controller.canEdit(group)") &&
+                menuBarSource.contains("controller.canToggleRadioEnabled(group)") &&
+                menuBarSource.contains("controller.adjust(group, direction: -1)") &&
+                menuBarSource.contains("controller.adjust(group, direction: 1)") &&
+                menuBarSource.contains("controller.setDraftPower(group, power: power)") &&
+                menuBarSource.contains("controller.setDraftRadioEnabled(group, enabled: !isOn)") &&
+                menuBarSource.contains("controller.discardPendingChanges()") &&
+                menuBarSource.contains("controller.applyPendingChanges()") &&
+                menuBarSource.contains("canManagePendingChangesFromMenuBar") &&
+                menuBarSource.contains("MenuBarPendingPolicy.canManage") &&
+                menuBarSource.contains("hasPendingMultiFlashChange: controller.hasPendingMultiFlashChange") &&
+                menuBarSource.contains("hasPendingRestoration: !controller.restorationPoints.isEmpty") &&
+                menuBarSource.contains(".accessibilityValue(statusAccessibilityValue)") &&
+                menuBarSource.contains(".accessibilityHint(") &&
+                menuBarSource.contains(".accessibilityAdjustableAction") &&
+                menuBarSource.contains("openWindow(id: \"main\")") &&
+                menuBarSource.contains("EstroboBrandAssets.menuBarMarkImage") &&
+                menuBarSource.contains("image.isTemplate = true") &&
+                menuBarSource.contains("\"menubar.quitShort\"") &&
+                menuBarSource.contains("Image(systemName: \"power\")") &&
+                menuBarSource.contains(".overlay(alignment: .bottomTrailing)") &&
+                menuBarSource.contains("MenuBarLayout.groupControlSize") &&
+                !menuBarSource.contains("EstroboBrandAssets.markImage") &&
+                !menuBarSource.contains("MenuBarPowerButtonStyle") &&
+                menuBarSource.contains(
+                    "Spacer(minLength: MenuBarLayout.minimumReadoutClearance)"
+                ),
+            "The Menu Bar panel must reuse visible groups, integrate safe activation into each badge, center readouts, preserve pending delivery, omit the popup logo, and keep a template status icon"
+        )
+
+        expect(
+            !menuBarSource.contains("sendTestFlash") &&
+                !menuBarSource.contains("setDraftOperatingMode") &&
+                !menuBarSource.contains("setGlobalMultiFlashEnabled") &&
+                !menuBarSource.contains("startScanning"),
+            "The first Menu Bar prototype must not expose Test, mode, Multi, or connection side effects"
+        )
+    }
+
+    private static func checkMenuBarRuntimeContract() {
+        let controller = MockRadioRuntime.makeController()
+        let menuBarView = MenuBarControlView(controller: controller)
+
+        expect(
+            menuBarView.controller === controller,
+            "The Menu Bar view must retain the exact shared session controller"
+        )
+        expect(
+            !MenuBarLayout.requiresScrolling(groupCount: 5) &&
+                MenuBarLayout.requiresScrolling(groupCount: 6) &&
+                MenuBarLayout.headerHeight == 42 &&
+                MenuBarLayout.groupControlSize == 44,
+            "The Menu Bar must stay compact, use integrated group controls, and show five complete groups before introducing scroll"
+        )
+    }
+
+    private static func checkMenuBarPendingPolicy() {
+        expect(
+            MenuBarPendingPolicy.canToggleRadioEnabled(
+                controllerAllowsToggle: true,
+                hasActiveMultiFlashScene: false
+            ),
+            "A controller-approved group toggle must remain available outside Multi"
+        )
+        expect(
+            !MenuBarPendingPolicy.canToggleRadioEnabled(
+                controllerAllowsToggle: true,
+                hasActiveMultiFlashScene: true
+            ),
+            "The compact group toggle must be disabled while a Global Multi scene is active"
+        )
+        expect(
+            MenuBarPendingPolicy.canManage(
+                displayedGroups: [.b, .c],
+                pendingGroups: [.b],
+                pendingFields: [.b: [.power]],
+                groupStates: [:],
+                hasPendingMultiFlashChange: false,
+                hasPendingRestoration: false
+            ),
+            "A visible power-only draft must remain manageable from the Menu Bar"
+        )
+        expect(
+            !MenuBarPendingPolicy.canManage(
+                displayedGroups: [.b],
+                pendingGroups: [.c],
+                pendingFields: [.c: [.power]],
+                groupStates: [:],
+                hasPendingMultiFlashChange: false,
+                hasPendingRestoration: false
+            ),
+            "A hidden group's draft must require review in the full app"
+        )
+        let activationDraft = menuBarGroupDraft(
+            baselineMode: .manual,
+            draftMode: .off,
+            baselinePower: 50,
+            draftPower: 40
+        )
+        expect(
+            MenuBarPendingPolicy.canManage(
+                displayedGroups: [.b],
+                pendingGroups: [.b],
+                pendingFields: [.b: [.power, .mode]],
+                groupStates: [.b: activationDraft],
+                hasPendingMultiFlashChange: false,
+                hasPendingRestoration: false
+            ),
+            "A visible on/off transition and its safe power normalization must remain manageable from the Menu Bar"
+        )
+        let modeSwitchDraft = menuBarGroupDraft(
+            baselineMode: .manual,
+            draftMode: .autoTTL
+        )
+        expect(
+            !MenuBarPendingPolicy.canManage(
+                displayedGroups: [.b],
+                pendingGroups: [.b],
+                pendingFields: [.b: [.mode]],
+                groupStates: [.b: modeSwitchDraft],
+                hasPendingMultiFlashChange: false,
+                hasPendingRestoration: false
+            ),
+            "A Manual-to-TTL mode change must still require review in the full app"
+        )
+        let multiToOffDraft = menuBarGroupDraft(
+            baselineMode: .multi,
+            draftMode: .off
+        )
+        expect(
+            !MenuBarPendingPolicy.canManage(
+                displayedGroups: [.b],
+                pendingGroups: [.b],
+                pendingFields: [.b: [.mode]],
+                groupStates: [.b: multiToOffDraft],
+                hasPendingMultiFlashChange: false,
+                hasPendingRestoration: false
+            ),
+            "Removing a Multi participant must require review in the full app"
+        )
+        let offToMultiDraft = menuBarGroupDraft(
+            baselineMode: .off,
+            draftMode: .multi
+        )
+        expect(
+            !MenuBarPendingPolicy.canManage(
+                displayedGroups: [.b],
+                pendingGroups: [.b],
+                pendingFields: [.b: [.mode]],
+                groupStates: [.b: offToMultiDraft],
+                hasPendingMultiFlashChange: false,
+                hasPendingRestoration: false
+            ),
+            "Adding a Multi participant must require review in the full app"
+        )
+        expect(
+            !MenuBarPendingPolicy.canManage(
+                displayedGroups: [.b],
+                pendingGroups: [.b],
+                pendingFields: [.b: [.power]],
+                groupStates: [:],
+                hasPendingMultiFlashChange: true,
+                hasPendingRestoration: false
+            ),
+            "A Multi draft must require review in the full app"
+        )
+        expect(
+            !MenuBarPendingPolicy.canManage(
+                displayedGroups: [.b],
+                pendingGroups: [.b],
+                pendingFields: [.b: [.power]],
+                groupStates: [:],
+                hasPendingMultiFlashChange: false,
+                hasPendingRestoration: true
+            ),
+            "A restoration batch must require review in the full app"
+        )
+    }
+
+    private static func menuBarGroupDraft(
+        baselineMode: GroupOperatingMode,
+        draftMode: GroupOperatingMode,
+        baselinePower: Int = 50,
+        draftPower: Int = 50
+    ) -> GroupDraft {
+        guard let baselinePowerValue = ManualPower.value(decimal: baselinePower),
+              let draftPowerValue = ManualPower.value(decimal: draftPower) else {
+            fail("Could not build a Menu Bar policy fixture")
+        }
+        return GroupDraft(
+            baseline: ManualGroupSnapshot(
+                power: baselinePowerValue,
+                modeling: .off,
+                operatingMode: baselineMode
+            ),
+            draft: ManualGroupSnapshot(
+                power: draftPowerValue,
+                modeling: .off,
+                operatingMode: draftMode
+            )
+        )
+    }
+
+    private static func checkTerminationSafety() {
+        expect(
+            AppTerminationSafety.blockReason(
+                pendingCount: 0,
+                canResolvePendingChanges: false,
+                phase: .ready,
+                isInteractiveEditActive: false,
+                isAutomaticApplyScheduled: false,
+                isTestPending: false,
+                hasPendingRestoration: false
+            ) == nil,
+            "A settled session must be allowed to quit"
+        )
+
+        expect(
+            AppTerminationSafety.blockReason(
+                pendingCount: 0,
+                canResolvePendingChanges: false,
+                phase: .synchronizing,
+                isInteractiveEditActive: false,
+                isAutomaticApplyScheduled: false,
+                isTestPending: false,
+                hasPendingRestoration: false
+            ) == "No se puede cerrar mientras se sincronizan valores con el radio",
+            "Connection Sync must block termination even without pending drafts"
+        )
+        expect(
+            AppTerminationSafety.blockReason(
+                pendingCount: 0,
+                canResolvePendingChanges: false,
+                phase: .ready,
+                isInteractiveEditActive: false,
+                isAutomaticApplyScheduled: false,
+                isTestPending: true,
+                hasPendingRestoration: false
+            ) == "No se puede cerrar mientras se entrega la orden Test",
+            "An in-flight Test delivery must block termination even without pending drafts"
+        )
+
+        let blockedStates: [String?] = [
+            AppTerminationSafety.blockReason(
+                pendingCount: 0,
+                canResolvePendingChanges: false,
+                phase: .ready,
+                isInteractiveEditActive: false,
+                isAutomaticApplyScheduled: false,
+                isTestPending: false,
+                hasPendingRestoration: true
+            ),
+            AppTerminationSafety.blockReason(
+                pendingCount: 1,
+                canResolvePendingChanges: true,
+                phase: .applying,
+                isInteractiveEditActive: false,
+                isAutomaticApplyScheduled: false,
+                isTestPending: false,
+                hasPendingRestoration: false
+            ),
+            AppTerminationSafety.blockReason(
+                pendingCount: 1,
+                canResolvePendingChanges: true,
+                phase: .ready,
+                isInteractiveEditActive: true,
+                isAutomaticApplyScheduled: false,
+                isTestPending: false,
+                hasPendingRestoration: false
+            ),
+            AppTerminationSafety.blockReason(
+                pendingCount: 1,
+                canResolvePendingChanges: true,
+                phase: .ready,
+                isInteractiveEditActive: false,
+                isAutomaticApplyScheduled: true,
+                isTestPending: false,
+                hasPendingRestoration: false
+            ),
+            AppTerminationSafety.blockReason(
+                pendingCount: 1,
+                canResolvePendingChanges: true,
+                phase: .ready,
+                isInteractiveEditActive: false,
+                isAutomaticApplyScheduled: false,
+                isTestPending: false,
+                hasPendingRestoration: false
+            ),
+        ]
+        expect(
+            blockedStates.allSatisfy { $0?.isEmpty == false },
+            "Restoration, apply, interactive, debounce, and pending states must block termination"
+        )
+        expect(
+            AppTerminationSafety.blockReason(
+                pendingCount: 1,
+                canResolvePendingChanges: false,
+                phase: .idle,
+                isInteractiveEditActive: false,
+                isAutomaticApplyScheduled: false,
+                isTestPending: false,
+                hasPendingRestoration: false
+            ) == nil,
+            "A persisted derived draft with no legal Apply or Discard path must not trap the app"
+        )
+    }
+
+    private static func checkMenuBarStrings() {
+        guard let english = loadTranslations(languageCode: "en"),
+              let spanish = loadTranslations(languageCode: "es") else {
+            fail("Could not load Menu Bar localization resources")
+        }
+        expect(
+            MenuBarStrings.pendingLocalizationKey(for: 1) == "menubar.pendingOne" &&
+                MenuBarStrings.pendingLocalizationKey(for: 2) == "menubar.pendingMany",
+            "Menu Bar pending counts must select singular and plural localization keys"
+        )
+        expect(
+            english["menubar.pendingOne"] == "1 pending change" &&
+                english["menubar.pendingMany"] == "%lld pending changes",
+            "English Menu Bar pending counts must distinguish singular and plural"
+        )
+        expect(
+            spanish["menubar.pendingOne"] == "1 cambio pendiente" &&
+                spanish["menubar.pendingMany"] == "%lld cambios pendientes",
+            "Spanish Menu Bar pending counts must distinguish singular and plural"
+        )
+        expect(
+            english["menubar.turnOnGroup"] == "Turn on group %@" &&
+                english["menubar.turnOffGroup"] == "Turn off group %@" &&
+                spanish["menubar.turnOnGroup"] == "Encender grupo %@" &&
+                spanish["menubar.turnOffGroup"] == "Apagar grupo %@",
+            "Menu Bar group activation actions must be localized in English and Spanish"
+        )
+        expect(
+            english["No se puede cerrar mientras se sincronizan valores con el radio"] ==
+                "Estrobo cannot quit while values are being synchronized with the trigger" &&
+                spanish["No se puede cerrar mientras se sincronizan valores con el radio"] ==
+                "No se puede cerrar mientras se sincronizan valores con el radio" &&
+                english["No se puede cerrar mientras se entrega la orden Test"] ==
+                "Estrobo cannot quit while the Test command is being delivered" &&
+                spanish["No se puede cerrar mientras se entrega la orden Test"] ==
+                "No se puede cerrar mientras se entrega la orden Test",
+            "Sync and in-flight Test termination blocks must be localized in English and Spanish"
+        )
+    }
+
+    private static func loadTranslations(languageCode: String) -> [String: String]? {
+        let projectURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let resourceURL = projectURL
+            .appendingPathComponent("Resources")
+            .appendingPathComponent("\(languageCode).lproj")
+            .appendingPathComponent("Localizable.strings")
+        guard let data = try? Data(contentsOf: resourceURL),
+              let propertyList = try? PropertyListSerialization.propertyList(
+                  from: data,
+                  options: [],
+                  format: nil
+              ) else {
+            return nil
+        }
+        return propertyList as? [String: String]
     }
 
     private static func checkWorkspaceChromeSourceContract() {
@@ -134,6 +545,23 @@ enum WorkspaceChromeInteractionCheck {
             "Connection setup must summarize and open the plural transmitter library"
         )
 
+        let connectionSummary = section(
+            in: source,
+            from: "private var workingGroupsSummary: some View",
+            to: "private var valueSynchronizationProgress: some View"
+        )
+        expect(
+            connectionSummary.contains("\"Al conectar se aplicará: %@\"") &&
+                connectionSummary.contains(
+                    "\"Estrobo sobrescribirá A0/A1 del radio; no importará su estado actual.\""
+                ) &&
+                connectionSummary.contains("Image(systemName: \"arrow.right\")") &&
+                !connectionSummary.contains("offWorkingGroupsMessage") &&
+                !connectionSummary.contains("PrototypePalette.warning") &&
+                !connectionSummary.contains("arrow.right.circle.fill"),
+            "Connection setup must quietly disclose both applied group states and the no-readback overwrite"
+        )
+
         let footer = section(
             in: source,
             from: "private struct WorkspaceFooter: View",
@@ -167,6 +595,14 @@ enum WorkspaceChromeInteractionCheck {
                 !settings.contains("Vista inicial") &&
                 !settings.contains("La vista se aplicará la próxima vez"),
             "Settings must call the immediate workspace choice View, never Initial view"
+        )
+        expect(
+            settings.contains("@AppStorage(MenuBarVisibilityPreferences.storageKey)") &&
+                settings.contains("SettingsRow(title: \"Barra de menús\"") &&
+                settings.contains("Toggle(isOn: $isMenuBarIconVisible)") &&
+                settings.contains("\"Mostrar icono de Estrobo\"") &&
+                settings.contains("Vuélvelo a mostrar desde Configuración."),
+            "Settings must persistently show or hide the Menu Bar icon and explain how to restore it"
         )
         expect(
             settings.contains("SettingsRow(title: \"Compatibilidad de grupos\"") &&

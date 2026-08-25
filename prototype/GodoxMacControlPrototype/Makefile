@@ -6,7 +6,7 @@ APP_NAME := estrobo
 BUILD_DIR ?= Build
 DIST_DIR ?= Dist
 VERSION ?= 0.1.0
-BUILD_NUMBER ?= 3
+BUILD_NUMBER ?= 4
 TAG ?= v$(VERSION)-beta.$(BUILD_NUMBER)
 SIGNING_IDENTITY ?=
 SIGNING_KEYCHAIN ?=
@@ -60,21 +60,24 @@ MODELING_MENU_POINTER_TEST_EXECUTABLE := $(BUILD_DIR)/ModelingMenuMouseOrderingC
 WORKSPACE_CHROME_TEST_EXECUTABLE := $(BUILD_DIR)/WorkspaceChromeInteractionCheck
 BRAND_ASSET_TEST_EXECUTABLE := $(BUILD_DIR)/EstroboBrandAssetsCheck
 INTERACTIVE_EDITING_TEST_EXECUTABLE := $(BUILD_DIR)/InteractiveEditingCheck
+MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE := $(BUILD_DIR)/MenuBarAccessibilityCheck
 INFO_PLIST := Info.plist
 ENTITLEMENTS := GodoxMacControlPrototype.entitlements
 RESOURCE_SOURCE_DIR := Resources
 LOCALIZATION_RESOURCES := $(sort $(wildcard $(RESOURCE_SOURCE_DIR)/*.lproj/*.strings))
 RESOURCE_FILES := $(sort $(shell find $(RESOURCE_SOURCE_DIR) -type f))
 LOCAL_SOURCES := $(sort $(wildcard Sources/*.swift))
+BLE_DEVICE_NAME_SOURCE := ../GodoxBLEPoC/Sources/GodoxBluetoothDeviceName.swift
 BLE_SOURCE := ../GodoxBLEPoC/Sources/BluetoothClient.swift
-SOURCES := $(LOCAL_SOURCES) $(BLE_SOURCE)
+BLE_SOURCES := $(BLE_DEVICE_NAME_SOURCE) $(BLE_SOURCE)
+SOURCES := $(LOCAL_SOURCES) $(BLE_SOURCES)
 
 SWIFTC := $(shell xcrun --find swiftc)
 MACOS_SDK := $(shell xcrun --sdk macosx --show-sdk-path)
 TARGET_ARCH ?= $(shell uname -m)
 COMMIT ?= $(shell git -C "$(REPOSITORY_ROOT)" rev-parse HEAD 2>/dev/null || printf uncommitted)
 
-.PHONY: build check test test-protocol test-session-recovery test-studio-library test-localization test-modeling-menu-pointer test-workspace-chrome test-brand-assets test-interactive-editing signing-certificate-check universal release-preflight release release-verify release-verify-existing package package-existing developer-id-certificate-check developer-id-preflight developer-id-release developer-id-release-verify developer-id-verify-signed-existing developer-id-notarize-existing developer-id-resume-notarization-existing developer-id-verify-existing developer-id-package-existing run clean
+.PHONY: build check test test-protocol test-session-recovery test-studio-library test-localization test-modeling-menu-pointer test-workspace-chrome test-brand-assets test-interactive-editing test-menu-bar-accessibility test-launch-responsiveness signing-certificate-check universal release-preflight release release-verify release-verify-existing package package-existing developer-id-certificate-check developer-id-preflight developer-id-release developer-id-release-verify developer-id-verify-signed-existing developer-id-notarize-existing developer-id-resume-notarization-existing developer-id-verify-existing developer-id-package-existing run clean
 
 build: $(EXECUTABLE)
 
@@ -90,7 +93,7 @@ check:
 		-framework CoreBluetooth \
 		$(SOURCES)
 
-test: test-protocol test-session-recovery test-studio-library test-localization test-modeling-menu-pointer test-workspace-chrome test-brand-assets test-interactive-editing
+test: test-protocol test-session-recovery test-studio-library test-localization test-modeling-menu-pointer test-workspace-chrome test-brand-assets test-interactive-editing test-menu-bar-accessibility test-launch-responsiveness
 
 test-protocol:
 	@/bin/mkdir -p "$(BUILD_DIR)"
@@ -111,6 +114,7 @@ test-protocol:
 		Sources/TransmitterProfilePreferences.swift \
 		Sources/LocalGroupPreferences.swift \
 		Sources/PendingRestorationStore.swift \
+		$(BLE_DEVICE_NAME_SOURCE) \
 		Sources/SavedRadioStore.swift \
 		Tests/SafeGodoxProtocolFrameCheck.swift \
 		-o "$(TEST_EXECUTABLE)"
@@ -125,6 +129,7 @@ test-session-recovery:
 		-framework Combine \
 		-framework CoreBluetooth \
 		Sources/AppLocalization.swift \
+		Sources/AppTerminationSafety.swift \
 		Sources/SafeGodoxProtocol.swift \
 		Sources/GodoxCapabilities.swift \
 		Sources/ControlModel.swift \
@@ -137,7 +142,7 @@ test-session-recovery:
 		Sources/SessionDeadlineScheduler.swift \
 		Sources/GodoxSessionTransport.swift \
 		Sources/GodoxSessionController.swift \
-		$(BLE_SOURCE) \
+		$(BLE_SOURCES) \
 		Tests/GodoxSessionRecoveryCheck.swift \
 		-o "$(SESSION_TEST_EXECUTABLE)"
 	@"$(SESSION_TEST_EXECUTABLE)"
@@ -190,7 +195,7 @@ test-workspace-chrome:
 		-framework AppKit \
 		-framework CoreBluetooth \
 		$(filter-out Sources/GodoxMacControlPrototypeApp.swift,$(LOCAL_SOURCES)) \
-		$(BLE_SOURCE) \
+		$(BLE_SOURCES) \
 		Tests/WorkspaceChromeInteractionCheck.swift \
 		-o "$(WORKSPACE_CHROME_TEST_EXECUTABLE)"
 	@"$(WORKSPACE_CHROME_TEST_EXECUTABLE)"
@@ -218,10 +223,30 @@ test-interactive-editing:
 		-framework AppKit \
 		-framework CoreBluetooth \
 		$(filter-out Sources/GodoxMacControlPrototypeApp.swift,$(LOCAL_SOURCES)) \
-		$(BLE_SOURCE) \
+		$(BLE_SOURCES) \
 		Tests/InteractiveEditingCheck.swift \
 		-o "$(INTERACTIVE_EDITING_TEST_EXECUTABLE)"
 	@"$(INTERACTIVE_EDITING_TEST_EXECUTABLE)"
+
+test-menu-bar-accessibility: build
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-parse-as-library \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework CoreBluetooth \
+		$(filter-out Sources/GodoxMacControlPrototypeApp.swift,$(LOCAL_SOURCES)) \
+		$(BLE_SOURCES) \
+		Tests/MenuBarAccessibilityCheck.swift \
+		-o "$(MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE)"
+	@ESTROBO_TEST_APP_BUNDLE="$(APP_BUNDLE)" \
+		"$(MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE)"
+
+test-launch-responsiveness: build
+	@/bin/zsh Tests/AppLaunchResponsivenessCheck.sh "$(APP_BUNDLE)"
 
 signing-certificate-check:
 	@"$(SIGNING_CERTIFICATE_VERIFY_SCRIPT)" \

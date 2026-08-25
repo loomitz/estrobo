@@ -9,6 +9,7 @@ enum AppLocalizationCheck {
         checkResourceParity(english: english, spanish: spanish)
         checkRuntimeCatalogCoverage(english: english, spanish: spanish)
         checkWorkspaceConfigurationCopy(english: english, spanish: spanish)
+        checkMenuBarSettingsCopy(english: english, spanish: spanish)
         checkSavedTransmittersCopy(english: english, spanish: spanish)
         checkMultiCopy(english: english, spanish: spanish)
         checkBluetoothMessages(english: english, spanish: spanish)
@@ -16,6 +17,33 @@ enum AppLocalizationCheck {
         checkPreferences()
 
         print("English/Spanish resources, runtime messages, and language preferences verified")
+    }
+
+    private static func checkMenuBarSettingsCopy(
+        english: [String: String],
+        spanish: [String: String]
+    ) {
+        assertLocalized(
+            "Barra de menús",
+            english: "Menu bar",
+            spanish: "Barra de menús",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Mostrar icono de Estrobo",
+            english: "Show Estrobo icon",
+            spanish: "Mostrar icono de Estrobo",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Ocultarlo no cierra Estrobo. Vuélvelo a mostrar desde Configuración.",
+            english: "Hiding it does not quit Estrobo. Show it again in Settings.",
+            spanish: "Ocultarlo no cierra Estrobo. Vuélvelo a mostrar desde Configuración.",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
     }
 
     private static func checkResourceParity(
@@ -137,6 +165,20 @@ enum AppLocalizationCheck {
             "%lld grupos seleccionados",
             english: "%lld groups selected",
             spanish: "%lld grupos seleccionados",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Al conectar se aplicará: %@",
+            english: "On connect: %@",
+            spanish: "Al conectar se aplicará: %@",
+            englishTranslations: english,
+            spanishTranslations: spanish
+        )
+        assertLocalized(
+            "Estrobo sobrescribirá A0/A1 del radio; no importará su estado actual.",
+            english: "Estrobo will overwrite the trigger's A0/A1 state; it will not import its current state.",
+            spanish: "Estrobo sobrescribirá A0/A1 del radio; no importará su estado actual.",
             englishTranslations: english,
             spanishTranslations: spanish
         )

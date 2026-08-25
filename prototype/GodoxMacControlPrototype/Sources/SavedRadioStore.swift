@@ -14,8 +14,7 @@ struct SavedRadio: Equatable, Identifiable {
     var id: UUID { deviceID }
 
     init?(deviceID: UUID, name: String, radioCode: String) {
-        let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !normalizedName.isEmpty,
+        guard let normalizedName = GodoxBluetoothDeviceName.canonicalName(from: name),
               Self.isValidRadioCode(radioCode) else {
             return nil
         }

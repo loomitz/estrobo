@@ -76,6 +76,9 @@
 "Sin conexión Bluetooth ni comandos físicos de flash" = "Sin conexión Bluetooth ni comandos físicos de flash";
 "Configurar" = "Configurar";
 "Configuración" = "Configuración";
+"Barra de menús" = "Barra de menús";
+"Mostrar icono de Estrobo" = "Mostrar icono de Estrobo";
+"Ocultarlo no cierra Estrobo. Vuélvelo a mostrar desde Configuración." = "Ocultarlo no cierra Estrobo. Vuélvelo a mostrar desde Configuración.";
 "CONTROL GLOBAL" = "CONTROL GLOBAL";
 "Sin grupos manuales activos" = "Sin grupos manuales activos";
 "1 grupo manual · incluye ocultos" = "1 grupo manual · incluye ocultos";
@@ -510,7 +513,8 @@
 "%lld modelos asignados al grupo %@" = "%lld modelos asignados al grupo %@";
 "%lld presets guardados" = "%lld presets guardados";
 "1 modelo asignado al grupo %@" = "1 modelo asignado al grupo %@";
-"Al conectar, Estrobo enviará sus valores al radio: %@." = "Al conectar, Estrobo enviará sus valores al radio: %@.";
+"Al conectar se aplicará: %@" = "Al conectar se aplicará: %@";
+"Estrobo sobrescribirá A0/A1 del radio; no importará su estado actual." = "Estrobo sobrescribirá A0/A1 del radio; no importará su estado actual.";
 "Arrastra verticalmente o pulsa una marca; cada paso equivale a un tercio EV" = "Arrastra verticalmente o pulsa una marca; cada paso equivale a un tercio EV";
 "Asigna uno o más modelos a cada grupo para calcular un rango seguro." = "Asigna uno o más modelos a cada grupo para calcular un rango seguro.";
 "Aún no tienes presets" = "Aún no tienes presets";
@@ -542,7 +546,6 @@
 "Guardar valores actuales" = "Guardar valores actuales";
 "La configuración está lista para guardarse en este Mac." = "La configuración está lista para guardarse en este Mac.";
 "La configuración se abre a pantalla completa y no cambia el radio hasta volver a conectar." = "La configuración se abre a pantalla completa y no cambia el radio hasta volver a conectar.";
-"La dirección es Estrobo → radio; la app no lee el estado completo del transmisor." = "La dirección es Estrobo → radio; la app no lee el estado completo del transmisor.";
 "NO COMPATIBLE" = "NO COMPATIBLE";
 "No cierres Estrobo ni apagues el radio durante esta operación." = "No cierres Estrobo ni apagues el radio durante esta operación.";
 "No se pudo cargar el preset. Revisa el perfil y los grupos de trabajo." = "No se pudo cargar el preset. Revisa el perfil y los grupos de trabajo.";
@@ -607,8 +610,6 @@
 "Desactiva el grupo %@ para dejar de dispararlo; el cambio queda pendiente de envío." = "Desactiva el grupo %@ para dejar de dispararlo; el cambio queda pendiente de envío.";
 "El grupo %@ está en %@ y no puede pasar automáticamente a Manual." = "El grupo %@ está en %@ y no puede pasar automáticamente a Manual.";
 "Activa el grupo %@ para editar potencia y modelado." = "Activa el grupo %@ para editar potencia y modelado.";
-"El grupo %@ se sincronizará apagado. Podrás activarlo después de conectar." = "El grupo %@ se sincronizará apagado. Podrás activarlo después de conectar.";
-"Los grupos %@ se sincronizarán apagados. Podrás activarlos después de conectar." = "Los grupos %@ se sincronizarán apagados. Podrás activarlos después de conectar.";
 "Cambia la vista del espacio de trabajo." = "Cambia la vista del espacio de trabajo.";
 "El cambio se aplica de inmediato y se conserva para la próxima sesión." = "El cambio se aplica de inmediato y se conserva para la próxima sesión.";
 "Selecciona todos los flashes que usará cada grupo." = "Selecciona todos los flashes que usará cada grupo.";
@@ -823,3 +824,40 @@
 "No se pudo guardar la escena anterior completa; no se transmitió A1" = "No se pudo guardar la escena anterior completa; no se transmitió A1";
 "El registro anterior no incluía A0; se reconstruyó un estado global conservador" = "El registro anterior no incluía A0; se reconstruyó un estado global conservador";
 "No se pudo preparar A0 para la recuperación segura" = "No se pudo preparar A0 para la recuperación segura";
+
+/* Controles de la barra de menús */
+"menubar.connected" = "Conectado";
+"menubar.noGroups.title" = "Aún no hay grupos visibles";
+"menubar.noGroups.detail" = "Abre Estrobo para elegir los grupos que quieres controlar desde la barra de menús.";
+"menubar.openApp" = "Abrir Estrobo";
+"menubar.quit" = "Salir de Estrobo";
+"menubar.quitShort" = "Salir";
+"menubar.standby" = "Standby activo · reanuda los grupos desde Estrobo para editarlos";
+"menubar.applying" = "Aplicando cambios…";
+"menubar.automaticPending" = "Envío automático pendiente";
+"menubar.pendingOne" = "1 cambio pendiente";
+"menubar.pendingMany" = "%lld cambios pendientes";
+"menubar.reviewPending" = "Revisa los cambios pendientes en Estrobo";
+"menubar.apply" = "Aplicar";
+"menubar.pending" = "PENDIENTE";
+"menubar.locked" = "BLOQUEADO";
+"menubar.decreaseGroup" = "Bajar un tercio EV en el grupo %@";
+"menubar.increaseGroup" = "Subir un tercio EV en el grupo %@";
+"menubar.powerGroup" = "Potencia del grupo %@";
+"menubar.choosePower" = "Elige directamente una potencia permitida";
+"menubar.connectToEdit" = "Conecta y sincroniza el radio para editar este grupo";
+"menubar.manualOnly" = "El grupo está en modo %@; la potencia sólo se edita en Manual";
+"menubar.openForDetails" = "Abre Estrobo para revisar por qué este grupo está bloqueado";
+"menubar.minimumPower" = "Este grupo ya está en su potencia mínima permitida";
+"menubar.maximumPower" = "Este grupo ya está en su potencia máxima permitida";
+"menubar.turnOnGroup" = "Encender grupo %@";
+"menubar.turnOffGroup" = "Apagar grupo %@";
+"menubar.groupOn" = "Encendido";
+"menubar.groupOff" = "Apagado";
+"menubar.togglePendingHint" = "El cambio usa el modo de envío elegido";
+"No se puede cerrar mientras se sincronizan valores con el radio" = "No se puede cerrar mientras se sincronizan valores con el radio";
+"No se puede cerrar mientras se aplican cambios al radio" = "No se puede cerrar mientras se aplican cambios al radio";
+"No se puede cerrar mientras se entrega la orden Test" = "No se puede cerrar mientras se entrega la orden Test";
+"No se puede cerrar durante un ajuste de potencia" = "No se puede cerrar durante un ajuste de potencia";
+"No se puede cerrar mientras el envío automático está pendiente" = "No se puede cerrar mientras el envío automático está pendiente";
+"No se puede cerrar: aplica o descarta los cambios pendientes" = "No se puede cerrar: aplica o descarta los cambios pendientes";
