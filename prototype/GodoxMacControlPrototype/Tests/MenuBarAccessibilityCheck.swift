@@ -6,6 +6,8 @@ import SwiftUI
 @MainActor
 enum MenuBarAccessibilityCheck {
     static func main() async {
+        await verifyMockEventOrdering()
+
         let app = NSApplication.shared
         let interactive = CommandLine.arguments.contains("--interactive")
         app.setActivationPolicy(interactive ? .regular : .accessory)
@@ -27,7 +29,7 @@ enum MenuBarAccessibilityCheck {
         }
         expect(
             fixtureReachedReady,
-            "The accessibility fixture must reach Ready; current phase: \(controller.phase.title)"
+            "The accessibility fixture must reach Ready; \(phaseDiagnostic(controller))"
         )
 
         let baselinePower = controller.groupDraft(.b).draft.power
@@ -209,6 +211,85 @@ enum MenuBarAccessibilityCheck {
         print("Menu Bar accessibility descriptors, actions, rendering, and modifier contract verified")
     }
 
+    private static func verifyMockEventOrdering() async {
+        let controlledDelay = ControlledDelay()
+        let recorder = MockEventRecorder()
+        let transport = MockGodoxSessionTransport { milliseconds in
+            await controlledDelay.wait(milliseconds)
+        }
+        transport.delegate = recorder
+        transport.connect(to: MockGodoxSessionTransport.device)
+
+        for _ in 0..<5 {
+            await settleTasks()
+            expect(
+                controlledDelay.resumeLongestPendingWait(),
+                "Each mock connection step must register one controlled delay"
+            )
+        }
+        await settleTasks()
+
+        expect(
+            recorder.events == [
+                "connecting",
+                "discovering",
+                "subscribing",
+                "ready",
+                "readyForAuthentication",
+            ],
+            "Mock connection events must remain ordered when several deadlines become runnable; received \(recorder.events)"
+        )
+
+        recorder.reset()
+        guard let power = ManualPower.value(decimal: 50),
+              let groupFrame = try? SafeGodoxProtocol.manualGroupFrame(
+                  group: .b,
+                  snapshot: ManualGroupSnapshot(
+                      power: power,
+                      modeling: .off
+                  )
+              ) else {
+            fputs("FAIL: Unable to build the mock A1 ordering fixture\n", stderr)
+            exit(1)
+        }
+        transport.sendControl(groupFrame)
+        for _ in 0..<3 {
+            await settleTasks()
+            expect(
+                controlledDelay.resumeLongestPendingWait(),
+                "Each mock control step must register one controlled delay"
+            )
+        }
+        await settleTasks()
+        expect(
+            recorder.events == [
+                "controlWriteStarted",
+                "controlWriteCompleted",
+                "controlNotification",
+            ],
+            "Mock A1 acknowledgement events must remain ordered; received \(recorder.events)"
+        )
+    }
+
+    private static func phaseDiagnostic(_ controller: GodoxSessionController) -> String {
+        let phase: String
+        if case .failed(let message) = controller.phase {
+            phase = "failed(\(message))"
+        } else {
+            phase = controller.phase.title
+        }
+        let recentActivity = controller.activity.suffix(6).map(\.message).joined(separator: " | ")
+        return recentActivity.isEmpty
+            ? "current phase: \(phase)"
+            : "current phase: \(phase); recent activity: \(recentActivity)"
+    }
+
+    private static func settleTasks() async {
+        for _ in 0..<50 {
+            await Task.yield()
+        }
+    }
+
     private static func verifyModifierContract() {
         let currentDirectory = URL(
             fileURLWithPath: FileManager.default.currentDirectoryPath,
@@ -276,6 +357,70 @@ enum MenuBarAccessibilityCheck {
         guard condition() else {
             fputs("FAIL: \(message)\n", stderr)
             exit(1)
+        }
+    }
+
+    @MainActor
+    private final class ControlledDelay {
+        private struct PendingWait {
+            let milliseconds: Int
+            let continuation: CheckedContinuation<Void, Never>
+        }
+
+        private var pendingWaits: [PendingWait] = []
+
+        func wait(_ milliseconds: Int) async {
+            await withCheckedContinuation { continuation in
+                pendingWaits.append(
+                    PendingWait(
+                        milliseconds: milliseconds,
+                        continuation: continuation
+                    )
+                )
+            }
+        }
+
+        func resumeLongestPendingWait() -> Bool {
+            guard let index = pendingWaits.indices.max(by: {
+                pendingWaits[$0].milliseconds < pendingWaits[$1].milliseconds
+            }) else {
+                return false
+            }
+            let pending = pendingWaits.remove(at: index)
+            pending.continuation.resume()
+            return true
+        }
+    }
+
+    @MainActor
+    private final class MockEventRecorder: BluetoothClientDelegate {
+        private(set) var events: [String] = []
+
+        func reset() {
+            events.removeAll()
+        }
+
+        func bluetoothClient(didReceive event: BluetoothClient.Event) {
+            switch event {
+            case .stateChanged(.connecting(_)):
+                events.append("connecting")
+            case .stateChanged(.discovering(_)):
+                events.append("discovering")
+            case .stateChanged(.subscribing(_)):
+                events.append("subscribing")
+            case .stateChanged(.ready(_)):
+                events.append("ready")
+            case .readyForAuthentication:
+                events.append("readyForAuthentication")
+            case .controlWriteStarted:
+                events.append("controlWriteStarted")
+            case .controlWriteCompleted:
+                events.append("controlWriteCompleted")
+            case .notification(.control, _):
+                events.append("controlNotification")
+            default:
+                break
+            }
         }
     }
 }
