@@ -5,7 +5,7 @@ import SwiftUI
 @main
 @MainActor
 enum MenuBarAccessibilityCheck {
-    static func main() {
+    static func main() async {
         let app = NSApplication.shared
         let interactive = CommandLine.arguments.contains("--interactive")
         app.setActivationPolicy(interactive ? .regular : .accessory)
@@ -13,14 +13,20 @@ enum MenuBarAccessibilityCheck {
 
         let controller = MockRadioRuntime.makeController()
         controller.startScanning()
+        let discoveredMockTrigger = await pumpUntil(timeout: 3) {
+            controller.selectedDevice != nil
+        }
         expect(
-            pumpUntil(timeout: 3) { controller.selectedDevice != nil },
+            discoveredMockTrigger,
             "The mock trigger must be discovered"
         )
         controller.radioCode = "123456"
         controller.connectSelectedDevice()
+        let fixtureReachedReady = await pumpUntil(timeout: 10) {
+            controller.phase == .ready
+        }
         expect(
-            pumpUntil(timeout: 10) { controller.phase == .ready },
+            fixtureReachedReady,
             "The accessibility fixture must reach Ready; current phase: \(controller.phase.title)"
         )
 
@@ -258,12 +264,10 @@ enum MenuBarAccessibilityCheck {
         timeout: TimeInterval,
         interval: TimeInterval = 0.02,
         condition: () -> Bool
-    ) -> Bool {
+    ) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while !condition(), Date() < deadline {
-            RunLoop.main.run(
-                until: min(deadline, Date().addingTimeInterval(interval))
-            )
+            try? await Task.sleep(for: .seconds(interval))
         }
         return condition()
     }
