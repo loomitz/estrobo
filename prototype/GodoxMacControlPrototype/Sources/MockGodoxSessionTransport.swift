@@ -15,15 +15,29 @@ final class MockGodoxSessionTransport: GodoxSessionTransport {
     weak var delegate: (any BluetoothClientDelegate)?
     let isSimulation = true
 
+    private let waitForMilliseconds: @MainActor (Int) async throws -> Void
     private var connectedDevice: BluetoothClient.Device?
     private var generation: UInt = 0
     private var scheduledEvents: [UUID: Task<Void, Never>] = [:]
 
+    init(
+        waitForMilliseconds: @escaping @MainActor (Int) async throws -> Void = { milliseconds in
+            try await Task.sleep(for: .milliseconds(milliseconds))
+        }
+    ) {
+        self.waitForMilliseconds = waitForMilliseconds
+    }
+
     func startScanning() {
         beginNewSequence()
         let activeGeneration = generation
-        emit(.stateChanged(.scanning), after: 10, generation: activeGeneration)
-        emit(.discovered(Self.device), after: 70, generation: activeGeneration)
+        emitSequence(
+            [
+                (10, .stateChanged(.scanning)),
+                (70, .discovered(Self.device)),
+            ],
+            generation: activeGeneration
+        )
     }
 
     func stopScanning() {
@@ -40,22 +54,31 @@ final class MockGodoxSessionTransport: GodoxSessionTransport {
 
         connectedDevice = Self.device
         let activeGeneration = generation
-        emit(.stateChanged(.connecting(Self.device)), after: 10, generation: activeGeneration)
-        emit(.stateChanged(.discovering(Self.device)), after: 35, generation: activeGeneration)
-        emit(.stateChanged(.subscribing(Self.device)), after: 60, generation: activeGeneration)
-        emit(.stateChanged(.ready(Self.device)), after: 85, generation: activeGeneration)
-        emit(.readyForAuthentication, after: 110, generation: activeGeneration)
+        emitSequence(
+            [
+                (10, .stateChanged(.connecting(Self.device))),
+                (35, .stateChanged(.discovering(Self.device))),
+                (60, .stateChanged(.subscribing(Self.device))),
+                (85, .stateChanged(.ready(Self.device))),
+                (110, .readyForAuthentication),
+            ],
+            generation: activeGeneration
+        )
     }
 
     func disconnect() {
         beginNewSequence()
         let activeGeneration = generation
         let device = connectedDevice ?? Self.device
-        emit(.stateChanged(.disconnecting(device)), after: 5, generation: activeGeneration)
-        schedule(after: 40, generation: activeGeneration) { transport in
-            transport.connectedDevice = nil
-            transport.delegate?.bluetoothClient(didReceive: .discoveryReset)
-            transport.delegate?.bluetoothClient(didReceive: .stateChanged(.idle))
+        schedule(after: 5, generation: activeGeneration) { transport in
+            transport.delegate?.bluetoothClient(
+                didReceive: .stateChanged(.disconnecting(device))
+            )
+            transport.schedule(after: 35, generation: activeGeneration) { transport in
+                transport.connectedDevice = nil
+                transport.delegate?.bluetoothClient(didReceive: .discoveryReset)
+                transport.delegate?.bluetoothClient(didReceive: .stateChanged(.idle))
+            }
         }
     }
 
@@ -73,15 +96,16 @@ final class MockGodoxSessionTransport: GodoxSessionTransport {
         }
 
         let activeGeneration = generation
-        emit(.commandSent(.authentication), after: 10, generation: activeGeneration)
-        schedule(after: 45, generation: activeGeneration) { transport in
-            transport.delegate?.bluetoothClient(
-                didReceive: .notification(
+        emitSequence(
+            [
+                (10, .commandSent(.authentication)),
+                (45, .notification(
                     .authentication,
                     Self.validAuthenticationResponse()
-                )
-            )
-        }
+                )),
+            ],
+            generation: activeGeneration
+        )
     }
 
     func sendSync(_ payload: Data) {
@@ -107,17 +131,18 @@ final class MockGodoxSessionTransport: GodoxSessionTransport {
         }
 
         let activeGeneration = generation
-        emit(.controlWriteStarted, after: 10, generation: activeGeneration)
-        emit(.controlWriteCompleted, after: 35, generation: activeGeneration)
+        var timeline: [(Int, BluetoothClient.Event)] = [
+            (10, .controlWriteStarted),
+            (35, .controlWriteCompleted),
+        ]
         // A0 termina con el acuse de escritura GATT. Sólo A1 recibe después
         // la confirmación FEC8 que compromete el estado del grupo.
         if SafeGodoxProtocol.groupSnapshot(from: payload) != nil {
-            emit(
-                .notification(.control, Data([0xF0, 0xA1])),
-                after: 60,
-                generation: activeGeneration
+            timeline.append(
+                (60, .notification(.control, Data([0xF0, 0xA1])))
             )
         }
+        emitSequence(timeline, generation: activeGeneration)
     }
 
     private func emitCommandFailure(_ kind: BluetoothClient.CommandKind) {
@@ -140,6 +165,37 @@ final class MockGodoxSessionTransport: GodoxSessionTransport {
         }
     }
 
+    /// Keeps protocol milestones ordered even when a loaded executor wakes
+    /// several elapsed deadlines together. Offsets are measured from the
+    /// beginning of the simulated operation, matching the prior timings.
+    private func emitSequence(
+        _ timeline: [(offsetMilliseconds: Int, event: BluetoothClient.Event)],
+        generation expectedGeneration: UInt
+    ) {
+        let eventID = UUID()
+        scheduledEvents[eventID] = Task { @MainActor [weak self] in
+            defer { self?.scheduledEvents[eventID] = nil }
+            var elapsedMilliseconds = 0
+            for milestone in timeline {
+                precondition(
+                    milestone.offsetMilliseconds >= elapsedMilliseconds,
+                    "Mock event timelines must use nondecreasing offsets"
+                )
+                guard let self else { return }
+                do {
+                    try await self.waitForMilliseconds(
+                        milestone.offsetMilliseconds - elapsedMilliseconds
+                    )
+                } catch {
+                    return
+                }
+                guard self.generation == expectedGeneration else { return }
+                self.delegate?.bluetoothClient(didReceive: milestone.event)
+                elapsedMilliseconds = milestone.offsetMilliseconds
+            }
+        }
+    }
+
     private func schedule(
         after milliseconds: Int,
         generation expectedGeneration: UInt,
@@ -149,7 +205,8 @@ final class MockGodoxSessionTransport: GodoxSessionTransport {
         scheduledEvents[eventID] = Task { @MainActor [weak self] in
             defer { self?.scheduledEvents[eventID] = nil }
             do {
-                try await Task.sleep(for: .milliseconds(milliseconds))
+                guard let self else { return }
+                try await self.waitForMilliseconds(milliseconds)
             } catch {
                 return
             }
