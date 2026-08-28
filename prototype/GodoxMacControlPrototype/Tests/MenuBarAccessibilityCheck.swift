@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import Foundation
 import SwiftUI
 
@@ -32,29 +33,6 @@ enum MenuBarAccessibilityCheck {
             "The accessibility fixture must reach Ready; \(phaseDiagnostic(controller))"
         )
 
-        MenuBarAccessibilityActions.sendTest(
-            controller: controller,
-            enabled: false
-        )
-        expect(
-            !controller.isTestPending,
-            "A disabled Menu Bar Test action must not reach the controller"
-        )
-        MenuBarAccessibilityActions.sendTest(
-            controller: controller,
-            enabled: true
-        )
-        expect(
-            controller.isTestPending,
-            "The enabled Menu Bar Test action must delegate to the shared guarded controller path"
-        )
-        let testDeliveryCompleted = await pumpUntil(timeout: 2) {
-            !controller.isTestPending
-        }
-        expect(
-            testDeliveryCompleted,
-            "The simulated Menu Bar Test delivery must complete without Bluetooth hardware"
-        )
         expect(
             controller.testHelpMessage == "mock.testHelp",
             "The Menu Bar and main window must share the same Test-help semantics"
@@ -115,6 +93,28 @@ enum MenuBarAccessibilityCheck {
         window.title = "Estrobo Menu Bar Accessibility QA"
         window.makeKeyAndOrderFront(nil)
         pump(0.25)
+
+        let activityCountBeforeTest = controller.activity.count
+        let didPressRenderedTest = performAccessibilityPress(
+            label: "menubar.testAccessibility"
+        )
+        expect(
+            didPressRenderedTest,
+            "VoiceOver must be able to press the rendered global Test button"
+        )
+        let testActionReachedController = controller.activity
+            .dropFirst(activityCountBeforeTest)
+            .contains {
+                $0.message == "Enviando disparo Test global"
+        }
+        expect(
+            testActionReachedController,
+            "The rendered Menu Bar Test button must delegate to the shared guarded controller path"
+        )
+        expect(
+            controller.isTestPending,
+            "The rendered Test action must enter the shared in-flight delivery state"
+        )
 
         if interactive {
             app.activate(ignoringOtherApps: true)
@@ -373,8 +373,6 @@ enum MenuBarAccessibilityCheck {
         }
 
         let modifierFragments = [
-            ".accessibilityElement(children: .ignore)",
-            ".accessibilityAddTraits(.isButton)",
             ".accessibilityLabel(Text(verbatim: descriptor.label))",
             ".accessibilityValue(Text(verbatim: descriptor.value))",
             ".accessibilityHint(Text(verbatim: descriptor.hint))",
@@ -386,6 +384,11 @@ enum MenuBarAccessibilityCheck {
                 "The shared accessible-button modifier must retain \(fragment)"
             )
         }
+        expect(
+            !source.contains(".accessibilityElement(children: .ignore)") &&
+                !source.contains(".accessibilityAddTraits(.isButton)"),
+            "Native buttons must retain their own VoiceOver role and Press action"
+        )
         let controlCount = source.components(separatedBy: ".menuBarAccessibleButton(").count - 1
         expect(
             controlCount == 7,
@@ -401,6 +404,81 @@ enum MenuBarAccessibilityCheck {
                 "The power menu must retain its public accessibility descriptor contract"
             )
         }
+    }
+
+    private static func performAccessibilityPress(label: String) -> Bool {
+        let application = AXUIElementCreateApplication(getpid())
+        guard let button = findAccessibilityElement(
+            in: application,
+            label: label,
+            depth: 0
+        ) else {
+            return false
+        }
+        var actionNames: CFArray?
+        guard AXUIElementCopyActionNames(button, &actionNames) == .success,
+              (actionNames as? [String])?.contains(kAXPressAction) == true else {
+            return false
+        }
+        let result = AXUIElementPerformAction(
+            button,
+            kAXPressAction as CFString
+        )
+        return result == .success
+    }
+
+    private static func findAccessibilityElement(
+        in element: AXUIElement,
+        label: String,
+        depth: Int
+    ) -> AXUIElement? {
+        guard depth < 20 else { return nil }
+        let labels = [
+            accessibilityString(element, attribute: kAXTitleAttribute),
+            accessibilityString(element, attribute: kAXDescriptionAttribute),
+        ].compactMap { $0 }
+        if labels.contains(label) {
+            return element
+        }
+        for child in accessibilityChildren(element) {
+            if let match = findAccessibilityElement(
+                in: child,
+                label: label,
+                depth: depth + 1
+            ) {
+                return match
+            }
+        }
+        return nil
+    }
+
+    private static func accessibilityString(
+        _ element: AXUIElement,
+        attribute: String
+    ) -> String? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            attribute as CFString,
+            &value
+        ) == .success else {
+            return nil
+        }
+        return value as? String
+    }
+
+    private static func accessibilityChildren(
+        _ element: AXUIElement
+    ) -> [AXUIElement] {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            kAXChildrenAttribute as CFString,
+            &value
+        ) == .success else {
+            return []
+        }
+        return value as? [AXUIElement] ?? []
     }
 
     private static func pump(_ seconds: TimeInterval) {

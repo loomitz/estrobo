@@ -147,10 +147,7 @@ struct MenuBarControlView: View {
                 }
 
                 Button {
-                    MenuBarAccessibilityActions.sendTest(
-                        controller: controller,
-                        enabled: controller.canSendTest
-                    )
+                    controller.sendTestFlash()
                 } label: {
                     HStack(spacing: 5) {
                         if controller.isTestPending {
@@ -881,8 +878,6 @@ private struct MenuBarAccessibleButtonModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .accessibilityElement(children: .ignore)
-            .accessibilityAddTraits(.isButton)
             .accessibilityLabel(Text(verbatim: descriptor.label))
             .accessibilityValue(Text(verbatim: descriptor.value))
             .accessibilityHint(Text(verbatim: descriptor.hint))
@@ -913,14 +908,6 @@ enum MenuBarLayout {
 
 @MainActor
 enum MenuBarAccessibilityActions {
-    static func sendTest(
-        controller: GodoxSessionController,
-        enabled: Bool
-    ) {
-        guard enabled else { return }
-        controller.sendTestFlash()
-    }
-
     static func adjustPower(
         _ direction: AccessibilityAdjustmentDirection,
         controller: GodoxSessionController,
