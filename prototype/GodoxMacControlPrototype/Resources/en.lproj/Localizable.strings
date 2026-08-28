@@ -834,11 +834,16 @@
 "menubar.quitShort" = "Quit";
 "menubar.standby" = "Standby is active · resume the groups in Estrobo to edit them";
 "menubar.applying" = "Applying changes…";
+"menubar.updatingSettings" = "Updating settings…";
 "menubar.automaticPending" = "Automatic delivery pending";
 "menubar.pendingOne" = "1 pending change";
 "menubar.pendingMany" = "%lld pending changes";
 "menubar.reviewPending" = "Review the pending changes in Estrobo";
 "menubar.apply" = "Apply";
+"menubar.test" = "Test";
+"menubar.testSending" = "Sending";
+"menubar.testAccessibility" = "Global Test flash";
+"menubar.testHelp" = "Fires all active groups using the applied settings; Bluetooth does not confirm the flash";
 "menubar.pending" = "PENDING";
 "menubar.locked" = "LOCKED";
 "menubar.decreaseGroup" = "Lower group %@ by one third EV";
