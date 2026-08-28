@@ -1,5 +1,6 @@
 #!/bin/zsh
 
+unsetopt XTRACE
 set -euo pipefail
 umask 077
 

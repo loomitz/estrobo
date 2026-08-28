@@ -554,7 +554,7 @@ run_profile() {
     "${common_env[@]}" \
     "NOTARY_KEYCHAIN_PROFILE=$profile_name" \
     "$@" \
-    "$package_script"
+    /bin/zsh -x "$package_script"
 }
 
 run_api() {

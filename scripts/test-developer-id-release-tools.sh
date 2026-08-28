@@ -319,7 +319,7 @@ NOTARIZATION_SUBMIT_RESULT="$profile_evidence_dir/notary-submit.json" \
 NOTARIZATION_WAIT_RESULT="$profile_evidence_dir/notary-wait.json" \
 NOTARIZATION_LOG="$profile_evidence_dir/notary-log.json" \
 NOTARIZATION_METADATA="$profile_evidence_dir/notarization-metadata.json" \
-  "$script_dir/notarize-macos-developer-id.sh" >"$profile_output" 2>&1
+  /bin/zsh -x "$script_dir/notarize-macos-developer-id.sh" >"$profile_output" 2>&1
 
 [[ "$(<"$profile_state_dir/submit.count")" == 1 ]] || \
   fail "keychain-profile notarization did not submit exactly once"
