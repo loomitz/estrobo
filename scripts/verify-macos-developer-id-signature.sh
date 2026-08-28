@@ -24,6 +24,15 @@ for required_name in \
   require_value "$required_name"
 done
 
+source_commit="${SOURCE_COMMIT:-}"
+[[ "$BUILD_NUMBER" =~ '^[1-9][0-9]*$' ]] || fail "BUILD_NUMBER must be a positive integer"
+if (( 10#$BUILD_NUMBER >= 4 )); then
+  [[ "$source_commit" =~ '^[0-9a-f]{40}$' ]] || \
+    fail "SOURCE_COMMIT must be the full lowercase source commit for build 4 and later"
+else
+  source_commit=""
+fi
+
 [[ "$DEVELOPER_ID_TEAM_ID" =~ '^[A-Z0-9]{10}$' ]] || \
   fail "DEVELOPER_ID_TEAM_ID must contain exactly 10 uppercase letters or digits"
 [[ -d "$APP_BUNDLE" ]] || fail "app bundle not found: $APP_BUNDLE"
@@ -58,6 +67,9 @@ expect_plist_value CFBundleDisplayName estrobo
 expect_plist_value CFBundleShortVersionString "$VERSION"
 expect_plist_value CFBundleVersion "$BUILD_NUMBER"
 expect_plist_value LSMinimumSystemVersion "$MACOSX_DEPLOYMENT_TARGET"
+if [[ -n "$source_commit" ]]; then
+  expect_plist_value EstroboSourceCommit "$source_commit"
+fi
 "${0:A:h}/verify-macos-bundle-contents.sh" "$APP_BUNDLE"
 
 /usr/bin/lipo "$binary" -verify_arch arm64 x86_64

@@ -13,11 +13,22 @@ SIGNING_KEYCHAIN ?=
 DEVELOPER_ID_SIGNING_IDENTITY ?=
 DEVELOPER_ID_SIGNING_KEYCHAIN ?=
 DEVELOPER_ID_TEAM_ID ?=
+NOTARY_KEYCHAIN_PROFILE ?=
 NOTARY_API_KEY_PATH ?=
 NOTARY_API_KEY_ID ?=
 NOTARY_API_ISSUER_ID ?=
 NOTARY_SUBMISSION_ID ?=
+DMG_NOTARY_SUBMISSION_ID ?=
 NOTARY_TIMEOUT ?= 30m
+DMG_EVIDENCE_DIR ?=
+DMG_IDENTIFIER ?= mx.loo.estrobo.dmg
+DMG_VOLUME_NAME ?= Estrobo
+REPOSITORY_URL ?= https://github.com/loomitz/estrobo
+APPROVED_TAG ?=
+APPROVED_COMMIT ?=
+APPROVED_DMG_SHA256 ?=
+PHYSICAL_SMOKE_STATUS ?=
+export NOTARY_KEYCHAIN_PROFILE NOTARY_API_KEY_PATH NOTARY_API_KEY_ID NOTARY_API_ISSUER_ID
 MACOSX_DEPLOYMENT_TARGET := 13.0
 BUNDLE_IDENTIFIER := mx.loo.estrobo
 REPOSITORY_ROOT := ../..
@@ -33,6 +44,10 @@ DEVELOPER_ID_SIGNATURE_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-macos-
 DEVELOPER_ID_RELEASE_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-macos-developer-id-release.sh
 DEVELOPER_ID_NOTARIZE_SCRIPT := $(REPOSITORY_ROOT)/scripts/notarize-macos-developer-id.sh
 DEVELOPER_ID_PACKAGE_SCRIPT := $(REPOSITORY_ROOT)/scripts/package-macos-developer-id-candidate.sh
+DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-local-developer-id-release-source.sh
+DEVELOPER_ID_DMG_PACKAGE_SCRIPT := $(REPOSITORY_ROOT)/scripts/package-macos-developer-id-dmg.sh
+DEVELOPER_ID_DMG_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-macos-developer-id-dmg.sh
+DEVELOPER_ID_LOCAL_APPROVAL_SCRIPT := $(REPOSITORY_ROOT)/scripts/finalize-local-developer-id-release-approval.sh
 APP_BUNDLE := $(BUILD_DIR)/$(APP_NAME).app
 LEGACY_APP_BUNDLE := $(BUILD_DIR)/GodoxMacControlPrototype.app
 CONTENTS_DIR := $(APP_BUNDLE)/Contents
@@ -52,6 +67,9 @@ NOTARIZATION_SUBMIT_RESULT ?= $(NOTARIZATION_DIR)/notary-submit.json
 NOTARIZATION_WAIT_RESULT ?= $(NOTARIZATION_DIR)/notary-wait.json
 NOTARIZATION_LOG ?= $(NOTARIZATION_DIR)/notary-log.json
 NOTARIZATION_METADATA ?= $(NOTARIZATION_DIR)/notarization-metadata.json
+PUBLIC_DMG := $(DIST_DIR)/estrobo-$(TAG)-macos-universal.dmg
+PUBLIC_DMG_MANIFEST := $(DIST_DIR)/estrobo-$(TAG)-manifest.json
+PUBLIC_DMG_CHECKSUMS := $(DIST_DIR)/SHA256SUMS
 TEST_EXECUTABLE := $(BUILD_DIR)/SafeGodoxProtocolFrameCheck
 SESSION_TEST_EXECUTABLE := $(BUILD_DIR)/GodoxSessionRecoveryCheck
 STUDIO_LIBRARY_TEST_EXECUTABLE := $(BUILD_DIR)/StudioLibraryStoreCheck
@@ -77,7 +95,7 @@ MACOS_SDK := $(shell xcrun --sdk macosx --show-sdk-path)
 TARGET_ARCH ?= $(shell uname -m)
 COMMIT ?= $(shell git -C "$(REPOSITORY_ROOT)" rev-parse HEAD 2>/dev/null || printf uncommitted)
 
-.PHONY: build check test test-protocol test-session-recovery test-studio-library test-localization test-modeling-menu-pointer test-workspace-chrome test-brand-assets test-interactive-editing test-menu-bar-accessibility test-launch-responsiveness signing-certificate-check universal release-preflight release release-verify release-verify-existing package package-existing developer-id-certificate-check developer-id-preflight developer-id-release developer-id-release-verify developer-id-verify-signed-existing developer-id-notarize-existing developer-id-resume-notarization-existing developer-id-verify-existing developer-id-package-existing run clean
+.PHONY: build check test test-protocol test-session-recovery test-studio-library test-localization test-modeling-menu-pointer test-workspace-chrome test-brand-assets test-interactive-editing test-menu-bar-accessibility test-launch-responsiveness signing-certificate-check universal release-preflight release release-verify release-verify-existing package package-existing developer-id-certificate-check developer-id-preflight developer-id-release developer-id-release-verify developer-id-local-release developer-id-verify-signed-existing developer-id-notarize-existing developer-id-local-notarize-existing developer-id-resume-notarization-existing developer-id-local-resume-notarization-existing developer-id-verify-existing developer-id-package-existing developer-id-local-source-verify developer-id-dmg-create-existing developer-id-dmg-resume-existing developer-id-dmg-verify-existing developer-id-local-approval-finalize developer-id-local-approval-verify run clean
 
 build: $(EXECUTABLE)
 
@@ -260,6 +278,7 @@ $(EXECUTABLE): $(SOURCES) $(INFO_PLIST) $(ENTITLEMENTS) $(RESOURCE_FILES)
 	@/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $(BUNDLE_IDENTIFIER)" "$(CONTENTS_DIR)/Info.plist"
 	@/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $(VERSION)" "$(CONTENTS_DIR)/Info.plist"
 	@/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $(BUILD_NUMBER)" "$(CONTENTS_DIR)/Info.plist"
+	@/usr/libexec/PlistBuddy -c "Set :EstroboSourceCommit $(COMMIT)" "$(CONTENTS_DIR)/Info.plist"
 	@/usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion $(MACOSX_DEPLOYMENT_TARGET)" "$(CONTENTS_DIR)/Info.plist"
 	@/usr/bin/ditto "$(RESOURCE_SOURCE_DIR)" "$(RESOURCES_DIR)"
 	"$(SWIFTC)" \
@@ -286,6 +305,7 @@ universal:
 	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $(BUNDLE_IDENTIFIER)" "$(UNIVERSAL_CONTENTS_DIR)/Info.plist"; \
 	/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $(VERSION)" "$(UNIVERSAL_CONTENTS_DIR)/Info.plist"; \
 	/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $(BUILD_NUMBER)" "$(UNIVERSAL_CONTENTS_DIR)/Info.plist"; \
+	/usr/libexec/PlistBuddy -c "Set :EstroboSourceCommit $(COMMIT)" "$(UNIVERSAL_CONTENTS_DIR)/Info.plist"; \
 	/usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion $(MACOSX_DEPLOYMENT_TARGET)" "$(UNIVERSAL_CONTENTS_DIR)/Info.plist"; \
 	/usr/bin/ditto "$(RESOURCE_SOURCE_DIR)" "$(UNIVERSAL_RESOURCES_DIR)"; \
 	for arch in arm64 x86_64; do \
@@ -434,10 +454,18 @@ developer-id-release-verify: developer-id-release
 		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
 		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)"
 
+developer-id-local-release:
+	@VERSION="$(VERSION)" BUILD_NUMBER="$(BUILD_NUMBER)" TAG="$(TAG)" \
+		"$(DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT)"
+	@set -euo pipefail; \
+		source_commit="$$(/usr/bin/git -C "$(REPOSITORY_ROOT)" rev-parse --verify 'HEAD^{commit}')"; \
+		$(MAKE) developer-id-release-verify COMMIT="$$source_commit"
+
 developer-id-verify-signed-existing:
 	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
 		VERSION="$(VERSION)" \
 		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		SOURCE_COMMIT="$(COMMIT)" \
 		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
 		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
 		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
@@ -448,9 +476,6 @@ developer-id-verify-signed-existing:
 developer-id-notarize-existing: developer-id-verify-signed-existing
 	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
 		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
-		NOTARY_API_KEY_PATH="$(NOTARY_API_KEY_PATH)" \
-		NOTARY_API_KEY_ID="$(NOTARY_API_KEY_ID)" \
-		NOTARY_API_ISSUER_ID="$(NOTARY_API_ISSUER_ID)" \
 		NOTARY_TIMEOUT="$(NOTARY_TIMEOUT)" \
 		NOTARIZATION_UPLOAD_ARCHIVE="$(NOTARIZATION_UPLOAD_ARCHIVE)" \
 		NOTARIZATION_SUBMIT_RESULT="$(NOTARIZATION_SUBMIT_RESULT)" \
@@ -459,12 +484,16 @@ developer-id-notarize-existing: developer-id-verify-signed-existing
 		NOTARIZATION_METADATA="$(NOTARIZATION_METADATA)" \
 		"$(DEVELOPER_ID_NOTARIZE_SCRIPT)"
 
+developer-id-local-notarize-existing:
+	@VERSION="$(VERSION)" BUILD_NUMBER="$(BUILD_NUMBER)" TAG="$(TAG)" \
+		"$(DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT)"
+	@set -euo pipefail; \
+		source_commit="$$(/usr/bin/git -C "$(REPOSITORY_ROOT)" rev-parse --verify 'HEAD^{commit}')"; \
+		$(MAKE) developer-id-notarize-existing COMMIT="$$source_commit"
+
 developer-id-resume-notarization-existing: developer-id-verify-signed-existing
 	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
 		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
-		NOTARY_API_KEY_PATH="$(NOTARY_API_KEY_PATH)" \
-		NOTARY_API_KEY_ID="$(NOTARY_API_KEY_ID)" \
-		NOTARY_API_ISSUER_ID="$(NOTARY_API_ISSUER_ID)" \
 		NOTARY_SUBMISSION_ID="$(NOTARY_SUBMISSION_ID)" \
 		NOTARY_TIMEOUT="$(NOTARY_TIMEOUT)" \
 		NOTARIZATION_UPLOAD_ARCHIVE="$(NOTARIZATION_UPLOAD_ARCHIVE)" \
@@ -474,10 +503,18 @@ developer-id-resume-notarization-existing: developer-id-verify-signed-existing
 		NOTARIZATION_METADATA="$(NOTARIZATION_METADATA)" \
 		"$(DEVELOPER_ID_NOTARIZE_SCRIPT)"
 
+developer-id-local-resume-notarization-existing:
+	@VERSION="$(VERSION)" BUILD_NUMBER="$(BUILD_NUMBER)" TAG="$(TAG)" \
+		"$(DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT)"
+	@set -euo pipefail; \
+		source_commit="$$(/usr/bin/git -C "$(REPOSITORY_ROOT)" rev-parse --verify 'HEAD^{commit}')"; \
+		$(MAKE) developer-id-resume-notarization-existing COMMIT="$$source_commit"
+
 developer-id-verify-existing:
 	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
 		VERSION="$(VERSION)" \
 		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		SOURCE_COMMIT="$(COMMIT)" \
 		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
 		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
 		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
@@ -504,6 +541,112 @@ developer-id-package-existing: developer-id-verify-existing
 		NOTARIZATION_METADATA="$(NOTARIZATION_METADATA)" \
 		VERIFY_SCRIPT="$(DEVELOPER_ID_RELEASE_VERIFY_SCRIPT)" \
 		"$(DEVELOPER_ID_PACKAGE_SCRIPT)"
+
+developer-id-local-source-verify:
+	@VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		TAG="$(TAG)" \
+		"$(DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT)"
+
+developer-id-dmg-create-existing: developer-id-verify-existing
+	@VERSION="$(VERSION)" BUILD_NUMBER="$(BUILD_NUMBER)" TAG="$(TAG)" \
+		"$(DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT)"
+	@set -euo pipefail; \
+		source_commit="$$(/usr/bin/git -C "$(REPOSITORY_ROOT)" rev-parse --verify 'HEAD^{commit}')"; \
+		if [[ "$(COMMIT)" != "$$source_commit" ]]; then \
+			print -u2 "COMMIT must be the exact verified local HEAD for the DMG lane."; \
+			exit 2; \
+		fi
+	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
+		APP_NOTARIZATION_METADATA="$(NOTARIZATION_METADATA)" \
+		DIST_DIR="$(DIST_DIR)" \
+		DMG_EVIDENCE_DIR="$(DMG_EVIDENCE_DIR)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		TAG="$(TAG)" \
+		COMMIT="$(COMMIT)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		DEVELOPER_ID_SIGNING_IDENTITY="$(DEVELOPER_ID_SIGNING_IDENTITY)" \
+		DEVELOPER_ID_SIGNING_KEYCHAIN="$(DEVELOPER_ID_SIGNING_KEYCHAIN)" \
+		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
+		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		NOTARY_TIMEOUT="$(NOTARY_TIMEOUT)" \
+		DMG_NOTARY_SUBMISSION_ID="$(DMG_NOTARY_SUBMISSION_ID)" \
+		DMG_IDENTIFIER="$(DMG_IDENTIFIER)" \
+		DMG_VOLUME_NAME="$(DMG_VOLUME_NAME)" \
+		REPOSITORY_URL="$(REPOSITORY_URL)" \
+		APP_VERIFY_SCRIPT="$(DEVELOPER_ID_RELEASE_VERIFY_SCRIPT)" \
+		DMG_VERIFY_SCRIPT="$(DEVELOPER_ID_DMG_VERIFY_SCRIPT)" \
+		"$(DEVELOPER_ID_DMG_PACKAGE_SCRIPT)"
+
+developer-id-dmg-resume-existing: developer-id-verify-existing
+	@$(MAKE) developer-id-dmg-create-existing \
+		BUILD_DIR="$(BUILD_DIR)" \
+		DIST_DIR="$(DIST_DIR)" \
+		DMG_NOTARY_SUBMISSION_ID="$(DMG_NOTARY_SUBMISSION_ID)"
+
+developer-id-dmg-verify-existing:
+	@DMG="$(PUBLIC_DMG)" \
+		MANIFEST="$(PUBLIC_DMG_MANIFEST)" \
+		CHECKSUMS="$(PUBLIC_DMG_CHECKSUMS)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		TAG="$(TAG)" \
+		COMMIT="$(COMMIT)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
+		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		APP_VERIFY_SCRIPT="$(DEVELOPER_ID_RELEASE_VERIFY_SCRIPT)" \
+		DMG_IDENTIFIER="$(DMG_IDENTIFIER)" \
+		DMG_VOLUME_NAME="$(DMG_VOLUME_NAME)" \
+		REPOSITORY_URL="$(REPOSITORY_URL)" \
+		"$(DEVELOPER_ID_DMG_VERIFY_SCRIPT)"
+
+developer-id-local-approval-finalize:
+	@DMG="$(PUBLIC_DMG)" \
+		MANIFEST="$(PUBLIC_DMG_MANIFEST)" \
+		CHECKSUMS="$(PUBLIC_DMG_CHECKSUMS)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		TAG="$(TAG)" \
+		COMMIT="$(COMMIT)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
+		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		APP_VERIFY_SCRIPT="$(DEVELOPER_ID_RELEASE_VERIFY_SCRIPT)" \
+		DMG_VERIFY_SCRIPT="$(DEVELOPER_ID_DMG_VERIFY_SCRIPT)" \
+		APPROVED_TAG="$(APPROVED_TAG)" \
+		APPROVED_COMMIT="$(APPROVED_COMMIT)" \
+		APPROVED_DMG_SHA256="$(APPROVED_DMG_SHA256)" \
+		PHYSICAL_SMOKE_STATUS="$(PHYSICAL_SMOKE_STATUS)" \
+		"$(DEVELOPER_ID_LOCAL_APPROVAL_SCRIPT)" finalize
+
+developer-id-local-approval-verify:
+	@DMG="$(PUBLIC_DMG)" \
+		MANIFEST="$(PUBLIC_DMG_MANIFEST)" \
+		CHECKSUMS="$(PUBLIC_DMG_CHECKSUMS)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		TAG="$(TAG)" \
+		COMMIT="$(COMMIT)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
+		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		APP_VERIFY_SCRIPT="$(DEVELOPER_ID_RELEASE_VERIFY_SCRIPT)" \
+		DMG_VERIFY_SCRIPT="$(DEVELOPER_ID_DMG_VERIFY_SCRIPT)" \
+		APPROVED_TAG="$(APPROVED_TAG)" \
+		APPROVED_COMMIT="$(APPROVED_COMMIT)" \
+		APPROVED_DMG_SHA256="$(APPROVED_DMG_SHA256)" \
+		PHYSICAL_SMOKE_STATUS="$(PHYSICAL_SMOKE_STATUS)" \
+		"$(DEVELOPER_ID_LOCAL_APPROVAL_SCRIPT)" verify
 
 run: build
 	@/usr/bin/open -n "$(APP_BUNDLE)"
