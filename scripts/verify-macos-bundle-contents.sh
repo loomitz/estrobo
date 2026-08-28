@@ -19,6 +19,7 @@ for forbidden_pattern in \
   '*.js' '*.jsx' '*.ts' '*.tsx' '*.java' '*.kt' '*.kts' '*.go' '*.rs' '*.cs' \
   'Makefile' 'CMakeLists.txt' \
   '*.p12' '*.pfx' '*.p8' '*.key' '*.pem' '*.cer' '*.mobileprovision' '*.provisionprofile' \
+  '.env' '.env.*' \
   '*.zip' '*.dmg' '*.pkg' '*.apk' '*.ipa' '*.tar' '*.tgz' '*.gz' \
   '*.bz2' '*.xz' '*.7z' '*.rar' \
   '*.o' '*.a' '*.dylib' '*.so' '*.lock' '*.lockfile' '*.af~lock~' \

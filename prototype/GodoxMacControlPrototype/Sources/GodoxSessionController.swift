@@ -1215,6 +1215,14 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         return "Espera a que termine la operación actual"
     }
 
+    var testHelpMessage: String {
+        if isSimulation { return "mock.testHelp" }
+        if !multiFlashGroups.isEmpty, testBlockReason == nil {
+            return "Ejecuta la secuencia Multi aplicada en los grupos activos; Bluetooth no confirma cuántos destellos ocurrieron"
+        }
+        return testBlockReason ?? "menubar.testHelp"
+    }
+
     func powerIndex(for group: GodoxGroup) -> Int {
         guard let power = groups[group]?.draft.power else { return 0 }
         guard let minimum = resolvedCapability(for: group).minimumManualDenominator else {
