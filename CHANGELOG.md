@@ -2,7 +2,7 @@
 
 Todos los cambios relevantes de Estrobo se documentan aquí. Mientras el proyecto esté en beta, las interfaces y la matriz de compatibilidad pueden cambiar entre prereleases.
 
-## 0.1.0-beta.4 — candidato sin publicar
+## 0.1.0-beta.4 — 2026-08-28
 
 ### Añadido
 
@@ -40,10 +40,10 @@ Todos los cambios relevantes de Estrobo se documentan aquí. Mientras el proyect
 
 ### Distribución
 
-- Versión `0.1.0`, build `4`, tag previsto `v0.1.0-beta.4`.
-- El candidato universal conserva App Sandbox, Hardened Runtime y únicamente el
-  entitlement Bluetooth; el release sólo puede publicarse después de firma
-  Developer ID, notarización, Gatekeeper y smoke del asset exacto.
+- Versión `0.1.0`, build `4`, tag `v0.1.0-beta.4`.
+- El release universal conserva App Sandbox, Hardened Runtime y únicamente el
+  entitlement Bluetooth. Su app y DMG exactos están firmados con Developer ID,
+  notarizados, engrapados y aceptados por Gatekeeper.
 - Notas públicas bilingües y manifiesto/checksums del artefacto exacto como
   fuentes de instalación y verificación.
 

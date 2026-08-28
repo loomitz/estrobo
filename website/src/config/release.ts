@@ -1,5 +1,5 @@
 const repositoryUrl = "https://github.com/loomitz/estrobo";
-const version = "0.1.0-beta.3";
+const version = "0.1.0-beta.4";
 const tag = `v${version}`;
 
 export const release = {

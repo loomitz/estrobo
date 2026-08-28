@@ -13,7 +13,7 @@
 Estrobo reúne los controles de disparadores de flash Godox compatibles en un espacio de trabajo enfocado para Mac. Organiza grupos y ajusta potencia, modo, luz de modelado y controles globales sin cuenta, backend, analítica ni telemetría.
 
 > [!IMPORTANT]
-> La beta pública `0.1.0-beta.3` sigue siendo la descarga vigente. `0.1.0-beta.4` es un candidato y no será un build oficial hasta que su DMG universal exacto esté firmado con Apple Developer ID, notarizado y engrapado por Apple, aceptado por Gatekeeper y publicado como prerelease de GitHub después de los smokes requeridos en Macs limpios y con hardware.
+> La beta pública `0.1.0-beta.4` es la descarga vigente. Su DMG universal exacto y la app incluida están firmados con Apple Developer ID, notarizados y engrapados por Apple, y aceptados por Gatekeeper.
 
 ![Vista Canales de Estrobo en modo simulado](prototype/GodoxMacControlPrototype/QA/channels-after-dark-final-es.png)
 
@@ -44,13 +44,9 @@ Esta es la única matriz de hardware utilizada en pruebas físicas hasta ahora; 
 
 ### Beta pública vigente
 
-Descarga `estrobo-v0.1.0-beta.3-macos-universal.dmg`, `SHA256SUMS` y `estrobo-v0.1.0-beta.3-manifest.json` desde el [GitHub Release oficial `0.1.0-beta.3`](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.3).
+Descarga `estrobo-v0.1.0-beta.4-macos-universal.dmg`, `SHA256SUMS` y `estrobo-v0.1.0-beta.4-manifest.json` desde el [GitHub Release oficial `0.1.0-beta.4`](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.4).
 
-### Beta 4 después de su publicación
-
-Cuando exista el prerelease, descarga `estrobo-v0.1.0-beta.4-macos-universal.dmg`, `SHA256SUMS` y `estrobo-v0.1.0-beta.4-manifest.json` desde el [GitHub Release oficial `0.1.0-beta.4`](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.4). Si esa página o alguno de esos assets no existe, todavía no hay un build oficial de beta 4.
-
-Para cualquiera de las versiones, conserva juntos sus tres archivos en Descargas, nunca mezcles assets entre releases y no uses builds publicados en issues ni enlaces de terceros.
+Conserva juntos los tres archivos en Descargas, nunca mezcles assets entre releases y no uses builds publicados en issues ni enlaces de terceros.
 
 1. Abre Terminal y verifica los archivos del release antes de montar la imagen:
 
@@ -63,9 +59,9 @@ Para cualquiera de las versiones, conserva juntos sus tres archivos en Descargas
 2. Haz doble clic en el DMG. En la ventana que se abre, arrastra `estrobo.app` sobre la carpeta **Applications**.
 3. Expulsa la imagen de disco de Estrobo y abre la app desde Aplicaciones. Confirma el aviso normal de macOS para una app descargada si aparece y concede acceso a Bluetooth cuando se solicite.
 
-Después de la publicación, tanto el DMG oficial de beta 4 como la app que contiene deben estar firmados y notarizados. Si macOS indica que no puede verificar al desarrollador, no eludas Gatekeeper: elimina esa copia, verifica `SHA256SUMS` y vuelve a descargar el asset desde el prerelease oficial.
+Tanto el DMG oficial de beta 4 como la app que contiene están firmados y notarizados. Si macOS indica que no puede verificar al desarrollador, no eludas Gatekeeper: elimina esa copia, verifica `SHA256SUMS` y vuelve a descargar el asset desde el prerelease oficial.
 
-> **Estado del release:** `0.1.0-beta.4` es el candidato documentado abajo. Mientras no existan su prerelease y sus assets de checksum, `0.1.0-beta.3` sigue siendo la beta pública vigente.
+> **Estado del release:** `0.1.0-beta.4` es la beta pública vigente. Los assets publicados son inmutables; verifica los tres archivos del mismo prerelease de GitHub.
 
 ## Inicio rápido
 

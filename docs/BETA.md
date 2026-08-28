@@ -1,6 +1,6 @@
 # Beta pública limitada
 
-Estrobo `0.1.0-beta.4` es un candidato para una prueba pública acotada de instalación, actualización, interfaz, controles de barra de menús, Multi global y compatibilidad física en una matriz pequeña de Macs, transmisores, flashes y firmware. No es una afirmación de compatibilidad general con la línea Godox. Mientras no exista su prerelease público con los assets exactos, `0.1.0-beta.3` sigue siendo la beta pública vigente.
+Estrobo `0.1.0-beta.4` es la beta pública vigente para una prueba acotada de instalación, actualización, interfaz, controles de barra de menús, Multi global y compatibilidad física en una matriz pequeña de Macs, transmisores, flashes y firmware. No es una afirmación de compatibilidad general con la línea Godox.
 
 ## Antes de participar
 
@@ -12,13 +12,11 @@ Estrobo `0.1.0-beta.4` es un candidato para una prueba pública acotada de insta
 - Test puede disparar los grupos que estén activos en el transmisor. Úsalo sólo cuando el entorno físico sea seguro.
 - No uses un PIN personal como Código del radio. El protocolo lo transmite por BLE y no ofrece autenticación fuerte.
 
-El candidato sólo podrá publicarse después de que su DMG exacto esté firmado con Apple Developer ID, notarizado y engrapado por Apple, y aceptado por Gatekeeper. Eso permitirá verificar su procedencia e integridad, pero no convertirá la matriz limitada de hardware en compatibilidad comercial garantizada.
+El DMG público exacto y la app incluida están firmados con Apple Developer ID, notarizados y engrapados por Apple, y aceptados por Gatekeeper. Eso permite verificar su procedencia e integridad, pero no convierte la matriz limitada de hardware en compatibilidad comercial garantizada.
 
 ## Descarga e integridad
 
-Mientras beta 3 siga siendo la versión pública, descarga sus tres assets exactos desde el [release oficial `v0.1.0-beta.3`](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.3) y usa las instrucciones versionadas de ese release. No mezcles checksums ni manifiestos entre versiones.
-
-Cuando beta 4 esté publicada, usa únicamente estos assets de su prerelease en GitHub Releases:
+Usa únicamente estos assets del [prerelease oficial `v0.1.0-beta.4`](https://github.com/loomitz/estrobo/releases/tag/v0.1.0-beta.4):
 
 - `estrobo-v0.1.0-beta.4-macos-universal.dmg`;
 - `SHA256SUMS`;
@@ -33,7 +31,7 @@ shasum -a 256 -c SHA256SUMS
 
 El DMG y el manifiesto deben mostrar `OK`. Si alguno falla, no abras la app.
 
-El candidato debe usar el certificado **Developer ID Application** del equipo `XG96FAV89U`, Hardened Runtime y un sello de tiempo seguro. El certificado público DER está en `release/signing/estrobo-developer-id-application.cer` y el SHA-256 de esos bytes en `release/signing/estrobo-developer-id-application.sha256`. Antes de publicarlo, Apple debe aceptar la notarización y el ticket debe quedar adjunto tanto a la app como al DMG para verificación incluso sin conexión. Los archivos `estrobo-beta-signing.*` se conservan sólo como identidad histórica de `beta.1` y `beta.2`.
+El release usa el certificado **Developer ID Application** del equipo `XG96FAV89U`, Hardened Runtime y un sello de tiempo seguro. El certificado público DER está en `release/signing/estrobo-developer-id-application.cer` y el SHA-256 de esos bytes en `release/signing/estrobo-developer-id-application.sha256`. Apple aceptó la notarización y el ticket está adjunto tanto a la app como al DMG para verificación incluso sin conexión. Los archivos `estrobo-beta-signing.*` se conservan sólo como identidad histórica de `beta.1` y `beta.2`.
 
 ## Instalar y abrir
 
@@ -42,7 +40,7 @@ El candidato debe usar el certificado **Developer ID Application** del equipo `X
 3. Expulsa la imagen de disco y abre Estrobo desde Aplicaciones.
 4. Confirma el aviso normal de app descargada si macOS lo presenta y concede acceso a Bluetooth cuando se solicite.
 
-Una vez publicado, Gatekeeper debe aceptar el DMG de beta 4 y la app como `Notarized Developer ID`; **Abrir de todos modos** no forma parte de esta instalación. Si macOS dice que no puede verificar al desarrollador, no retires la cuarentena ni desactives Gatekeeper: elimina esa copia y vuelve a descargar el asset oficial.
+Gatekeeper debe aceptar el DMG de beta 4 y la app como `Notarized Developer ID`; **Abrir de todos modos** no forma parte de esta instalación. Si macOS dice que no puede verificar al desarrollador, no retires la cuarentena ni desactives Gatekeeper: elimina esa copia y vuelve a descargar el asset oficial.
 
 ## Identidad local y actualización
 
@@ -87,9 +85,14 @@ Con hardware, sigue únicamente el gate manual coordinado del [Checklist de rele
 
 ## Estado del release
 
-El proceso de beta 4 prepara primero un release **draft** con el DMG exacto firmado y notarizado. Debe permanecer en draft hasta cerrar CI por arquitectura, checksums, firma, notarización, los smokes aplicables y la autorización humana del tag exacto. Sólo entonces puede publicarse como **prerelease** inmutable. Hasta ese momento es un candidato, no una versión publicada, y nunca deben sustituirse assets después de publicar.
+Beta 4 es un **prerelease** público e inmutable. Antes de publicarlo se cerraron
+los gates de distribución del artefacto exacto: CI por arquitectura, checksums,
+firma, notarización, verificación en Macs limpios y autorización del tag. Las
+capacidades que no alcanzaron validación física u óptica continúan identificadas
+como tales arriba; el estado del release no amplía esa matriz. Sus assets nunca
+deben sustituirse: cualquier corrección requiere una versión nueva.
 
-Las notas canónicas del candidato en inglés están en [releases/v0.1.0-beta.4.md](releases/v0.1.0-beta.4.md) y su traducción en [releases/v0.1.0-beta.4.es.md](releases/v0.1.0-beta.4.es.md).
+Las notas canónicas del release en inglés están en [releases/v0.1.0-beta.4.md](releases/v0.1.0-beta.4.md) y su traducción en [releases/v0.1.0-beta.4.es.md](releases/v0.1.0-beta.4.es.md).
 
 ## Comentarios y reportes
 
