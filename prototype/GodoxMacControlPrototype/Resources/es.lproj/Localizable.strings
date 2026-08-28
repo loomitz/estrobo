@@ -834,11 +834,16 @@
 "menubar.quitShort" = "Salir";
 "menubar.standby" = "Standby activo · reanuda los grupos desde Estrobo para editarlos";
 "menubar.applying" = "Aplicando cambios…";
+"menubar.updatingSettings" = "Actualizando ajustes…";
 "menubar.automaticPending" = "Envío automático pendiente";
 "menubar.pendingOne" = "1 cambio pendiente";
 "menubar.pendingMany" = "%lld cambios pendientes";
 "menubar.reviewPending" = "Revisa los cambios pendientes en Estrobo";
 "menubar.apply" = "Aplicar";
+"menubar.test" = "Test";
+"menubar.testSending" = "Enviando";
+"menubar.testAccessibility" = "Disparo Test global";
+"menubar.testHelp" = "Dispara todos los grupos activos con los ajustes aplicados; Bluetooth no confirma el destello";
 "menubar.pending" = "PENDIENTE";
 "menubar.locked" = "BLOQUEADO";
 "menubar.decreaseGroup" = "Bajar un tercio EV en el grupo %@";

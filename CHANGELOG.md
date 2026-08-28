@@ -8,6 +8,8 @@ Todos los cambios relevantes de Estrobo se documentan aquí. Mientras el proyect
 
 - Control compacto opcional desde la barra de menús para encender o apagar los
   grupos visibles y ajustar su potencia Manual sin abrir el workspace.
+- Botón Test global en el panel compacto, sujeto a los mismos bloqueos de
+  sesión y entrega segura que la app completa.
 - Preferencia persistente para ocultar el icono de la barra de menús y
   recuperarlo desde Configuración.
 - Comprobación aislada de arranque y respuesta a eventos de activación en modo
@@ -18,6 +20,8 @@ Todos los cambios relevantes de Estrobo se documentan aquí. Mientras el proyect
 
 ### Cambiado
 
+- Los cambios del panel compacto muestran un único estado global y discreto en
+  lugar de repetir el aviso en cada grupo.
 - La conexión vuelve a declarar explícitamente que Estrobo sobrescribe A0/A1
   desde el estado local y no importa el estado previo del radio.
 - El sitio usa Astro `7.2.6` y un árbol de dependencias sin avisos conocidos de

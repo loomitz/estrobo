@@ -54,8 +54,12 @@ struct MenuBarControlView: View {
             }
 
             Text(connectionLabel)
-                .font(.callout.weight(.semibold))
-                .foregroundStyle(PrototypePalette.primaryText)
+                .font(controller.isSynchronizingValues ? .caption : .callout.weight(.semibold))
+                .foregroundStyle(
+                    controller.isSynchronizingValues
+                        ? PrototypePalette.secondaryText
+                        : PrototypePalette.primaryText
+                )
                 .lineLimit(1)
         }
         .padding(.horizontal, MenuBarLayout.rowHorizontalPadding)
@@ -142,6 +146,36 @@ struct MenuBarControlView: View {
                         .foregroundStyle(PrototypePalette.accent)
                 }
 
+                Button {
+                    controller.sendTestFlash()
+                } label: {
+                    HStack(spacing: 5) {
+                        if controller.isTestPending {
+                            ProgressView()
+                                .controlSize(.mini)
+                                .accessibilityHidden(true)
+                        } else {
+                            Image(systemName: "bolt.fill")
+                        }
+
+                        Text(languageStore.language.localized("menubar.test"))
+                    }
+                    .font(.caption.weight(.semibold))
+                    .frame(minWidth: 56)
+                    .fixedSize(horizontal: true, vertical: false)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(PrototypePalette.accent)
+                .disabled(!controller.canSendTest)
+                .help(testHelp)
+                .menuBarAccessibleButton(MenuBarAccessibilityDescriptors.test(
+                    isPending: controller.isTestPending,
+                    isEnabled: controller.canSendTest,
+                    hint: testHelp,
+                    language: languageStore.language
+                ))
+
                 Rectangle()
                     .fill(PrototypePalette.divider)
                     .frame(width: 1, height: 24)
@@ -167,20 +201,20 @@ struct MenuBarControlView: View {
     }
 
     private var pendingControls: some View {
-        HStack(spacing: 9) {
-            if controller.phase == .applying || controller.isAutomaticApplyScheduled {
+        HStack(spacing: 8) {
+            if isGlobalUpdateInProgress {
                 ProgressView()
                     .controlSize(.mini)
                     .accessibilityHidden(true)
             } else {
                 Circle()
                     .fill(PrototypePalette.warning)
-                    .frame(width: 7, height: 7)
+                    .frame(width: 5, height: 5)
                     .accessibilityHidden(true)
             }
 
             Text(pendingLabel)
-                .font(.caption.weight(.semibold))
+                .font(.caption)
                 .foregroundStyle(PrototypePalette.secondaryText)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -281,11 +315,11 @@ struct MenuBarControlView: View {
     }
 
     private var pendingLabel: String {
+        if isGlobalUpdateInProgress {
+            return languageStore.language.localized("menubar.updatingSettings")
+        }
         if !canManagePendingChangesFromMenuBar {
             return languageStore.language.localized("menubar.reviewPending")
-        }
-        if controller.phase == .applying {
-            return languageStore.language.localized("menubar.applying")
         }
         if controller.changeDeliveryMode == .automatic {
             return languageStore.language.localized("menubar.automaticPending")
@@ -294,6 +328,25 @@ struct MenuBarControlView: View {
             controller.pendingCount,
             language: languageStore.language
         )
+    }
+
+    private var isGlobalUpdateInProgress: Bool {
+        controller.phase == .applying || controller.isAutomaticApplyScheduled
+    }
+
+    private var testHelp: String {
+        if controller.isSimulation {
+            return languageStore.language.localized("mock.testHelp")
+        }
+        if !controller.multiFlashGroups.isEmpty, controller.testBlockReason == nil {
+            return languageStore.language.localized(
+                "Ejecuta la secuencia Multi aplicada en los grupos activos; Bluetooth no confirma cuántos destellos ocurrieron"
+            )
+        }
+        if let testBlockReason = controller.testBlockReason {
+            return languageStore.language.localizedMessage(testBlockReason)
+        }
+        return languageStore.language.localized("menubar.testHelp")
     }
 
     /// Applying from a compact surface is safe only when every pending field is
@@ -460,7 +513,6 @@ private struct MenuBarPowerRow: View {
             MenuBarGroupControl(
                 group: group,
                 isOn: isOn,
-                isPending: state.hasPendingChange,
                 accessibility: groupAccessibility
             ) {
                 controller.setDraftRadioEnabled(group, enabled: !isOn)
@@ -529,21 +581,10 @@ private struct MenuBarPowerRow: View {
                     }
                     .help(languageStore.language.localized("menubar.choosePower"))
 
-                    HStack(spacing: 5) {
-                        Text(verbatim: state.draft.operatingMode.label)
-                            .font(.caption2.weight(.bold))
-
-                        if state.hasPendingChange {
-                            Text(languageStore.language.localized("menubar.pending"))
-                                .font(.caption2.weight(.semibold))
-                        }
-                    }
-                    .foregroundStyle(
-                        state.hasPendingChange
-                            ? PrototypePalette.warning
-                            : PrototypePalette.secondaryText
-                    )
-                    .accessibilityHidden(true)
+                    Text(verbatim: state.draft.operatingMode.label)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(PrototypePalette.secondaryText)
+                        .accessibilityHidden(true)
                 }
                 .frame(width: MenuBarLayout.powerReadoutWidth, alignment: .center)
             }
@@ -579,9 +620,6 @@ private struct MenuBarPowerRow: View {
 
     private func accessibilityValue(state: GroupDraft, canEdit: Bool) -> String {
         var components = [state.draft.operatingMode.label, state.draft.power.label]
-        if state.hasPendingChange {
-            components.append(languageStore.language.localized("menubar.pending"))
-        }
         if !canEdit {
             components.append(languageStore.language.localized("menubar.locked"))
         }
@@ -604,7 +642,6 @@ private struct MenuBarPowerRow: View {
 private struct MenuBarGroupControl: View {
     let group: GodoxGroup
     let isOn: Bool
-    let isPending: Bool
     let accessibility: MenuBarAccessibilityDescriptor
     let action: () -> Void
     @State private var isHovering = false
@@ -614,7 +651,6 @@ private struct MenuBarGroupControl: View {
             MenuBarGroupBadge(
                 group: group,
                 isOn: isOn,
-                isPending: isPending,
                 isHovering: isHovering && accessibility.isEnabled
             )
         }
@@ -632,7 +668,6 @@ private struct MenuBarGroupControl: View {
 private struct MenuBarGroupBadge: View {
     let group: GodoxGroup
     let isOn: Bool
-    let isPending: Bool
     let isHovering: Bool
 
     var body: some View {
@@ -663,18 +698,6 @@ private struct MenuBarGroupBadge: View {
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(badgeForeground(identity: identity))
                 .padding(5)
-        }
-        .overlay(alignment: .topTrailing) {
-            if isPending {
-                Circle()
-                    .fill(PrototypePalette.warning)
-                    .overlay {
-                        Circle()
-                            .stroke(PrototypePalette.windowBackground, lineWidth: 1.5)
-                    }
-                    .frame(width: 8, height: 8)
-                    .offset(x: 3, y: -3)
-            }
         }
         .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .accessibilityHidden(true)
@@ -831,6 +854,23 @@ enum MenuBarAccessibilityDescriptors {
     ) -> MenuBarAccessibilityDescriptor {
         MenuBarAccessibilityDescriptor(
             label: language.localizedString("menubar.openApp", bundle: bundle)
+        )
+    }
+
+    static func test(
+        isPending: Bool,
+        isEnabled: Bool,
+        hint: String,
+        language: AppLanguage,
+        bundle: Bundle = .main
+    ) -> MenuBarAccessibilityDescriptor {
+        MenuBarAccessibilityDescriptor(
+            label: language.localizedString("menubar.testAccessibility", bundle: bundle),
+            value: isPending
+                ? language.localizedString("menubar.testSending", bundle: bundle)
+                : "",
+            hint: hint,
+            isEnabled: isEnabled
         )
     }
 

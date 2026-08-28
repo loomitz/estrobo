@@ -193,12 +193,50 @@ enum MenuBarAccessibilityCheck {
             MenuBarAccessibilityDescriptors.openApp(
                 language: language,
                 bundle: resourceBundle
-            ).label == "Abrir Estrobo" &&
+            ).label == "Abrir Estrobo",
+            "The Open Estrobo footer action must preserve its localized label"
+        )
+
+        let enabledTestDescriptor = MenuBarAccessibilityDescriptors.test(
+            isPending: false,
+            isEnabled: true,
+            hint: "Dispara todos los grupos activos con los ajustes aplicados; Bluetooth no confirma el destello",
+            language: language,
+            bundle: resourceBundle
+        )
+        expect(
+            enabledTestDescriptor == MenuBarAccessibilityDescriptor(
+                label: "Disparo Test global",
+                value: "",
+                hint: "Dispara todos los grupos activos con los ajustes aplicados; Bluetooth no confirma el destello",
+                isEnabled: true
+            ),
+            "The enabled global Test descriptor must expose one stable identity and its safety help"
+        )
+
+        let pendingTestDescriptor = MenuBarAccessibilityDescriptors.test(
+            isPending: true,
+            isEnabled: false,
+            hint: "La orden Test se está entregando al radio",
+            language: language,
+            bundle: resourceBundle
+        )
+        expect(
+            pendingTestDescriptor == MenuBarAccessibilityDescriptor(
+                label: "Disparo Test global",
+                value: "Enviando",
+                hint: "La orden Test se está entregando al radio",
+                isEnabled: false
+            ),
+            "The global Test descriptor must expose its localized delivery state and blocking reason"
+        )
+
+        expect(
                 MenuBarAccessibilityDescriptors.quit(
                     language: language,
                     bundle: resourceBundle
                 ).label == "Salir de Estrobo",
-            "The footer actions must preserve their localized labels"
+            "The Quit footer action must preserve its localized label"
         )
 
         expect(
@@ -322,7 +360,7 @@ enum MenuBarAccessibilityCheck {
         }
         let controlCount = source.components(separatedBy: ".menuBarAccessibleButton(").count - 1
         expect(
-            controlCount == 6,
+            controlCount == 7,
             "Every compact button family must use the shared accessibility modifier; found \(controlCount) call sites"
         )
         for fragment in [
