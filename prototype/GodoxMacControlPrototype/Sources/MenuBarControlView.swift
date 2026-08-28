@@ -147,7 +147,10 @@ struct MenuBarControlView: View {
                 }
 
                 Button {
-                    controller.sendTestFlash()
+                    MenuBarAccessibilityActions.sendTest(
+                        controller: controller,
+                        enabled: controller.canSendTest
+                    )
                 } label: {
                     HStack(spacing: 5) {
                         if controller.isTestPending {
@@ -335,18 +338,7 @@ struct MenuBarControlView: View {
     }
 
     private var testHelp: String {
-        if controller.isSimulation {
-            return languageStore.language.localized("mock.testHelp")
-        }
-        if !controller.multiFlashGroups.isEmpty, controller.testBlockReason == nil {
-            return languageStore.language.localized(
-                "Ejecuta la secuencia Multi aplicada en los grupos activos; Bluetooth no confirma cuántos destellos ocurrieron"
-            )
-        }
-        if let testBlockReason = controller.testBlockReason {
-            return languageStore.language.localizedMessage(testBlockReason)
-        }
-        return languageStore.language.localized("menubar.testHelp")
+        languageStore.language.localizedMessage(controller.testHelpMessage)
     }
 
     /// Applying from a compact surface is safe only when every pending field is
@@ -921,6 +913,14 @@ enum MenuBarLayout {
 
 @MainActor
 enum MenuBarAccessibilityActions {
+    static func sendTest(
+        controller: GodoxSessionController,
+        enabled: Bool
+    ) {
+        guard enabled else { return }
+        controller.sendTestFlash()
+    }
+
     static func adjustPower(
         _ direction: AccessibilityAdjustmentDirection,
         controller: GodoxSessionController,

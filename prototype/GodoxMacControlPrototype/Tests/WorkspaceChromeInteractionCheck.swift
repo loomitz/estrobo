@@ -66,10 +66,11 @@ enum WorkspaceChromeInteractionCheck {
                 menuBarSource.contains("controller.discardPendingChanges()") &&
                 menuBarSource.contains("controller.applyPendingChanges()") &&
                 menuBarSource.contains("controller.sendTestFlash()") &&
+                menuBarSource.contains("MenuBarAccessibilityActions.sendTest(") &&
                 menuBarSource.contains(".disabled(!controller.canSendTest)") &&
                 menuBarSource.components(separatedBy: "controller.sendTestFlash()").count - 1 == 1 &&
                 menuBarSource.contains("controller.isTestPending") &&
-                menuBarSource.contains("controller.testBlockReason") &&
+                menuBarSource.contains("controller.testHelpMessage") &&
                 menuBarSource.contains("controller.isSynchronizingValues") &&
                 !menuBarSource.contains("controller.applySequenceStatus") &&
                 menuBarSource.contains("canManagePendingChangesFromMenuBar") &&

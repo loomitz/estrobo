@@ -32,6 +32,34 @@ enum MenuBarAccessibilityCheck {
             "The accessibility fixture must reach Ready; \(phaseDiagnostic(controller))"
         )
 
+        MenuBarAccessibilityActions.sendTest(
+            controller: controller,
+            enabled: false
+        )
+        expect(
+            !controller.isTestPending,
+            "A disabled Menu Bar Test action must not reach the controller"
+        )
+        MenuBarAccessibilityActions.sendTest(
+            controller: controller,
+            enabled: true
+        )
+        expect(
+            controller.isTestPending,
+            "The enabled Menu Bar Test action must delegate to the shared guarded controller path"
+        )
+        let testDeliveryCompleted = await pumpUntil(timeout: 2) {
+            !controller.isTestPending
+        }
+        expect(
+            testDeliveryCompleted,
+            "The simulated Menu Bar Test delivery must complete without Bluetooth hardware"
+        )
+        expect(
+            controller.testHelpMessage == "mock.testHelp",
+            "The Menu Bar and main window must share the same Test-help semantics"
+        )
+
         let baselinePower = controller.groupDraft(.b).draft.power
         MenuBarAccessibilityActions.adjustPower(
             .increment,
