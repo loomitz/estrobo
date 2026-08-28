@@ -2,7 +2,7 @@
 
 Todos los cambios relevantes de Estrobo se documentan aquí. Mientras el proyecto esté en beta, las interfaces y la matriz de compatibilidad pueden cambiar entre prereleases.
 
-## 0.1.0-beta.4 — 2026-08-25
+## 0.1.0-beta.4 — 2026-08-28
 
 ### Añadido
 
