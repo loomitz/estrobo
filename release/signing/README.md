@@ -17,7 +17,14 @@ The legacy workflow is restricted to an ephemeral GitHub-hosted signing runner. 
 
 Participants must not install or trust this certificate. For this lane, `codesign --verify` must pass and Gatekeeper rejection is expected.
 
-## Developer ID candidate lane
+## Developer ID candidate lanes
+
+Developer ID has two supported execution lanes. Both pin the same Apple certificate, build the same universal app, require a secure timestamp, submit each artifact at most once, preserve Apple evidence, and stop before publication. They differ only in where private credentials are used:
+
+- the GitHub Actions lane imports a P12 and Team API key into an ephemeral hosted runner;
+- the single-maintainer local lane uses the Developer ID identity and validated `notarytool` profile already stored in that maintainer's macOS Keychain.
+
+The local lane is an explicit single-maintainer exception: self-approval is not represented as independent review. It compensates with exact-source verification, owner-only non-reusable evidence directories, submit-once/resume guards, CI on both architectures, draft re-download verification, and a separate final authorization tied to the exact tag, commit, and DMG checksum.
 
 `.github/workflows/developer-id-candidate.yml` is a manual, encrypted-candidate workflow. It has read-only repository permissions, runs only from a commit contained in protected `main`, and has no job capable of creating, editing, or publishing a GitHub Release. Because this repository is public, every Actions artifact from this lane is ciphertext plus its SHA-256 checksum; the workflow must never upload a raw app, package, notarization log, or transfer directory.
 
@@ -25,6 +32,8 @@ The Apple Developer membership and identity now exist. These public pinning file
 
 - `estrobo-developer-id-application.cer`: the Apple-issued **Developer ID Application** leaf certificate in DER format.
 - `estrobo-developer-id-application.sha256`: the SHA-256 digest of those exact DER bytes.
+
+### GitHub Actions API-key lane
 
 Configure these repository variables:
 
@@ -110,6 +119,91 @@ unset CANDIDATE_ARTIFACT_PASSWORD
 ```
 
 Run this only on the clean smoke-test Mac. The extracted `DistDeveloperID` directory remains a candidate until every promotion gate below passes.
+
+### Single-maintainer local Keychain lane
+
+This lane is used only when the repository has one maintainer and the release decision explicitly accepts self-approval. It does not require a `.p8` or P12 export: code signing uses the Developer ID private identity already in the local Keychain, and notarization authenticates with `NOTARY_KEYCHAIN_PROFILE`. The Apple ID, app-specific password, profile value, private key, P12, and API credentials must never enter the repository, command output, evidence, manifest, or release assets.
+
+The app notarizer accepts exactly one authentication mode: `NOTARY_KEYCHAIN_PROFILE`, or the complete API-key triple. Missing, partial, or mixed authentication fails before creating an upload. Use a fresh evidence directory outside the repository; it must not already exist and is created owner-only. A second fresh invocation against that directory fails before `submit`. After a timeout, resume only with the exact preserved ZIP, submit result, and matching Submission ID; resume never executes another submission and archives earlier wait/log results instead of overwriting them.
+
+From a clean checkout of `origin/main`, keep the real Keychain profile and signing identity only in the invoking shell. Prepare durable private evidence outside the repository; the two leaf directories must not exist before their fresh submissions:
+
+```sh
+export VERSION=0.1.0
+export BUILD_NUMBER=4
+export TAG=v0.1.0-beta.4
+export DEVELOPER_ID_TEAM_ID=XG96FAV89U
+export DEVELOPER_ID_SIGNING_IDENTITY
+export DEVELOPER_ID_SIGNING_KEYCHAIN
+export NOTARY_KEYCHAIN_PROFILE
+
+release_private_root="$HOME/Library/Application Support/Estrobo/Release/$TAG"
+app_evidence="$release_private_root/app-notarization"
+dmg_evidence="$release_private_root/dmg-notarization"
+test -n "$DEVELOPER_ID_SIGNING_IDENTITY"
+test -n "$NOTARY_KEYCHAIN_PROFILE"
+test ! -e "$app_evidence"
+test ! -e "$dmg_evidence"
+mkdir -p "$release_private_root"
+
+export NOTARIZATION_UPLOAD_ARCHIVE="$app_evidence/notary-upload.zip"
+export NOTARIZATION_SUBMIT_RESULT="$app_evidence/notary-submit.json"
+export NOTARIZATION_WAIT_RESULT="$app_evidence/notary-wait.json"
+export NOTARIZATION_LOG="$app_evidence/notary-log.json"
+export NOTARIZATION_METADATA="$app_evidence/notarization-metadata.json"
+export DMG_EVIDENCE_DIR="$dmg_evidence"
+
+make mac-prototype-developer-id-local-release
+make mac-prototype-developer-id-local-notarize-existing
+```
+
+If app notarization times out after returning an ID, preserve every byte and resume the same request; never rerun the fresh target:
+
+```sh
+NOTARY_SUBMISSION_ID='<existing-app-submission-id>' \
+  make mac-prototype-developer-id-local-resume-notarization-existing
+```
+
+After the app is accepted and stapled, derive the commit from the verified checkout and create the separately notarized DMG. A DMG timeout resumes its own distinct ID:
+
+```sh
+commit="$(git rev-parse --verify 'HEAD^{commit}')"
+COMMIT="$commit" make mac-prototype-developer-id-dmg-create-existing
+
+DMG_NOTARY_SUBMISSION_ID='<existing-dmg-submission-id>' COMMIT="$commit" \
+  make mac-prototype-developer-id-dmg-resume-existing
+
+COMMIT="$commit" make mac-prototype-developer-id-dmg-verify-existing
+```
+
+Upload only the DMG, schema-3 manifest, and `SHA256SUMS` to a draft. Download and verify that exact tuple before physical smoke. Only after the exact DMG passes the required clean-host, update, and Bluetooth smokes may the sole maintainer record and re-verify self-approval:
+
+```sh
+dmg="Dist/estrobo-$TAG-macos-universal.dmg"
+dmg_sha="$(shasum -a 256 "$dmg" | awk '{ print tolower($1) }')"
+
+APPROVED_TAG="$TAG" APPROVED_COMMIT="$commit" \
+APPROVED_DMG_SHA256="$dmg_sha" PHYSICAL_SMOKE_STATUS=passed COMMIT="$commit" \
+  make mac-prototype-developer-id-local-approval-finalize
+
+APPROVED_TAG="$TAG" APPROVED_COMMIT="$commit" \
+APPROVED_DMG_SHA256="$dmg_sha" PHYSICAL_SMOKE_STATUS=passed COMMIT="$commit" \
+  make mac-prototype-developer-id-local-approval-verify
+```
+
+Final approval updates only the manifest and `SHA256SUMS`; publication remains a separate explicit action. Replace those two draft assets, download the three assets again, run the read-only approval verification, and only then publish the prerelease.
+
+Before building an official local candidate, require all of the following:
+
+1. fetch `origin`, prove the worktree is clean and `HEAD == origin/main`, and prove the proposed tag is absent locally and remotely;
+2. require successful ARM and Intel CI checks for that exact commit;
+3. build, sign, and verify the universal app from that exact checkout;
+4. submit and staple the app once, preserving private evidence outside the repository;
+5. create the public DMG from that exact stapled app, sign it once, and use a second independent notarization request with its own evidence and resume guard;
+6. publish only DMG, schema-3 manifest, and `SHA256SUMS` to a draft; re-download and verify those exact bytes;
+7. complete clean-host, update, and physical smokes, then record a new self-approval tied to the exact tag, commit, and final DMG SHA-256 before publishing.
+
+Authorization to use this lane is not authorization to publish an artifact whose final digest and smoke results are not yet known. The GitHub Actions API-key lane remains available and must not be weakened by local-lane changes.
 
 ## Promotion and public DMG
 

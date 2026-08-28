@@ -1,6 +1,6 @@
 # Checklist de release beta
 
-Este checklist es un gate, no una guía opcional. Un release permanece **draft** mientras cualquier punto aplicable esté pendiente. Nunca se publica con CI fallando, una slice ausente o sin smoke físico/limpio requerido. Desde `beta.3`, el contrato público es Developer ID + notarización + DMG; el carril autosignado queda congelado para las betas 1 y 2 históricas. El workflow Developer ID de Actions produce candidatos cifrados, no publica por sí mismo.
+Este checklist es un gate, no una guía opcional. Un release permanece **draft** mientras cualquier punto aplicable esté pendiente. Nunca se publica con CI fallando, una slice ausente o sin smoke físico/limpio requerido. Desde `beta.3`, el contrato público es Developer ID + notarización + DMG; el carril autosignado queda congelado para las betas 1 y 2 históricas. Developer ID puede ejecutarse mediante el workflow cifrado de Actions o mediante la excepción local documentada para un único mantenedor; ninguno publica por sí mismo.
 
 ## 1. Preparación de versión
 
@@ -79,20 +79,29 @@ codesign -dvv "$APP"
 
 Un candidato aprobado aquí sigue sin ser un release hasta completar el DMG, los smokes y la autorización de publicación.
 
-- [ ] El workflow manual parte de un commit contenido en `origin/main`, sin crear ni requerir un tag.
+- [ ] En el carril local, el candidato parte de un checkout limpio cuyo `HEAD` coincide exactamente con `origin/main`; en Actions, el SHA seleccionado debe estar contenido en `origin/main` y conservar sus checks exactos. El tag propuesto aún no existe local ni remotamente.
 - [ ] El certificado público Apple y su digest están versionados bajo nombres nuevos; los archivos históricos autosignados no cambiaron.
 - [ ] El certificado encadena a Apple, su `OU` coincide con `ESTROBO_APPLE_TEAM_ID` y su digest coincide también con la variable protegida.
 - [ ] El bundle se firma como `Developer ID Application` con Hardened Runtime y `Timestamp=` seguro; `Signed Time` por sí solo no satisface el gate.
 - [ ] `TeamIdentifier`, certificado leaf, bundle ID, versión, build, ambas slices y macOS mínimo coinciden exactamente.
 - [ ] Los entitlements efectivos son exclusivamente App Sandbox + Bluetooth; no contienen red, `get-task-allow` ni excepciones de Hardened Runtime.
 - [ ] El ZIP temporal de notarización se envía una sola vez; se conserva el Submission ID y un timeout nunca dispara un reenvío automático.
-- [ ] Un timeout conserva cifrados el ZIP exacto enviado y el submit result; el target de recuperación reanuda el mismo Submission ID sin ejecutar otro `submit`.
-- [ ] El job de firma sólo acepta `github.run_attempt == 1`; un fallo posterior a submit se recupera por Submission ID, nunca mediante rerun del job ni un nuevo dispatch a ciegas.
+- [ ] Un timeout conserva el ZIP exacto enviado y el submit result bajo la protección correspondiente al carril; la recuperación reanuda el mismo Submission ID sin ejecutar otro `submit`.
 - [ ] Submit, wait y log tienen el mismo Submission ID; Apple devuelve `Accepted` y el digest del log coincide con el ZIP enviado.
 - [ ] El ticket se adjunta a la `.app`, `stapler validate` pasa y `spctl` reporta `Notarized Developer ID`.
-- [ ] P12, `.p8` y keychain privado se eliminan y se comprueba su ausencia antes de cifrar o subir cualquier artefacto.
-- [ ] La transferencia al host limpio y el candidato final se cifran con AES-256 y PBKDF2; Actions sólo recibe ciphertext y su checksum, nunca la app, ZIP, evidencia o directorio de distribución en claro.
-- [ ] El ZIP de transferencia/candidato se crea desde la app stapled en un host limpio; nunca se publica el ZIP temporal enviado a Apple.
+- [ ] Ninguna clave privada, contraseña, perfil de Llavero, `.p8`, P12 ni ZIP temporal enviado a Apple aparece en Git, logs propios, manifiestos o assets públicos.
+
+## 4C. Excepción local para un único mantenedor
+
+- [ ] La decisión de autoaprobación está documentada como excepción de separación de funciones; no se presenta como revisión independiente.
+- [ ] El preflight verifica sesión `gh`, checkout limpio, `HEAD == origin/main`, tag ausente y CI ARM/Intel verde para ese SHA antes de firmar.
+- [ ] Firma y notarización usan la identidad Developer ID y un perfil validado del Llavero local; no se requiere `.p8` ni exportar P12 para este carril.
+- [ ] `NOTARY_KEYCHAIN_PROFILE` es mutuamente exclusivo con la triple credencial API; configuración ausente, parcial o mixta falla antes de crear evidencia o contactar a Apple.
+- [ ] Cada solicitud usa un directorio nuevo fuera del repositorio, creado con `umask 077` y permisos sólo para el propietario.
+- [ ] Una segunda ejecución fresh sobre evidencia existente falla antes de `submit`; no borra ni reemplaza submit, upload, wait, log o metadata.
+- [ ] Resume valida primero el Submission ID y bytes preservados; un ID incorrecto no altera evidencia y un ID correcto nunca vuelve a ejecutar `submit`.
+- [ ] La app y el DMG tienen directorios, Submission IDs y digests independientes; ninguno reutiliza la solicitud del otro.
+- [ ] La autorización para habilitar este carril no autoriza el release final; la autoaprobación final se registra después de los smokes para el tag, commit y SHA-256 exactos.
 
 ## 5. Paquete y procedencia
 
@@ -135,7 +144,7 @@ Un candidato aprobado aquí sigue sin ser un release hasta completar el DMG, los
 - [ ] Release immutability está habilitada antes de publicar el primer prerelease.
 - [ ] Falta de aprobación o smoke deja el draft intacto; el workflow no publica parcialmente.
 
-### Carril Developer ID preparado
+### Carril Developer ID mediante GitHub Actions
 
 - [ ] `.github/workflows/developer-id-candidate.yml` sólo permite `workflow_dispatch`, usa `permissions: contents: read` y no contiene `gh release`, attestations ni un job de publicación.
 - [ ] `developer-id-signing` y `developer-id-verification` limitan deployment a `main` protegida, exigen reviewer, impiden self-review y deshabilitan bypass administrativo cuando el plan lo permite; no se carga ningún secret antes de cerrar estas reglas.
@@ -147,6 +156,15 @@ Un candidato aprobado aquí sigue sin ser un release hasta completar el DMG, los
 - [ ] Diagnósticos de error sólo se cifran y suben después de que el cleanup privado pasó; ningún path de transferencia contiene `.p12`, `.p8`, key, PEM o keychain.
 - [ ] Cada `upload-artifact` de este carril apunta exclusivamente a archivos `.enc` y `.sha256`; no existe subida de un path en claro.
 - [ ] El resultado final es un artefacto cifrado y temporal de Actions; no crea draft, tag o release y no puede publicar.
+
+### Carril Developer ID local para un único mantenedor
+
+- [ ] El carril local conserva el contrato API-key-only y la ausencia de autoridad de publicación del workflow alternativo de Actions; puede reforzar su recuperación sin mezclar autenticación de Llavero.
+- [ ] El origen, CI y tag se validan antes de acceder a la identidad privada local.
+- [ ] La app se firma una sola vez y su notarización fresh no puede reutilizar un directorio de evidencia existente.
+- [ ] El DMG se construye exclusivamente desde la app stapled, se firma una sola vez y usa otra solicitud Apple con guard anti-resubmit propio.
+- [ ] La evidencia privada permanece owner-only fuera del repositorio; sólo DMG, manifiesto schema 3 y `SHA256SUMS` llegan al draft.
+- [ ] El draft se vuelve a descargar y verificar antes del smoke; la autoaprobación final identifica tag, commit y digest exactos.
 
 ### Promoción pública Developer ID
 
@@ -192,7 +210,7 @@ Realízalo únicamente con una persona responsable del equipo y un baseline reve
 - [ ] Repositorio público correcto, Issues habilitados y `main` como default.
 - [ ] Protección de `main`: checks arm64/Intel obligatorios y force-push prohibido.
 - [ ] Private Vulnerability Reporting habilitado y probado desde **Security → Advisories**.
-- [ ] Environment protegido `public-beta` configurado con revisores.
+- [ ] Environment `public-beta` configurado con aprobación humana; en la excepción de mantenedor único puede ser autoaprobación explícita posterior al smoke.
 - [ ] Release immutability configurada.
 - [ ] No existe otro repositorio remoto que vaya a sobrescribirse.
 
