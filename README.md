@@ -15,6 +15,12 @@ Estrobo brings compatible Godox flash-trigger controls into one focused Mac work
 > [!IMPORTANT]
 > Public beta `0.1.0-beta.4` is the current download. Its exact universal DMG and bundled app are signed with Apple Developer ID, notarized and stapled by Apple, and accepted by Gatekeeper.
 
+## iPhone and iPad — in development
+
+This branch includes a native SwiftUI app for iPhone and iPad that shares Estrobo's protocol, session, persistence, and recovery core with macOS. It is development work, not a public iOS release: there is no TestFlight or App Store build yet.
+
+Simulator, Demo mode, and automated builds do not validate CoreBluetooth, AccessorySetupKit, the physical X3Pro link, or the optical result. Those claims remain blocked on the [physical test matrix](docs/IOS-PHYSICAL-TEST-MATRIX.md). See the [iOS architecture](docs/IOS-ARCHITECTURE.md) and [AccessorySetupKit spike](docs/IOS-ACCESSORY-SETUP-SPIKE.md) for the current boundaries.
+
 ![Estrobo Channels view in simulated mode](prototype/GodoxMacControlPrototype/QA/channels-after-dark-final-en.png)
 
 ## Requirements
