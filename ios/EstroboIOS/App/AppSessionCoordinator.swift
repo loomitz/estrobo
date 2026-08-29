@@ -74,8 +74,9 @@ final class AppSessionCoordinator: ObservableObject {
 
     func startLiveAfterEducation() {
         guard bluetoothEducationAcknowledged else { return }
-        let live = AppRuntimeFactory.makeLive()
-        replaceRuntime(with: live)
+        replaceRuntime {
+            AppRuntimeFactory.makeLive()
+        }
         bluetoothEducationPresented = false
     }
 
@@ -154,12 +155,7 @@ final class AppSessionCoordinator: ObservableObject {
     }
 
     private func clearRuntime() {
-        autoConnectionTask?.cancel()
-        autoConnectionTask = nil
-        pendingAutomaticDemoConnection = nil
-        runtime?.controller.suspendForInactiveScene()
-        runtime = nil
-        scenePhaseBridge = .pendingControllerHooks()
+        releaseCurrentRuntime()
         selectedGroup = nil
         phoneSection = .groups
         tabletDestination = .groups
@@ -171,14 +167,26 @@ final class AppSessionCoordinator: ObservableObject {
         scenario: SimulatedRadioScenario,
         seed: AppRuntimeFactory.DemoSeed
     ) {
-        replaceRuntime(with: AppRuntimeFactory.makeDemo(scenario: scenario, seed: seed))
+        replaceRuntime {
+            AppRuntimeFactory.makeDemo(scenario: scenario, seed: seed)
+        }
     }
 
-    private func replaceRuntime(with newRuntime: AppRuntime) {
+    private func releaseCurrentRuntime() {
         autoConnectionTask?.cancel()
         autoConnectionTask = nil
         pendingAutomaticDemoConnection = nil
+        runtime?.controller.suspendForInactiveScene()
+        scenePhaseBridge = .pendingControllerHooks()
         runtime = nil
+    }
+
+    /// Module-internal so the app integration tests can assert that teardown
+    /// completes before the replacement factory is invoked.
+    func replaceRuntime(using makeRuntime: () -> AppRuntime) {
+        releaseCurrentRuntime()
+
+        let newRuntime = makeRuntime()
         scenePhaseBridge = .controller(newRuntime.controller)
         runtime = newRuntime
         selectedGroup = newRuntime.controller.visibleGroups.first

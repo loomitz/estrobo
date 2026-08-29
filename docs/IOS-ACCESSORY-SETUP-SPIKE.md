@@ -93,13 +93,12 @@ make ios-accessory-setup-check
 Este framework no está enlazado a `EstroboIOS` y compilarlo no autoriza a
 presentar el picker.
 
-## Guardas de compatibilidad
+## Límite de plataforma
 
-```swift
-#if os(iOS) && !targetEnvironment(macCatalyst) && canImport(AccessorySetupKit)
-import AccessorySetupKit
-#endif
-```
+El spike importa `AccessorySetupKit` directamente y vive en un target separado,
+exclusivo de iOS, con deployment target 18.0 y Catalyst deshabilitado. El target
+no está enlazado a `EstroboIOS`; si el SDK seleccionado no contiene
+AccessorySetupKit, su compilación debe fallar en vez de producir un módulo vacío.
 
 No usar APIs que eleven el mínimo por encima de iOS 18, incluidos custom filtering de iOS 26.1 o presentation settings de iOS 26.
 

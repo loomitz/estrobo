@@ -182,6 +182,47 @@ final class EstroboTracerTests: XCTestCase {
     }
 
     @MainActor
+    func testResetDemoSuspendsRetainedControllerBeforeInstallingReplacement() async throws {
+        let configuration = UITestConfiguration(
+            isEnabled: true,
+            fixture: .workspace,
+            scenario: .normal,
+            language: .es,
+            appearance: .light
+        )
+        let coordinator = AppSessionCoordinator(uiTestConfiguration: configuration)
+        let originalController = try XCTUnwrap(coordinator.controller)
+
+        originalController.startScanning()
+        XCTAssertEqual(originalController.phase, .scanning)
+
+        var factoryObservedReleasedRuntime = false
+        coordinator.replaceRuntime {
+            factoryObservedReleasedRuntime = true
+            XCTAssertNil(coordinator.runtime)
+            XCTAssertFalse(originalController.isSceneActive)
+            XCTAssertEqual(originalController.phase, .idle)
+            return AppRuntimeFactory.makeDemo(
+                scenario: .authenticationRejected,
+                seed: .workspace
+            )
+        }
+
+        let replacementController = try XCTUnwrap(coordinator.controller)
+        XCTAssertTrue(factoryObservedReleasedRuntime)
+        XCTAssertFalse(originalController === replacementController)
+        XCTAssertFalse(originalController.isSceneActive)
+        XCTAssertEqual(originalController.phase, .idle)
+        XCTAssertEqual(coordinator.runtime?.demoScenario, .authenticationRejected)
+
+        try await Task.sleep(for: .milliseconds(180))
+
+        XCTAssertFalse(originalController.isSceneActive)
+        XCTAssertEqual(originalController.phase, .idle)
+        XCTAssertTrue(originalController.devices.isEmpty)
+    }
+
+    @MainActor
     func testRecoveryFixtureRequiresTheOriginalPhysicalUUID() {
         let runtime = AppRuntimeFactory.makeDemo(seed: .recoveryWrongUUID)
         let requiredIDs = Set(runtime.controller.restorationPoints.values.map(\.deviceID))

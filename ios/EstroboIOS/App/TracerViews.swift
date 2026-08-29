@@ -457,10 +457,7 @@ private struct TabletTracerRoot: View {
                 controller: controller
             )
         case .demo:
-            DemoLabView(
-                coordinator: coordinator,
-                controller: controller
-            )
+            DemoLabView(coordinator: coordinator)
         }
     }
 

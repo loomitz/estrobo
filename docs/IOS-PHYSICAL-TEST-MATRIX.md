@@ -87,7 +87,7 @@ Para cada fila registrar por separado:
 
 | Comprobación | Resultado |
 | --- | --- |
-| Import y compile guard iOS 18+ | PASS local con `make ios-accessory-setup-check`; sólo compilación generic iOS, sin hardware |
+| Import y compilación de AccessorySetupKit en target iOS 18+ | PASS local con `make ios-accessory-setup-check`; sólo compilación generic iOS, sin hardware |
 | Descriptor basado sólo en datos observados | Bloqueado por evidencia física |
 | Picker encuentra exclusivamente el X3Pro | Pendiente, dispositivo físico |
 | Permiso concedido/denegado | Pendiente, dispositivo físico |

@@ -104,10 +104,7 @@ struct SettingsControlView: View {
             if coordinator.isDemo {
                 Section {
                     NavigationLink {
-                        DemoLabView(
-                            coordinator: coordinator,
-                            controller: controller
-                        )
+                        DemoLabView(coordinator: coordinator)
                     } label: {
                         Label(
                             coordinator.text("demo.lab.title"),
@@ -576,7 +573,6 @@ struct CompatibilityEditorView: View {
 
 struct DemoLabView: View {
     @ObservedObject var coordinator: AppSessionCoordinator
-    @ObservedObject var controller: GodoxSessionController
 
     @State private var exitConfirmationPresented = false
 

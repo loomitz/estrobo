@@ -44,9 +44,11 @@ Apple device that discovered it; it is never synchronized across macOS and iOS.
 - **Demo**: `SimulatedRadioTransport` plus new in-memory repositories. It never
   reads, migrates or clears live transmitters, Keychain entries or journals.
 
-Changing runtime destroys the previous controller and its dependencies before
-creating the replacement. Views observe the one controller owned by the app;
-they never create their own transport or session.
+Changing runtime suspends the previous controller and releases the
+coordinator's ownership before creating the replacement. A view that is still
+leaving the hierarchy can retain that controller briefly, but it is already
+inert. Views observe the one current controller owned by the app; they never
+create their own transport or session.
 
 ## Foreground lifecycle
 
