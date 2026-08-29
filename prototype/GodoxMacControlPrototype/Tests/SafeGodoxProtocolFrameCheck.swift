@@ -3,6 +3,7 @@ import Foundation
 import SwiftUI
 
 @main
+@MainActor
 enum SafeGodoxProtocolFrameCheck {
     static func main() throws {
         try checkPowerScales()
@@ -1356,9 +1357,12 @@ enum SafeGodoxProtocolFrameCheck {
         expect(memory.objects[legacyKey] == nil)
         guard let migratedData = memory.objects[currentKey] as? Data,
               let migratedJSON = String(data: migratedData, encoding: .utf8) else {
-            preconditionFailure("La migración v1 no produjo el registro plural v2")
+            preconditionFailure("La migración v1 no produjo el catálogo v3")
         }
-        expect(migratedJSON.contains(#""version":2"#))
+        expect(migratedJSON.contains(#""version":3"#))
+        expect(!migratedJSON.contains("123456"))
+        expect(!migratedJSON.contains("radioCode"))
+        expect(!migratedJSON.contains("password"))
         expect(store.upsert(replacement))
         expect(store.load() == .records([legacy, replacement]))
 
@@ -1389,10 +1393,10 @@ enum SafeGodoxProtocolFrameCheck {
             #"{"version":1,"deviceID":"11111111-2222-3333-4444-555555555555","name":"GDBH-LEGACY","password":"123456"}"#.utf8
         )
         memory.rejectedRemovalKeys = [legacyKey]
-        expect(store.load() == .records([legacy]))
+        expect(store.load() == .invalid)
         expect(memory.objects[currentKey] != nil)
         expect(memory.objects[legacyKey] != nil)
-        expect(store.load() == .records([legacy]))
+        expect(store.load() == .invalid)
         expect(memory.objects[legacyKey] != nil)
         expect(!store.clear())
         expect(memory.objects[currentKey] != nil)

@@ -1,3 +1,7 @@
+#if canImport(EstroboCore)
+import EstroboCore
+#endif
+
 /// Stable, theme-independent colors that mirror the group LEDs on Godox gear.
 ///
 /// They live outside the general app palette because these colors identify a

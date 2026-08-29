@@ -1,14 +1,34 @@
 import Foundation
 import Combine
 
+#if canImport(EstroboCore) && !ESTROBO_CORE_TARGET
+import EstroboCore
+#endif
+
+enum ForegroundSessionRequirement: Equatable, Sendable {
+    case reconnectAndSynchronize
+    case recover(deviceID: UUID)
+
+    fileprivate var isRecovery: Bool {
+        if case .recover = self { return true }
+        return false
+    }
+}
+
+enum ForegroundSessionState: Equatable, Sendable {
+    case active
+    case inactive(requirement: ForegroundSessionRequirement?)
+    case actionRequired(ForegroundSessionRequirement)
+}
+
 @MainActor
-final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientDelegate {
+final class GodoxSessionController: NSObject, ObservableObject {
     struct InteractiveEditToken: Hashable {
         fileprivate let id = UUID()
     }
 
     @Published private(set) var phase: SessionPhase = .idle
-    @Published private(set) var devices: [BluetoothClient.Device] = []
+    @Published private(set) var devices: [RadioCandidate] = []
     @Published var selectedDeviceID: UUID?
     @Published var radioCode = ""
     @Published var rememberSelectedRadio = false
@@ -45,6 +65,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     @Published private(set) var isGlobalStandbyEnabled = false
     @Published private(set) var isGlobalControlPending = false
     @Published private(set) var activeInteractiveEditCount = 0
+    @Published private(set) var foregroundSessionState: ForegroundSessionState = .active
 
     private enum ApplySequencePurpose: Equatable {
         case pendingChanges
@@ -151,7 +172,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         case failure(String)
     }
 
-    private var client: (any GodoxSessionTransport)!
+    private let client: any RadioTransport
     private let deadlineScheduler: any SessionDeadlineScheduling
     private var authenticationAttempt: UUID?
     private var scanDeadline: SessionDeadlineToken?
@@ -174,6 +195,9 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     private var snapshotsAwaitingRadioResponse: [GodoxGroup: ManualGroupSnapshot] = [:]
     private var controlWriteHasStarted = false
     private var sessionIsInvalidating = false
+    private var acceptsTransportEvents = true
+    private var foregroundRequirementSessionID: UUID?
+    private var foregroundTransportSyncSessionID: UUID?
     private var shouldSaveRadioAfterAuthentication = false
     private var selectedDeviceWasChosenExplicitly = false
     private var sessionDeviceID: UUID?
@@ -192,12 +216,12 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         standbyEnabled: false
     )
     private var hasConfirmedGlobalSnapshot = false
-    private let visibilityPreferences: LocalGroupPreferences
-    private let restorationStore: PendingRestorationStore
-    private let savedRadioStore: SavedRadioStore
-    private let changeDeliveryPreferences: ChangeDeliveryPreferences
-    private let transmitterProfilePreferences: TransmitterProfilePreferences
-    private let studioLibraryStore: StudioLibraryStore
+    private let visibilityPreferences: any GroupVisibilityPreferencesStore
+    private let restorationStore: any RestorationRepository
+    private let savedRadioStore: any SavedRadioRepository
+    private let changeDeliveryPreferences: any ChangeDeliveryPreferencesStore
+    private let transmitterProfilePreferences: any TransmitterProfilePreferencesStore
+    private let studioLibraryStore: any StudioLibraryRepository
 
     var restorationPoints: [GodoxGroup: GroupRestorationPoint] {
         physicalSafetyState.restorationPoints
@@ -207,29 +231,17 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         physicalSafetyState.preparedRestorations
     }
 
-    override convenience init() {
-        self.init(
-            transport: nil,
-            deadlineScheduler: LiveSessionDeadlineScheduler(),
-            visibilityPreferences: LocalGroupPreferences(),
-            restorationStore: PendingRestorationStore(),
-            savedRadioStore: SavedRadioStore(),
-            changeDeliveryPreferences: ChangeDeliveryPreferences(),
-            transmitterProfilePreferences: TransmitterProfilePreferences(),
-            studioLibraryStore: StudioLibraryStore()
-        )
-    }
-
     init(
-        transport: (any GodoxSessionTransport)?,
+        transport: any RadioTransport,
         deadlineScheduler: any SessionDeadlineScheduling,
-        visibilityPreferences initialVisibilityPreferences: LocalGroupPreferences,
-        restorationStore initialRestorationStore: PendingRestorationStore,
-        savedRadioStore initialSavedRadioStore: SavedRadioStore = SavedRadioStore(),
-        changeDeliveryPreferences initialChangeDeliveryPreferences: ChangeDeliveryPreferences = ChangeDeliveryPreferences(),
-        transmitterProfilePreferences initialTransmitterProfilePreferences: TransmitterProfilePreferences = TransmitterProfilePreferences(),
-        studioLibraryStore initialStudioLibraryStore: StudioLibraryStore = StudioLibraryStore()
+        visibilityPreferences initialVisibilityPreferences: any GroupVisibilityPreferencesStore,
+        restorationStore initialRestorationStore: any RestorationRepository,
+        savedRadioStore initialSavedRadioStore: any SavedRadioRepository,
+        changeDeliveryPreferences initialChangeDeliveryPreferences: any ChangeDeliveryPreferencesStore,
+        transmitterProfilePreferences initialTransmitterProfilePreferences: any TransmitterProfilePreferencesStore,
+        studioLibraryStore initialStudioLibraryStore: any StudioLibraryRepository
     ) {
+        client = transport
         self.deadlineScheduler = deadlineScheduler
         let loadedLibrary: StudioLibrary?
         let studioLibraryLoadWasInvalid: Bool
@@ -467,8 +479,9 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             globalRadioSnapshot.multiPowerByte = multiFlashDraft.powerByte
         }
 
-        client = transport ?? BluetoothClient()
-        client.delegate = self
+        client.eventHandler = { [weak self] event in
+            self?.handleTransportEvent(event)
+        }
         if didMigrateStoredMultiFlashSettings, hasCompletedOnboarding,
            !persistStudioLibrary() {
             addActivity(
@@ -508,7 +521,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
     }
 
-    var selectedDevice: BluetoothClient.Device? {
+    var selectedDevice: RadioCandidate? {
         devices.first { $0.id == selectedDeviceID }
     }
 
@@ -533,16 +546,145 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         !duplicateDeviceNameKeys.isEmpty
     }
 
-    func isDeviceNameDuplicated(_ device: BluetoothClient.Device) -> Bool {
+    func isDeviceNameDuplicated(_ device: RadioCandidate) -> Bool {
         duplicateDeviceNameKeys.contains(Self.normalizedDeviceName(device.name))
     }
 
-    func deviceIdentifierSuffix(_ device: BluetoothClient.Device) -> String {
+    func deviceIdentifierSuffix(_ device: RadioCandidate) -> String {
         String(device.id.uuidString.replacingOccurrences(of: "-", with: "").suffix(6))
     }
 
     var isSessionReady: Bool { phase == .ready }
     var isSimulation: Bool { client.isSimulation }
+
+    var isSceneActive: Bool {
+        if case .inactive = foregroundSessionState { return false }
+        return true
+    }
+
+    var foregroundSessionRequirement: ForegroundSessionRequirement? {
+        switch foregroundSessionState {
+        case .active:
+            return nil
+        case .inactive(let requirement):
+            return requirement
+        case .actionRequired(let requirement):
+            return requirement
+        }
+    }
+
+    var foregroundInterruptionNotice: String? {
+        switch foregroundSessionState {
+        case .active:
+            return nil
+        case .inactive(requirement: nil):
+            return "Estrobo está en pausa; no se enviarán comandos mientras la escena esté inactiva."
+        case .inactive(requirement: .some(.reconnectAndSynchronize)),
+             .actionRequired(.reconnectAndSynchronize):
+            return "La sesión se interrumpió; vuelve a conectar el radio y completa Sync."
+        case .inactive(requirement: .some(.recover(let deviceID))),
+             .actionRequired(.recover(let deviceID)):
+            return "La entrega quedó incierta; reconecta el mismo radio (\(deviceID.uuidString)) y completa la recuperación."
+        }
+    }
+
+    /// Makes every physical operation foreground-only. Local drafts and an
+    /// existing restoration journal remain intact, but no deadline, gesture or
+    /// transport callback may resume delivery after this point.
+    func suspendForInactiveScene() {
+        guard isSceneActive else { return }
+
+        let wasScanning = phase == .scanning
+        let hadSessionOrAttempt: Bool
+        switch phase {
+        case .connecting, .discovering, .authenticating, .synchronizing,
+             .ready, .applying, .disconnecting:
+            hadSessionOrAttempt = true
+        case .idle, .scanning, .unavailable, .failed:
+            hadSessionOrAttempt = sessionDeviceID != nil
+        }
+
+        let recoveryRequirement = restorationPoints.values.first.map {
+            ForegroundSessionRequirement.recover(deviceID: $0.deviceID)
+        }
+        let requirement = recoveryRequirement
+            ?? foregroundSessionRequirement
+            ?? (hadSessionOrAttempt ? .reconnectAndSynchronize : nil)
+
+        foregroundSessionState = .inactive(requirement: requirement)
+        acceptsTransportEvents = false
+
+        if wasScanning {
+            client.stopScanning()
+        }
+        disconnectRecoveryDeadline?.cancel()
+        disconnectRecoveryDeadline = nil
+        pendingDisconnectResolution = nil
+        resetTransientSessionState()
+        radioCode = ""
+        connectedDeviceName = nil
+        phase = .idle
+
+        if hadSessionOrAttempt {
+            client.disconnect()
+            // A scene transition cannot wait for a missing CoreBluetooth
+            // callback. Resetting also drops adapter-owned deferred writes.
+            client.forceResetConnection()
+        }
+
+        switch requirement {
+        case .recover:
+            addActivity(
+                .error,
+                "La sesión se pausó con una entrega incierta; la recuperación del mismo radio sigue siendo obligatoria"
+            )
+        case .reconnectAndSynchronize:
+            addActivity(.warning, "La sesión se pausó; será necesario reconectar y completar Sync")
+        case nil:
+            addActivity(.info, "Estrobo quedó en pausa sin una sesión física pendiente")
+        }
+    }
+
+    /// Reactivation only exposes the next explicit action. It never resumes a
+    /// scan, Test, debounce, Multi sequence or write.
+    func resumeActiveScene() {
+        guard case .inactive(let requirement) = foregroundSessionState else { return }
+        if let requirement {
+            foregroundSessionState = .actionRequired(requirement)
+            addActivity(
+                requirement.isRecovery
+                    ? .error
+                    : .warning,
+                foregroundInterruptionNotice
+                    ?? "Vuelve a conectar el radio antes de continuar"
+            )
+        } else {
+            foregroundSessionState = .active
+        }
+    }
+
+    private func resolveForegroundRequirementIfSafe(
+        valueSynchronizationCompleted: Bool
+    ) {
+        guard case .actionRequired(let requirement) = foregroundSessionState,
+              let sessionID,
+              foregroundRequirementSessionID == sessionID,
+              foregroundTransportSyncSessionID == sessionID else {
+            return
+        }
+
+        switch requirement {
+        case .reconnectAndSynchronize:
+            guard !hasCompletedOnboarding || valueSynchronizationCompleted else { return }
+        case .recover:
+            guard restorationPoints.isEmpty else { return }
+        }
+
+        foregroundSessionState = .active
+        foregroundRequirementSessionID = nil
+        foregroundTransportSyncSessionID = nil
+        addActivity(.success, "Sesión foreground restablecida de forma segura")
+    }
 
     /// La configuración de conexión ocupa el espacio principal hasta que el
     /// handshake y Sync terminan. Durante un write se conserva el workspace,
@@ -555,7 +697,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     /// radio desconectado o ya listo. Ninguna reconfiguración puede competir
     /// con un write, Test o recuperación física pendiente.
     var canConfigureWorkspace: Bool {
-        guard recoveryBlockReason == nil,
+        guard isSceneActive,
+              recoveryBlockReason == nil,
               !isInteractiveEditActive,
               !isGlobalStandbyEnabled,
               restorationPoints.isEmpty,
@@ -592,7 +735,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
         guard normalizedProfileID != defaultTransmitterProfileID else { return true }
 
-        let state = TransmitterProfilePreferences.State(
+        let state = TransmitterProfilePreferenceState(
             availableProfileIDs: availableTransmitterProfiles.map(\.id),
             defaultProfileID: normalizedProfileID
         )
@@ -616,7 +759,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         let nextDefaultProfileID = remainingProfiles.contains(where: {
             $0.id == defaultTransmitterProfileID
         }) ? defaultTransmitterProfileID : transmitterProfile.id
-        let state = TransmitterProfilePreferences.State(
+        let state = TransmitterProfilePreferenceState(
             availableProfileIDs: remainingProfiles.map(\.id),
             defaultProfileID: nextDefaultProfileID
         )
@@ -632,7 +775,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         let nextDefaultProfileID = builtInProfiles.contains(where: {
             $0.id == defaultTransmitterProfileID
         }) ? defaultTransmitterProfileID : transmitterProfile.id
-        let state = TransmitterProfilePreferences.State(
+        let state = TransmitterProfilePreferenceState(
             availableProfileIDs: builtInProfiles.map(\.id),
             defaultProfileID: nextDefaultProfileID
         )
@@ -689,6 +832,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     /// different gesture's delivery gate.
     func beginInteractiveEdit() -> InteractiveEditToken {
         let token = InteractiveEditToken()
+        guard isSceneActive else { return token }
         interactiveEditTokens.insert(token)
         activeInteractiveEditCount = interactiveEditTokens.count
         cancelAutomaticApply()
@@ -718,7 +862,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     var canApply: Bool {
         let eligibleGroups = groupsEligibleForApply
         let canApplyMultiFlashOnly = restorationPoints.isEmpty && hasPendingMultiFlashChange
-        guard recoveryBlockReason == nil, isSessionReady, !isReconfiguringWorkspace,
+        guard isSceneActive,
+              recoveryBlockReason == nil, isSessionReady, !isReconfiguringWorkspace,
               !isInteractiveEditActive,
               !isGlobalStandbyEnabled,
               !eligibleGroups.isEmpty || canApplyMultiFlashOnly,
@@ -746,7 +891,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     var canSynchronizeValues: Bool {
-        recoveryBlockReason == nil && phase == .ready && !isReconfiguringWorkspace &&
+        isSceneActive && recoveryBlockReason == nil && phase == .ready && !isReconfiguringWorkspace &&
             !isInteractiveEditActive &&
             !isGlobalStandbyEnabled &&
             !isTestPending &&
@@ -796,6 +941,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     var canDisconnect: Bool {
+        guard isSceneActive else { return false }
         switch phase {
         case .ready, .failed, .unavailable, .idle:
             return !isTestPending && controlIntents.isEmpty && awaitingRadioResponses.isEmpty &&
@@ -806,7 +952,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     var canCancelConnectionAttempt: Bool {
-        guard pendingDisconnectResolution == nil else { return false }
+        guard isSceneActive, pendingDisconnectResolution == nil else { return false }
         switch phase {
         case .scanning, .connecting, .discovering, .authenticating, .synchronizing:
             return true
@@ -833,12 +979,13 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     var canChangeDeliveryMode: Bool {
-        !isInteractiveEditActive && phase != .applying && !isGlobalStandbyEnabled && !isTestPending &&
+        isSceneActive && !isInteractiveEditActive && phase != .applying &&
+            !isGlobalStandbyEnabled && !isTestPending &&
             restorationPoints.isEmpty
     }
 
     var canToggleGlobalStandby: Bool {
-        recoveryBlockReason == nil && phase == .ready && !isReconfiguringWorkspace &&
+        isSceneActive && recoveryBlockReason == nil && phase == .ready && !isReconfiguringWorkspace &&
             !isInteractiveEditActive && !isTestPending && physicalSafetyState.allowsNewEdits &&
             controlIntents.isEmpty && awaitingRadioResponses.isEmpty &&
             activeGroupChange == nil && queuedGroupChanges.isEmpty &&
@@ -855,7 +1002,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     var canEditMultiFlashSettings: Bool {
-        recoveryBlockReason == nil && phase == .ready && !isReconfiguringWorkspace &&
+        isSceneActive && recoveryBlockReason == nil && phase == .ready && !isReconfiguringWorkspace &&
             !isGlobalStandbyEnabled && !isTestPending &&
             physicalSafetyState.allowsNewEdits && controlIntents.isEmpty &&
             awaitingRadioResponses.isEmpty && activeGroupChange == nil &&
@@ -1007,7 +1154,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     func canEdit(_ group: GodoxGroup) -> Bool {
-        guard phase == .ready,
+        guard isSceneActive,
+              phase == .ready,
               !isGlobalStandbyEnabled,
               !isReconfiguringWorkspace,
               !isTestPending,
@@ -1027,7 +1175,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     func canChangeOperatingMode(_ group: GodoxGroup) -> Bool {
-        guard phase == .ready,
+        guard isSceneActive,
+              phase == .ready,
               !isGlobalStandbyEnabled,
               !isReconfiguringWorkspace,
               !isTestPending,
@@ -1071,7 +1220,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     func canToggleRadioEnabled(_ group: GodoxGroup) -> Bool {
-        guard phase == .ready,
+        guard isSceneActive,
+              phase == .ready,
               !isGlobalStandbyEnabled,
               !isReconfiguringWorkspace,
               !isTestPending,
@@ -1193,7 +1343,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     var canSendTest: Bool {
-        recoveryBlockReason == nil && phase == .ready && !isReconfiguringWorkspace &&
+        isSceneActive && recoveryBlockReason == nil && phase == .ready && !isReconfiguringWorkspace &&
             !isInteractiveEditActive &&
             !isGlobalStandbyEnabled &&
             !isTestPending &&
@@ -1759,7 +1909,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     func setGroupVisible(_ group: GodoxGroup, isVisible: Bool) {
-        let result = LocalGroupPreferences.visibilityAfterToggling(
+        let result = GroupVisibilityPolicy.visibilityAfterToggling(
             group,
             isVisible: isVisible,
             currentVisibleGroups: visibleGroups,
@@ -1869,7 +2019,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 !previousWorkingGroups.contains($0) || previousVisibleGroups.contains($0)
             }
             : orderedGroups
-        let nextVisibleGroups = LocalGroupPreferences.normalizedVisibleGroups(
+        let nextVisibleGroups = GroupVisibilityPolicy.normalizedVisibleGroups(
             requestedVisibleGroups,
             supportedGroups: orderedGroups
         )
@@ -2308,6 +2458,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     func prepareBaselineRestoration(for group: GodoxGroup) {
+        guard isSceneActive else { return }
         guard !isInteractiveEditActive else {
             addActivity(.warning, "Suelta el control antes de preparar una recuperación")
             return
@@ -2375,6 +2526,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     func startScanning() {
+        guard isSceneActive else { return }
         if let recoveryBlockReason {
             addActivity(.error, recoveryBlockReason)
             return
@@ -2383,6 +2535,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             addActivity(.warning, "Espera a que termine la recuperación del enlace")
             return
         }
+        acceptsTransportEvents = true
         resetTransientSessionState()
         devices.removeAll()
         selectDeviceAutomatically(nil)
@@ -2400,6 +2553,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     func connectSelectedDevice() {
+        guard isSceneActive else { return }
         guard pendingDisconnectResolution == nil else {
             addActivity(.warning, "Espera a que termine la recuperación del enlace")
             return
@@ -2416,12 +2570,17 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             failLocally("La restauración pendiente pertenece a otro radio; selecciona el transmisor original")
             return
         }
+        acceptsTransportEvents = true
         resetTransientSessionState()
         lastValueSynchronizationAt = nil
         shouldSaveRadioAfterAuthentication = rememberSelectedRadio
         sessionDeviceID = selectedDevice.id
         let attemptID = UUID()
         sessionID = attemptID
+        if foregroundSessionRequirement != nil {
+            foregroundRequirementSessionID = attemptID
+            foregroundTransportSyncSessionID = nil
+        }
         phase = .connecting
         connectedDeviceName = selectedDevice.name
         addActivity(.info, "Conectando con \(selectedDevice.name)")
@@ -2477,7 +2636,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         selectedDeviceID = deviceID
         selectedDeviceWasChosenExplicitly = explicitly
         if let deviceID, let savedRadio = savedRadio(for: deviceID) {
-            radioCode = savedRadio.radioCode
+            radioCode = savedRadio.unsafeRadioCodePlaintext
         } else {
             radioCode = ""
         }
@@ -2635,7 +2794,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     private var permitsGlobalPowerAdjustment: Bool {
-        recoveryBlockReason == nil && phase == .ready && !isGlobalStandbyEnabled &&
+        isSceneActive && recoveryBlockReason == nil && phase == .ready && !isGlobalStandbyEnabled &&
             !isTestPending &&
             physicalSafetyState.allowsNewEdits
     }
@@ -2758,7 +2917,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
 
     private func scheduleAutomaticApplyIfNeeded() {
         cancelAutomaticApply()
-        guard changeDeliveryMode == .automatic,
+        guard isSceneActive,
+              changeDeliveryMode == .automatic,
               !isInteractiveEditActive,
               !automaticApplySuppressedForLocalPreset,
               restorationPoints.isEmpty,
@@ -2843,6 +3003,9 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 "Valores sincronizados · \(completedCount) de \(completedCount) grupos confirmados"
             )
         }
+        resolveForegroundRequirementIfSafe(
+            valueSynchronizationCompleted: completedPurpose.synchronizesValues
+        )
         scheduleAutomaticApplyIfNeeded()
     }
 
@@ -3004,7 +3167,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
 
     private func startValueSynchronization(purpose: ApplySequencePurpose) {
         automaticApplySuppressedForLocalPreset = false
-        guard purpose.synchronizesValues, workingConfigurationIssue == nil else {
+        guard isSceneActive,
+              purpose.synchronizesValues, workingConfigurationIssue == nil else {
             if let workingConfigurationIssue {
                 addActivity(.error, workingConfigurationIssue)
             }
@@ -3071,7 +3235,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         purpose: GlobalControlPurpose,
         followup: GlobalControlFollowup?
     ) -> Bool {
-        guard recoveryBlockReason == nil,
+        guard isSceneActive,
+              recoveryBlockReason == nil,
               let sessionDeviceID,
               let sessionID,
               controlIntents.isEmpty,
@@ -3083,15 +3248,22 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
 
         do {
             let frame = try SafeGodoxProtocol.globalFrame(snapshot: snapshot)
-            if let followup,
-               restorationPoints.isEmpty || applySequenceJournalKind == .forward {
-                let preflightChanges = try makeQueuedGroupChanges(
-                    groups: followup.groups,
-                    forceWrite: followup.forceWrite,
-                    restorationGlobalSnapshot: followup.restorationGlobalSnapshot,
-                    isExactRestoration: false
-                )
-                guard prepareForwardJournal(for: preflightChanges) else {
+            if restorationPoints.isEmpty || applySequenceJournalKind == .forward {
+                let journalWasPrepared: Bool
+                if let followup {
+                    let preflightChanges = try makeQueuedGroupChanges(
+                        groups: followup.groups,
+                        forceWrite: followup.forceWrite,
+                        restorationGlobalSnapshot: followup.restorationGlobalSnapshot,
+                        isExactRestoration: false
+                    )
+                    journalWasPrepared = prepareForwardJournal(for: preflightChanges)
+                } else {
+                    journalWasPrepared = prepareGlobalOnlyForwardJournal(
+                        restorationGlobalSnapshot: globalRadioSnapshot
+                    )
+                }
+                guard journalWasPrepared else {
                     addActivity(
                         .error,
                         "No se pudo guardar la escena anterior completa; no se transmitió A0"
@@ -3142,6 +3314,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         forceWrite: Bool,
         restorationGlobalSnapshot: GlobalRadioSnapshot?
     ) {
+        guard isSceneActive else { return }
         do {
             let isExactRestoration = !restorationPoints.isEmpty &&
                 applySequenceJournalKind != .forward
@@ -3254,6 +3427,46 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             )
         }
 
+        return prepareForwardJournal(points: points)
+    }
+
+    /// A0 también cambia estado físico aunque no tenga A1 posterior. Conserva
+    /// la escena global confirmada y los baselines de todos los grupos como una
+    /// tanda restaurable antes de transmitir Standby o un cambio Multi-only.
+    private func prepareGlobalOnlyForwardJournal(
+        restorationGlobalSnapshot: GlobalRadioSnapshot
+    ) -> Bool {
+        guard let sessionDeviceID, !workingGroups.isEmpty else { return false }
+        var points: [GodoxGroup: GroupRestorationPoint] = [:]
+        for group in workingGroups {
+            guard let state = groups[group], points[group] == nil else { return false }
+            let snapshot = state.baseline
+            let restoresAfterMulti = state.baselineRestoresAfterMulti
+            let multiUnderlyingMode: GroupOperatingMode?
+            if snapshot.operatingMode == .multi ||
+                snapshot.operatingMode == .off ||
+                restoresAfterMulti {
+                multiUnderlyingMode = state.baselineLastKnownActiveMode
+            } else {
+                multiUnderlyingMode = nil
+            }
+            points[group] = GroupRestorationPoint(
+                deviceID: sessionDeviceID,
+                snapshot: snapshot,
+                globalSnapshot: restorationGlobalSnapshot,
+                multiUnderlyingMode: multiUnderlyingMode,
+                restoresAfterMulti: restoresAfterMulti
+            )
+        }
+
+        return prepareForwardJournal(points: points)
+    }
+
+    private func prepareForwardJournal(
+        points: [GodoxGroup: GroupRestorationPoint]
+    ) -> Bool {
+        guard !points.isEmpty else { return false }
+
         if applySequenceJournalKind == .forward {
             return restorationPoints == points
         }
@@ -3271,7 +3484,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     private func sendNextQueuedGroupChange() {
-        guard activeGroupChange == nil,
+        guard isSceneActive,
+              activeGroupChange == nil,
               controlIntents.isEmpty,
               awaitingRadioResponses.isEmpty else {
             return
@@ -3336,7 +3550,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         forceWrite: Bool = false,
         permitsJournaledForwardWrite: Bool = false
     ) -> Bool {
-        guard recoveryBlockReason == nil,
+        guard isSceneActive,
+              recoveryBlockReason == nil,
               let sessionDeviceID, let state = groups[group] else { return false }
         if !restorationPoints.isEmpty {
             if !permitsJournaledForwardWrite {
@@ -3418,7 +3633,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         return "El cambio de \(group.label) no forma un comando válido"
     }
 
-    func bluetoothClient(didReceive event: BluetoothClient.Event) {
+    private func handleTransportEvent(_ event: TransportEvent) {
+        guard isSceneActive, acceptsTransportEvents else { return }
         switch event {
         case .stateChanged(let clientState):
             handleClientState(clientState)
@@ -3430,7 +3646,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             guard let canonicalName = GodoxBluetoothDeviceName.canonicalName(
                 from: discoveredDevice.name
             ) else { return }
-            let device = BluetoothClient.Device(
+            let device = RadioCandidate(
                 id: discoveredDevice.id,
                 name: canonicalName,
                 rssi: discoveredDevice.rssi
@@ -3503,7 +3719,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
     }
 
-    private func handleClientState(_ state: BluetoothClient.State) {
+    private func handleClientState(_ state: RadioTransportState) {
         switch state {
         case .idle:
             if pendingDisconnectResolution != nil {
@@ -3550,6 +3766,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     private func beginAuthentication() {
+        guard isSceneActive else { return }
         connectionSetupDeadline?.cancel()
         connectionSetupDeadline = nil
         guard isRadioCodeValid else {
@@ -3606,7 +3823,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             } catch {
                 return
             }
-            guard let self, self.phase == .synchronizing else { return }
+            guard let self, self.isSceneActive, self.phase == .synchronizing else { return }
             self.synchronizationTimeout?.cancel()
             self.synchronizationTimeout = Task { @MainActor [weak self] in
                 do {
@@ -3614,19 +3831,22 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 } catch {
                     return
                 }
-                guard let self, self.phase == .synchronizing else { return }
+                guard let self, self.isSceneActive, self.phase == .synchronizing else { return }
                 self.invalidateSession("Sync no fue entregado a CoreBluetooth")
             }
             self.client.sendSync(SafeGodoxProtocol.synchronizationPayload(now: Date()))
         }
     }
 
-    private func handleCommandSent(_ kind: BluetoothClient.CommandKind) {
+    private func handleCommandSent(_ kind: RadioCommand) {
         switch kind {
         case .authentication:
             break
         case .sync:
             guard phase == .synchronizing else { return }
+            if foregroundRequirementSessionID == sessionID {
+                foregroundTransportSyncSessionID = sessionID
+            }
             synchronizationDelay?.cancel()
             synchronizationDelay = nil
             synchronizationTimeout?.cancel()
@@ -3667,6 +3887,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                 )
                 scheduleAutomaticApplyIfNeeded()
             }
+            resolveForegroundRequirementIfSafe(valueSynchronizationCompleted: false)
         case .test:
             guard !sessionIsInvalidating, isTestPending else { return }
             testDeliveryDeadline?.cancel()
@@ -3822,8 +4043,11 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
                     restorationGlobalSnapshot: followup.restorationGlobalSnapshot
                 )
             } else {
-                phase = .ready
-                scheduleAutomaticApplyIfNeeded()
+                // La única escritura de esta operación fue A0. Su acuse GATT
+                // permite cerrar la misma tanda durable preparada antes de
+                // transmitir; si el clear falla, finishApplySequence conserva
+                // el journal y bloquea operaciones nuevas.
+                finishApplySequence()
             }
         case .heartbeat(let deviceID, let intentSessionID, let intentID):
             completePendingHeartbeat(intentID: intentID)
@@ -3894,7 +4118,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
     }
 
-    private func handleCommandFailure(_ kind: BluetoothClient.CommandKind, message: String) {
+    private func handleCommandFailure(_ kind: RadioCommand, message: String) {
         switch kind {
         case .authentication, .sync:
             invalidateSession(message)
@@ -3962,6 +4186,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     private func submitControl(_ payload: Data, intentID: UUID) {
+        guard isSceneActive else { return }
         let previousIntentID = submittingControlIntentID
         submittingControlIntentID = intentID
         client.sendControl(payload)
@@ -4221,6 +4446,8 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         shouldSaveRadioAfterAuthentication = false
         sessionDeviceID = nil
         sessionID = nil
+        foregroundRequirementSessionID = nil
+        foregroundTransportSyncSessionID = nil
     }
 
     private func addActivity(_ level: ActivityLevel, _ message: String) {
@@ -4311,7 +4538,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     private func saveTransmitterProfilePreferences(
-        _ state: TransmitterProfilePreferences.State
+        _ state: TransmitterProfilePreferenceState
     ) -> Bool {
         transmitterProfilePreferences.save(
             state,

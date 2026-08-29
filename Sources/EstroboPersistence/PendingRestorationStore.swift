@@ -1,17 +1,27 @@
 import Foundation
 
+#if canImport(EstroboCore)
+import EstroboCore
+#endif
+
 /// Registro local de recuperación. Guarda identidad CoreBluetooth, grupo, los
 /// seis bytes mutables del baseline A1 y, cuando existe, el A0 global previo y
 /// el modo M/TTL recordado debajo de MULTI u Off; nunca credenciales.
-struct PendingRestorationStore {
-    enum LoadResult: Equatable {
-        case none
-        case record(group: GodoxGroup, point: GroupRestorationPoint)
-        case batch(points: [GodoxGroup: GroupRestorationPoint])
-        case invalid
-    }
+@MainActor
+struct PendingRestorationStore: RestorationRepository {
+    typealias LoadResult = RestorationLoadResult
 
-    static let defaultStorageKey = "GodoxMacControlPrototype.pendingRestoration.v1"
+    nonisolated static let defaultStorageKey = "GodoxMacControlPrototype.pendingRestoration.v1"
+
+    static var defaultJournalURL: URL {
+        let applicationSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first!
+        return applicationSupport
+            .appendingPathComponent("mx.loo.estrobo", isDirectory: true)
+            .appendingPathComponent("pending-restoration.json", isDirectory: false)
+    }
 
     private struct PersistedGlobalSnapshot: Codable {
         let beepEnabled: Bool
@@ -122,22 +132,22 @@ struct PendingRestorationStore {
         let points: [PersistedPoint]
     }
 
-    private let storageKey: String
-    private let readObject: (String) -> Any?
-    private let writeData: (Data, String) -> Bool
-    private let removeValue: (String) -> Bool
+    private let journal: RestorationJournal
+    private let legacyStorageKey: String?
+    private let readLegacyObject: ((String) -> Any?)?
+    private let removeLegacyValue: ((String) -> Bool)?
 
     init(
         defaults: UserDefaults = .standard,
-        storageKey: String = PendingRestorationStore.defaultStorageKey
+        storageKey: String = PendingRestorationStore.defaultStorageKey,
+        journal: RestorationJournal? = nil
     ) {
-        self.storageKey = storageKey
-        readObject = { defaults.object(forKey: $0) }
-        writeData = { data, key in
-            defaults.set(data, forKey: key)
-            return defaults.data(forKey: key) == data
-        }
-        removeValue = { key in
+        self.journal = journal ?? AtomicFileRestorationJournal(
+            fileURL: Self.defaultJournalURL
+        )
+        legacyStorageKey = storageKey
+        readLegacyObject = { defaults.object(forKey: $0) }
+        removeLegacyValue = { key in
             defaults.removeObject(forKey: key)
             return defaults.object(forKey: key) == nil
         }
@@ -149,10 +159,26 @@ struct PendingRestorationStore {
         writeData: @escaping (Data, String) -> Bool,
         removeValue: @escaping (String) -> Bool
     ) {
-        self.storageKey = storageKey
-        self.readObject = readObject
-        self.writeData = writeData
-        self.removeValue = removeValue
+        journal = ClosureRestorationJournal(
+            readObject: { readObject(storageKey) },
+            writeData: { writeData($0, storageKey) },
+            removeValue: { removeValue(storageKey) }
+        )
+        legacyStorageKey = nil
+        readLegacyObject = nil
+        removeLegacyValue = nil
+    }
+
+    init(
+        journal: RestorationJournal,
+        legacyStorageKey: String? = nil,
+        readLegacyObject: ((String) -> Any?)? = nil,
+        removeLegacyValue: ((String) -> Bool)? = nil
+    ) {
+        self.journal = journal
+        self.legacyStorageKey = legacyStorageKey
+        self.readLegacyObject = readLegacyObject
+        self.removeLegacyValue = removeLegacyValue
     }
 
     private static func decodePoint(
@@ -234,15 +260,41 @@ struct PendingRestorationStore {
     }
 
     func load() -> LoadResult {
-        guard let object = readObject(storageKey) else { return .none }
-        guard let data = object as? Data,
-              let envelope = try? JSONDecoder().decode(
-                  VersionEnvelope.self,
-                  from: data
-              ) else {
+        switch journal.read() {
+        case .failed:
             return .invalid
+        case .data(let data):
+            guard let decoded = decode(data), removeLegacyIfPresent() else {
+                return .invalid
+            }
+            return decoded
+        case .none:
+            break
         }
 
+        guard let legacyStorageKey,
+              let readLegacyObject,
+              let object = readLegacyObject(legacyStorageKey) else {
+            return .none
+        }
+        guard let data = object as? Data,
+              let decoded = decode(data),
+              journal.replace(with: data) == .committed,
+              journal.read() == .data(data),
+              decode(data) == decoded,
+              removeLegacyIfPresent() else {
+            return .invalid
+        }
+        return decoded
+    }
+
+    private func decode(_ data: Data) -> LoadResult? {
+        guard let envelope = try? JSONDecoder().decode(
+            VersionEnvelope.self,
+            from: data
+        ) else {
+            return nil
+        }
         switch envelope.version {
         case 1:
             guard let record = try? JSONDecoder().decode(
@@ -251,7 +303,7 @@ struct PendingRestorationStore {
                   ),
                   record.version == 1,
                   let decoded = Self.decodePoint(PersistedPoint(record)) else {
-                return .invalid
+                return nil
             }
             return .record(group: decoded.group, point: decoded.point)
         case 2:
@@ -261,11 +313,11 @@ struct PendingRestorationStore {
                   ),
                   record.version == 2,
                   let points = Self.decodeBatch(record.points) else {
-                return .invalid
+                return nil
             }
             return .batch(points: points)
         default:
-            return .invalid
+            return nil
         }
     }
 
@@ -290,10 +342,35 @@ struct PendingRestorationStore {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         guard let data = try? encoder.encode(record) else { return false }
-        return writeData(data, storageKey)
+        guard journal.replace(with: data) == .committed,
+              journal.read() == .data(data),
+              decode(data) != nil,
+              removeLegacyIfPresent() else {
+            return false
+        }
+        return true
     }
 
     func clear() -> Bool {
-        removeValue(storageKey)
+        guard removeLegacyIfPresent(),
+              journal.clear() == .committed,
+              journal.read() == .none else {
+            return false
+        }
+        return true
+    }
+
+    private func removeLegacyIfPresent() -> Bool {
+        guard let legacyStorageKey,
+              let readLegacyObject,
+              readLegacyObject(legacyStorageKey) != nil else {
+            return true
+        }
+        guard let removeLegacyValue,
+              removeLegacyValue(legacyStorageKey),
+              readLegacyObject(legacyStorageKey) == nil else {
+            return false
+        }
+        return true
     }
 }

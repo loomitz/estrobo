@@ -27,7 +27,7 @@ Para trabajar sin hardware:
 - El estado local es la fuente de verdad. Después de `PWOK` y Sync técnico, conectar escribe deliberadamente A0 y todos los A1 configurados; no importa el estado del radio.
 - Automático sigue siendo predeterminado y usa 700 ms. Un gesto continuo no arma el plazo hasta soltar y sólo transmite el valor final.
 - A0 confirma por GATT. Cada A1 confirma por GATT + `FEC8`; `FEC8` no identifica grupo ni demuestra el resultado óptico.
-- Recordar el **Código del radio** comienza apagado. Si se elige, se guarda localmente y sin cifrar después de `PWOK` + Sync; nunca se envía a Internet.
+- Recordar el **Código del radio** comienza apagado. Si se elige, se guarda después de `PWOK` + Sync en el Keychain local con accesibilidad `WhenUnlockedThisDeviceOnly`; no se sincroniza entre dispositivos ni se envía a Internet.
 - App Sandbox y Bluetooth permanecen activos, sin red, analítica ni telemetría.
 - Las pruebas automatizadas usan transporte falso y códigos sintéticos; no sustituyen los gates físicos de release.
 

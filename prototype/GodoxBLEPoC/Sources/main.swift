@@ -3,6 +3,13 @@ import Darwin
 import Dispatch
 import Foundation
 
+#if canImport(EstroboBluetooth)
+import EstroboBluetooth
+#endif
+#if canImport(EstroboCore)
+import EstroboCore
+#endif
+
 private let ansiClear = "\u{001B}[2J\u{001B}[H"
 private let ansiBold = "\u{001B}[1m"
 private let ansiDim = "\u{001B}[2m"
@@ -10,6 +17,10 @@ private let ansiReset = "\u{001B}[0m"
 
 private func writeTerminal(_ text: String) {
     FileHandle.standardOutput.write(Data(text.utf8))
+}
+
+private func safeFrameSummary(_ data: Data) -> String {
+    data.map { String(format: "%02X", $0) }.joined(separator: " ")
 }
 
 private func readRadioCodeWithoutEcho() -> String? {
@@ -40,11 +51,17 @@ private func readRadioCodeWithoutEcho() -> String? {
 }
 
 @MainActor
-private final class TerminalApp: BluetoothClientDelegate {
+private final class TerminalApp {
     private var radioCode: String
-    private lazy var client = BluetoothClient(delegate: self)
+    private lazy var client: any RadioTransport = {
+        let transport = RadioTransportFactory.live()
+        transport.eventHandler = { [weak self] event in
+            self?.handle(event)
+        }
+        return transport
+    }()
     private var state = SessionState()
-    private var devices: [BluetoothClient.Device] = []
+    private var devices: [RadioCandidate] = []
     private var recentEvents: [String] = []
     private var inputSource: (any DispatchSourceRead)?
     private var inputBuffer = ""
@@ -65,7 +82,7 @@ private final class TerminalApp: BluetoothClientDelegate {
         render()
     }
 
-    func bluetoothClient(didReceive event: BluetoothClient.Event) {
+    private func handle(_ event: TransportEvent) {
         switch event {
         case .stateChanged(let clientState):
             handle(clientState)
@@ -93,7 +110,7 @@ private final class TerminalApp: BluetoothClientDelegate {
             handleAuthenticationResponse(data)
 
         case .notification(.control, let data):
-            if let heartbeat = GodoxProtocol.heartbeatResponse(for: data) {
+            if let heartbeat = SafeGodoxProtocol.heartbeatResponse(for: data) {
                 appendEvent("heartbeat F0 E0 recibido")
                 client.sendControl(heartbeat)
             } else {
@@ -146,7 +163,7 @@ private final class TerminalApp: BluetoothClientDelegate {
         }
     }
 
-    private func handle(_ clientState: BluetoothClient.State) {
+    private func handle(_ clientState: RadioTransportState) {
         switch clientState {
         case .idle:
             if state.phase == .booting || state.phase == .bluetoothUnavailable {
@@ -190,7 +207,7 @@ private final class TerminalApp: BluetoothClientDelegate {
         apply(.transportReady)
         let now = unixMilliseconds()
         do {
-            let request = try GodoxProtocol.authenticationRequest(
+            let request = try SafeGodoxProtocol.authenticationRequest(
                 radioCode: radioCode,
                 unixMilliseconds: now,
                 randomValue: Int.random(in: 1...98)
@@ -219,7 +236,7 @@ private final class TerminalApp: BluetoothClientDelegate {
             appendEvent("respuesta FFF4 ignorada fuera del handshake")
             return
         }
-        guard GodoxProtocol.isValidAuthenticationResponse(
+        guard SafeGodoxProtocol.isValidAuthenticationResponse(
             data,
             unixMilliseconds: unixMilliseconds()
         ) else {
@@ -233,7 +250,7 @@ private final class TerminalApp: BluetoothClientDelegate {
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(500))
             guard let self, self.state.phase == .authenticating else { return }
-            self.client.sendSync(GodoxProtocol.synchronizationPayload(now: Date()))
+            self.client.sendSync(SafeGodoxProtocol.synchronizationPayload(now: Date()))
             self.apply(.authenticationSucceeded)
         }
     }
@@ -246,12 +263,15 @@ private final class TerminalApp: BluetoothClientDelegate {
 
         let decimalPower = command == .raiseGroupB ? 23 : 20
         do {
-            let frame = try GodoxProtocol.manualGroupFrame(
+            guard let power = ManualPower.value(decimal: decimalPower) else {
+                throw SafeGodoxProtocolError.invalidPower
+            }
+            let frame = try SafeGodoxProtocol.manualGroupFrame(
                 group: .b,
-                decimalPower: decimalPower
+                snapshot: ManualGroupSnapshot(power: power, modeling: .off)
             )
             pendingControl = command
-            lastFrame = GodoxProtocol.safeFrameSummary(frame)
+            lastFrame = safeFrameSummary(frame)
             apply(.writeStarted(command))
             client.sendControl(frame)
         } catch {
@@ -403,7 +423,7 @@ private final class TerminalApp: BluetoothClientDelegate {
         writeTerminal(output)
     }
 
-    private func label(for level: BluetoothClient.LogLevel) -> String {
+    private func label(for level: RadioTransportLogLevel) -> String {
         switch level {
         case .debug: "debug"
         case .info: "info"

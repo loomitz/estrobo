@@ -73,8 +73,8 @@ private final class InteractiveTestDeadlineScheduler: SessionDeadlineScheduling 
 }
 
 @MainActor
-private final class InteractiveFakeTransport: GodoxSessionTransport {
-    weak var delegate: (any BluetoothClientDelegate)?
+private final class InteractiveFakeTransport: RadioTransport {
+    var eventHandler: ((TransportEvent) -> Void)?
     let isSimulation = true
 
     private(set) var controlPayloads: [Data] = []
@@ -89,7 +89,7 @@ private final class InteractiveFakeTransport: GodoxSessionTransport {
         emit(.stateChanged(.idle))
     }
 
-    func connect(to device: BluetoothClient.Device) {
+    func connect(to device: RadioCandidate) {
         emit(.stateChanged(.connecting(device)))
     }
 
@@ -119,12 +119,12 @@ private final class InteractiveFakeTransport: GodoxSessionTransport {
         controlPayloads.append(payload)
     }
 
-    func emit(_ event: BluetoothClient.Event) {
-        delegate?.bluetoothClient(didReceive: event)
+    func emit(_ event: TransportEvent) {
+        eventHandler?(event)
     }
 }
 
-private let interactiveTestDevice = BluetoothClient.Device(
+private let interactiveTestDevice = RadioCandidate(
     id: UUID(uuidString: "BEE70000-1111-4222-8333-444444444444")!,
     name: "ESTROBO-INTERACTION-TEST",
     rssi: -38
@@ -231,6 +231,7 @@ private struct FixedIntensityHarness: View {
 enum InteractiveEditingCheck {
     static func main() {
         checkCentralTokenTransaction()
+        checkForegroundSuspensionCancelsHeldGesture()
         checkBeginCancelsExistingDeadline()
         checkReturningToBaselineDoesNotSend()
         checkConcurrentAndIdempotentTokens()
@@ -283,6 +284,37 @@ enum InteractiveEditingCheck {
         }
         expect(decoded.0 == .c)
         expect(decoded.1.power == powers.last, "Only the last dragged value may be sent")
+    }
+
+    private static func checkForegroundSuspensionCancelsHeldGesture() {
+        let fixture = makeReadyFixture()
+        let powers = alternatePowers(in: fixture.controller)
+        let token = fixture.controller.beginInteractiveEdit()
+
+        fixture.controller.setDraftPower(.c, power: powers.first)
+        fixture.controller.setDraftPower(.c, power: powers.last)
+        expect(fixture.controller.isInteractiveEditActive)
+        expect(fixture.scheduler.activeCount(.automaticApply) == 0)
+        expect(fixture.transport.controlPayloads.isEmpty)
+
+        fixture.controller.suspendForInactiveScene()
+        expect(!fixture.controller.isInteractiveEditActive)
+        expect(fixture.controller.activeInteractiveEditCount == 0)
+        expect(fixture.scheduler.activeCount(.automaticApply) == 0)
+        expect(fixture.transport.controlPayloads.isEmpty)
+        expect(fixture.controller.groupDraft(.c).draft.power == powers.last)
+
+        // A late mouse-up from the retired gesture is harmless and cannot arm
+        // the final 700 ms write.
+        fixture.controller.endInteractiveEdit(token)
+        fixture.controller.resumeActiveScene()
+        expect(fixture.scheduler.activeCount(.automaticApply) == 0)
+        expect(!fixture.scheduler.fireNext(.automaticApply))
+        expect(
+            fixture.transport.controlPayloads.isEmpty,
+            "Background durante un gesto no debe enviar intermedios ni valor final"
+        )
+        expect(fixture.controller.groupDraft(.c).draft.power == powers.last)
     }
 
     private static func checkReturningToBaselineDoesNotSend() {

@@ -1,23 +1,23 @@
 import Foundation
 
-enum CapabilityEvidence: String, Hashable {
+public enum CapabilityEvidence: String, Hashable, Sendable {
     case apkCatalog = "Catálogo APK"
     case protocolGeneric = "Campo A1 genérico"
     case observedLocalData = "Datos locales observados"
     case manufacturerSpecification = "Especificación oficial Godox"
 }
 
-enum ModelingCapability: Hashable {
+public enum ModelingCapability: Hashable, Sendable {
     case unavailable
     case proportionalAndFixed(range: ClosedRange<Int>, step: Int, evidence: CapabilityEvidence)
     case unknown
 
-    var permitsModeling: Bool {
+    public var permitsModeling: Bool {
         if case .unavailable = self { return false }
         return true
     }
 
-    var editableValues: [ModelingLight] {
+    public var editableValues: [ModelingLight] {
         switch self {
         case .unavailable:
             return [.off]
@@ -36,22 +36,22 @@ enum ModelingCapability: Hashable {
     }
 }
 
-enum FeatureSupport: String, Hashable {
+public enum FeatureSupport: String, Hashable, Sendable {
     case unsupported
     case protocolGeneric
     case unknown
 
-    var permitsDraft: Bool { self != .unsupported }
+    public var permitsDraft: Bool { self != .unsupported }
 }
 
 /// A manufacturer-published power × frequency table. Profiles stay explicit:
 /// Godox models do not all share the same stroboscopic ceiling, so an unknown
 /// model must remain visibly unverified instead of inheriting another flash's
 /// limit by accident.
-enum MultiFlashLimitProfile: String, Hashable {
+public enum MultiFlashLimitProfile: String, Hashable, Sendable {
     case ad400ProII
 
-    func maximumFlashCount(power: ManualPower, hertz: Int) -> Int? {
+    public func maximumFlashCount(power: ManualPower, hertz: Int) -> Int? {
         switch self {
         case .ad400ProII:
             return Self.ad400ProIIMaximumFlashCount(power: power, hertz: hertz)
@@ -62,7 +62,7 @@ enum MultiFlashLimitProfile: String, Hashable {
     /// fallback. The AD400Pro II table jumps from 20–50 Hz to 60–100 Hz; the
     /// app applies the safer following row at 51–59 Hz, but must not label that
     /// manufacturer-unpublished gap as verified.
-    func hasManufacturerPublishedLimit(power: ManualPower, hertz: Int) -> Bool {
+    public func hasManufacturerPublishedLimit(power: ManualPower, hertz: Int) -> Bool {
         guard maximumFlashCount(power: power, hertz: hertz) != nil else { return false }
         switch self {
         case .ad400ProII:
@@ -111,25 +111,25 @@ enum MultiFlashLimitProfile: String, Hashable {
     }
 }
 
-struct FlashCapability: Hashable, Identifiable {
-    let id: String
-    let name: String
-    let minimumManualDenominator: Int
-    let modeling: ModelingCapability
-    let beep: FeatureSupport
-    let evidence: CapabilityEvidence
-    let multiLimitProfile: MultiFlashLimitProfile?
+public struct FlashCapability: Hashable, Identifiable, Sendable {
+    public let id: String
+    public let name: String
+    public let minimumManualDenominator: Int
+    public let modeling: ModelingCapability
+    public let beep: FeatureSupport
+    public let evidence: CapabilityEvidence
+    public let multiLimitProfile: MultiFlashLimitProfile?
 }
 
-struct TransmitterProfile: Hashable, Identifiable {
-    let id: String
-    let name: String
-    let supportedGroups: [GodoxGroup]
+public struct TransmitterProfile: Hashable, Identifiable, Sendable {
+    public let id: String
+    public let name: String
+    public let supportedGroups: [GodoxGroup]
     /// Godox documents wireless Multi selection for groups A-E on the X3Pro.
     /// Keep this explicit instead of inferring it from the wider M/TTL group set.
-    let supportedMultiGroups: [GodoxGroup]
-    let flashCatalog: [FlashCapability]
-    let supportsGroupBeep: Bool
+    public let supportedMultiGroups: [GodoxGroup]
+    public let flashCatalog: [FlashCapability]
+    public let supportsGroupBeep: Bool
 
     private static func flash(
         id: String,
@@ -149,7 +149,7 @@ struct TransmitterProfile: Hashable, Identifiable {
         )
     }
 
-    static let recoveredFlashCatalog: [FlashCapability] = [
+    public static let recoveredFlashCatalog: [FlashCapability] = [
         flash(id: "p2400", name: "P2400", denominator: 512),
         flash(
             id: "ad400pro-ii",
@@ -256,7 +256,7 @@ struct TransmitterProfile: Hashable, Identifiable {
         ),
     ]
 
-    static let observedGDBH = TransmitterProfile(
+    public static let observedGDBH = TransmitterProfile(
         id: "gdbh-observed-0-f",
         name: "GDBH · grupos 0–F",
         supportedGroups: GodoxGroup.allCases,
@@ -265,7 +265,7 @@ struct TransmitterProfile: Hashable, Identifiable {
         supportsGroupBeep: true
     )
 
-    static let classicLetters = TransmitterProfile(
+    public static let classicLetters = TransmitterProfile(
         id: "godox-letters-a-f",
         name: "Godox · grupos A–F",
         supportedGroups: GodoxGroup.lettered,
@@ -274,30 +274,42 @@ struct TransmitterProfile: Hashable, Identifiable {
         supportsGroupBeep: true
     )
 
-    static let available: [TransmitterProfile] = [.observedGDBH, .classicLetters]
+    public static let available: [TransmitterProfile] = [.observedGDBH, .classicLetters]
 }
 
-struct GroupConfiguration: Equatable {
-    var assignedFlashModelIDs: Set<String>
-    var isVisibleLocally: Bool
-    var isEnabledOnRadio: Bool
-    var hasCompleteBaseline: Bool
+public struct GroupConfiguration: Equatable, Sendable {
+    public var assignedFlashModelIDs: Set<String>
+    public var isVisibleLocally: Bool
+    public var isEnabledOnRadio: Bool
+    public var hasCompleteBaseline: Bool
+
+    public init(
+        assignedFlashModelIDs: Set<String>,
+        isVisibleLocally: Bool,
+        isEnabledOnRadio: Bool,
+        hasCompleteBaseline: Bool
+    ) {
+        self.assignedFlashModelIDs = assignedFlashModelIDs
+        self.isVisibleLocally = isVisibleLocally
+        self.isEnabledOnRadio = isEnabledOnRadio
+        self.hasCompleteBaseline = hasCompleteBaseline
+    }
 }
 
-struct ResolvedGroupCapability: Equatable {
-    let flashModels: [FlashCapability]
-    let minimumManualDenominator: Int?
-    let extendedManualDenominator: Int?
-    let modeling: ModelingCapability
-    let supportsBeepDraft: Bool
-    let multiLimitProfiles: [MultiFlashLimitProfile]
-    let hasUnverifiedMultiLimits: Bool
+public struct ResolvedGroupCapability: Equatable, Sendable {
+    public let flashModels: [FlashCapability]
+    public let minimumManualDenominator: Int?
+    public let extendedManualDenominator: Int?
+    public let modeling: ModelingCapability
+    public let supportsBeepDraft: Bool
+    public let multiLimitProfiles: [MultiFlashLimitProfile]
+    public let hasUnverifiedMultiLimits: Bool
 
-    var hasMixedPowerCapabilities: Bool {
+    public var hasMixedPowerCapabilities: Bool {
         Set(flashModels.map(\.minimumManualDenominator)).count > 1
     }
 
-    var powerScale: [ManualPower] {
+    public var powerScale: [ManualPower] {
         guard let minimumManualDenominator else { return [] }
         return ManualPower.scale(minimumDenominator: minimumManualDenominator)
     }
@@ -305,18 +317,18 @@ struct ResolvedGroupCapability: Equatable {
     /// Multi uses whole-stop output values and tops out at 1/4 on the X3Pro.
     /// The lower bound still comes from the safest common range of the flashes
     /// assigned to the group.
-    var multiPowerScale: [ManualPower] {
+    public var multiPowerScale: [ManualPower] {
         powerScale.filter {
             $0.decimalValue <= 80 && $0.decimalValue.isMultiple(of: 10)
         }
     }
 
-    var safeRangeLabel: String {
+    public var safeRangeLabel: String {
         guard let first = powerScale.first, let last = powerScale.last else { return "Sin modelo" }
         return "\(first.label) – \(last.label)"
     }
 
-    static func resolve(
+    public static func resolve(
         configuration: GroupConfiguration,
         profile: TransmitterProfile
     ) -> ResolvedGroupCapability {

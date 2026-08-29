@@ -1,6 +1,16 @@
 import SwiftUI
 import AppKit
 
+#if canImport(EstroboBluetooth)
+import EstroboBluetooth
+#endif
+#if canImport(EstroboCore)
+import EstroboCore
+#endif
+#if canImport(EstroboPersistence)
+import EstroboPersistence
+#endif
+
 // Aplicación macOS para controlar grupos, potencia y modelado junto al
 // tethering. Las tres vistas comparten una sola sesión y los mismos borradores.
 
@@ -16,7 +26,7 @@ struct GodoxMacControlPrototypeApp: App {
 
     init() {
         let sessionController = MockRadioRuntime.makeControllerIfRequested()
-            ?? GodoxSessionController()
+            ?? Self.makeLiveController()
         _controller = StateObject(wrappedValue: sessionController)
         _appearanceStore = StateObject(wrappedValue: AppAppearanceStore())
         _languageStore = StateObject(wrappedValue: AppLanguageStore())
@@ -30,6 +40,20 @@ struct GodoxMacControlPrototypeApp: App {
                 guard newValue != isMenuBarIconVisible else { return }
                 isMenuBarIconVisible = newValue
             }
+        )
+    }
+
+    private static func makeLiveController() -> GodoxSessionController {
+        let persistence = PersistenceServicesFactory.live()
+        return GodoxSessionController(
+            transport: RadioTransportFactory.live(),
+            deadlineScheduler: LiveSessionDeadlineScheduler(),
+            visibilityPreferences: persistence.groupVisibility,
+            restorationStore: persistence.restorations,
+            savedRadioStore: persistence.savedRadios,
+            changeDeliveryPreferences: persistence.changeDelivery,
+            transmitterProfilePreferences: persistence.transmitterProfiles,
+            studioLibraryStore: persistence.studioLibrary
         )
     }
 

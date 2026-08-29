@@ -1,6 +1,6 @@
 import Foundation
 
-enum SessionDeadlineKind: Hashable {
+public enum SessionDeadlineKind: Hashable, Sendable {
     case scan
     case connectionSetup
     case authentication
@@ -10,7 +10,7 @@ enum SessionDeadlineKind: Hashable {
     case heartbeat
     case testDelivery
 
-    var duration: Duration {
+    public var duration: Duration {
         switch self {
         case .scan:
             .seconds(10)
@@ -33,11 +33,13 @@ enum SessionDeadlineKind: Hashable {
 }
 
 @MainActor
-final class SessionDeadlineToken {
+public final class SessionDeadlineToken {
     private var cancellation: (() -> Void)?
-    private(set) var isCancelled = false
+    public private(set) var isCancelled = false
 
-    func installCancellation(_ cancellation: @escaping () -> Void) {
+    public init() {}
+
+    public func installCancellation(_ cancellation: @escaping () -> Void) {
         guard !isCancelled else {
             cancellation()
             return
@@ -45,7 +47,7 @@ final class SessionDeadlineToken {
         self.cancellation = cancellation
     }
 
-    func cancel() {
+    public func cancel() {
         guard !isCancelled else { return }
         isCancelled = true
         let action = cancellation
@@ -55,7 +57,7 @@ final class SessionDeadlineToken {
 }
 
 @MainActor
-protocol SessionDeadlineScheduling: AnyObject {
+public protocol SessionDeadlineScheduling: AnyObject {
     @discardableResult
     func schedule(
         _ kind: SessionDeadlineKind,
@@ -64,8 +66,10 @@ protocol SessionDeadlineScheduling: AnyObject {
 }
 
 @MainActor
-final class LiveSessionDeadlineScheduler: SessionDeadlineScheduling {
-    func schedule(
+public final class LiveSessionDeadlineScheduler: SessionDeadlineScheduling {
+    public init() {}
+
+    public func schedule(
         _ kind: SessionDeadlineKind,
         action: @escaping @MainActor () -> Void
     ) -> SessionDeadlineToken {

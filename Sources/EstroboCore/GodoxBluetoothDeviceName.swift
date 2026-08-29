@@ -5,8 +5,8 @@ import Foundation
 /// Directional, zero-width, and other format/control scalars can make two names
 /// compare differently while rendering alike, or can alter terminal/UI output.
 /// Reject them at the boundary instead of trying to strip or display them.
-enum GodoxBluetoothDeviceName {
-    static func canonicalName(from rawName: String) -> String? {
+public enum GodoxBluetoothDeviceName {
+    public static func canonicalName(from rawName: String) -> String? {
         // Inspect the original scalars first: compatibility normalization can
         // erase some default-ignorable controls, which must remain rejectable.
         guard !rawName.unicodeScalars.contains(where: isUnsafeForDisplay) else {
@@ -22,7 +22,7 @@ enum GodoxBluetoothDeviceName {
         return trimmedName.isEmpty ? nil : trimmedName
     }
 
-    static func compatibleName(from rawName: String) -> String? {
+    public static func compatibleName(from rawName: String) -> String? {
         guard let canonicalName = canonicalName(from: rawName),
               canonicalName.contains("-"),
               canonicalName.hasPrefix("GD") || canonicalName.hasPrefix("Ami-") else {

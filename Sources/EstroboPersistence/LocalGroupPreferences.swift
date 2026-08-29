@@ -1,29 +1,19 @@
 import Foundation
 
+#if canImport(EstroboCore)
+import EstroboCore
+#endif
+
 /// Persistencia exclusivamente local de los grupos que aparecen en la interfaz.
 ///
 /// Los valores guardados son únicamente los `rawValue` técnicos de cada grupo.
 /// Esta preferencia no representa el estado del radio y nunca debe provocar una
 /// escritura Bluetooth.
-struct LocalGroupPreferences {
-    enum VisibilityToggleResult: Equatable {
-        case accepted([GodoxGroup])
-        case rejectedWouldHideLast([GodoxGroup])
+@MainActor
+struct LocalGroupPreferences: GroupVisibilityPreferencesStore {
+    typealias VisibilityToggleResult = GroupVisibilityToggleResult
 
-        var visibleGroups: [GodoxGroup] {
-            switch self {
-            case .accepted(let groups), .rejectedWouldHideLast(let groups):
-                groups
-            }
-        }
-
-        var wasAccepted: Bool {
-            if case .accepted = self { return true }
-            return false
-        }
-    }
-
-    static let defaultStorageKey = "GodoxMacControlPrototype.visibleGroups.v1"
+    nonisolated static let defaultStorageKey = "GodoxMacControlPrototype.visibleGroups.v1"
 
     private let storageKey: String
     private let readArray: (String) -> [Any]?
@@ -93,31 +83,12 @@ struct LocalGroupPreferences {
         currentVisibleGroups: [GodoxGroup],
         supportedGroups: [GodoxGroup]
     ) -> VisibilityToggleResult {
-        let supported = uniqueGroups(supportedGroups)
-        let current = normalizedVisibleGroups(
-            currentVisibleGroups,
-            supportedGroups: supported
+        GroupVisibilityPolicy.visibilityAfterToggling(
+            group,
+            isVisible: isVisible,
+            currentVisibleGroups: currentVisibleGroups,
+            supportedGroups: supportedGroups
         )
-
-        guard supported.contains(group) else {
-            return .accepted(current)
-        }
-
-        var requested = Set(current)
-        if isVisible {
-            requested.insert(group)
-        } else {
-            guard requested.contains(group) else {
-                return .accepted(current)
-            }
-            guard requested.count > 1 else {
-                return .rejectedWouldHideLast(current)
-            }
-            requested.remove(group)
-        }
-
-        let updated = supported.filter(requested.contains)
-        return .accepted(updated)
     }
 
     /// Intersección estable con el perfil, sin duplicados y nunca vacía cuando
@@ -127,26 +98,20 @@ struct LocalGroupPreferences {
         _ requestedGroups: [GodoxGroup]?,
         supportedGroups: [GodoxGroup]
     ) -> [GodoxGroup] {
-        let supported = uniqueGroups(supportedGroups)
-        guard !supported.isEmpty else { return [] }
-        guard let requestedGroups else { return supported }
-
-        let requested = Set(requestedGroups)
-        let normalized = supported.filter(requested.contains)
-        return normalized.isEmpty ? [supported[0]] : normalized
+        GroupVisibilityPolicy.normalizedVisibleGroups(
+            requestedGroups,
+            supportedGroups: supportedGroups
+        )
     }
 
     static func validSelection(
         current: GodoxGroup?,
         visibleGroups: [GodoxGroup]
     ) -> GodoxGroup? {
-        if let current, visibleGroups.contains(current) { return current }
-        return visibleGroups.first
-    }
-
-    private static func uniqueGroups(_ groups: [GodoxGroup]) -> [GodoxGroup] {
-        var seen: Set<GodoxGroup> = []
-        return groups.filter { seen.insert($0).inserted }
+        GroupVisibilityPolicy.validSelection(
+            current: current,
+            visibleGroups: visibleGroups
+        )
     }
 
     private static func group(fromStoredValue value: Any) -> GodoxGroup? {

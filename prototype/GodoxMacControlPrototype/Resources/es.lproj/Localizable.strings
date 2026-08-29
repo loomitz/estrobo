@@ -151,7 +151,7 @@
 "Recordar este radio y su código en este Mac" = "Recordar este radio y su código en este Mac";
 "Hay radios con el mismo nombre. Elige usando RSSI y el sufijo UUID; estos datos ayudan a distinguirlos, pero no autentican el transmisor." = "Hay radios con el mismo nombre. Elige usando RSSI y el sufijo UUID; estos datos ayudan a distinguirlos, pero no autentican el transmisor.";
 "Conectar" = "Conectar";
-"Si activas Recordar, el código se guarda localmente y sin cifrar en este Mac. Nunca se envía a Internet. No reutilices un PIN personal." = "Si activas Recordar, el código se guarda localmente y sin cifrar en este Mac. Nunca se envía a Internet. No reutilices un PIN personal.";
+"Si activas Recordar, el código se guarda en el Keychain de este Mac, sólo para este dispositivo. Nunca se envía a Internet. No reutilices un PIN personal." = "Si activas Recordar, el código se guarda en el Keychain de este Mac, sólo para este dispositivo. Nunca se envía a Internet. No reutilices un PIN personal.";
 "El radio admite una sola conexión Bluetooth a la vez. Cierra antes cualquier otra app conectada al transmisor." = "El radio admite una sola conexión Bluetooth a la vez. Cierra antes cualquier otra app conectada al transmisor.";
 
 "Sin actividad todavía" = "Sin actividad todavía";

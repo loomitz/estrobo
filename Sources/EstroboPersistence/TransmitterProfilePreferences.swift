@@ -1,15 +1,17 @@
 import Foundation
 
+#if canImport(EstroboCore)
+import EstroboCore
+#endif
+
 /// Local availability and default selection for the built-in transmitter
 /// profiles. Profiles themselves remain compile-time capability definitions;
 /// this preference only hides or restores those definitions on this Mac.
-struct TransmitterProfilePreferences {
-    struct State: Equatable {
-        let availableProfileIDs: [String]
-        let defaultProfileID: String
-    }
+@MainActor
+struct TransmitterProfilePreferences: TransmitterProfilePreferencesStore {
+    typealias State = TransmitterProfilePreferenceState
 
-    static let defaultStorageKey = "GodoxMacControlPrototype.transmitterProfiles.v1"
+    nonisolated static let defaultStorageKey = "GodoxMacControlPrototype.transmitterProfiles.v1"
 
     private static let currentVersion = 1
 

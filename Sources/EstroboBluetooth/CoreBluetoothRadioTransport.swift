@@ -1,123 +1,20 @@
 import Foundation
 import CoreBluetooth
 
-@MainActor
-protocol BluetoothClientDelegate: AnyObject {
-    func bluetoothClient(didReceive event: BluetoothClient.Event)
-}
+#if canImport(EstroboCore)
+import EstroboCore
+#endif
 
 /// A deliberately small CoreBluetooth central for the Godox proof of concept.
 ///
 /// This type owns transport and GATT sequencing only. Callers are responsible for
 /// constructing and validating authentication, sync, and control payloads.
 @MainActor
-final class BluetoothClient: NSObject {
-    struct Device: Hashable, Identifiable {
-        let id: UUID
-        let name: String
-        let rssi: Int
-    }
+final class CoreBluetoothRadioTransport: NSObject, RadioTransport {
+    var eventHandler: ((TransportEvent) -> Void)?
 
-    enum State: Equatable {
-        case idle
-        case waitingForBluetooth
-        case bluetoothUnavailable(String)
-        case scanning
-        case connecting(Device)
-        case discovering(Device)
-        case subscribing(Device)
-        case ready(Device)
-        case disconnecting(Device)
-        case failed(String)
-    }
-
-    enum LogLevel {
-        case debug
-        case info
-        case warning
-        case error
-    }
-
-    enum NotificationSource {
-        case authentication
-        case control
-    }
-
-    enum CommandKind {
-        case authentication
-        case sync
-        case test
-        case control
-    }
-
-    enum ClientError: LocalizedError, Equatable {
-        case bluetoothUnavailable(String)
-        case unknownDevice(UUID)
-        case busy(String)
-        case connectionFailed(String)
-        case disconnected(String)
-        case serviceDiscoveryFailed(String)
-        case missingService(String)
-        case characteristicDiscoveryFailed(String)
-        case missingCharacteristic(String)
-        case unsupportedCharacteristic(String)
-        case subscriptionFailed(String)
-        case notReady
-        case payloadTooLarge(command: CommandKind, maximum: Int)
-        case writeFailed(command: CommandKind, message: String)
-
-        var errorDescription: String? {
-            switch self {
-            case .bluetoothUnavailable(let reason):
-                return "Bluetooth is unavailable: \(reason)"
-            case .unknownDevice:
-                return "The selected Bluetooth device is no longer available."
-            case .busy(let reason):
-                return reason
-            case .connectionFailed(let reason):
-                return "Could not connect: \(reason)"
-            case .disconnected(let reason):
-                return "The device disconnected: \(reason)"
-            case .serviceDiscoveryFailed(let reason):
-                return "Service discovery failed: \(reason)"
-            case .missingService(let uuid):
-                return "The device does not expose required service \(uuid)."
-            case .characteristicDiscoveryFailed(let reason):
-                return "Characteristic discovery failed: \(reason)"
-            case .missingCharacteristic(let uuid):
-                return "The device does not expose required characteristic \(uuid)."
-            case .unsupportedCharacteristic(let uuid):
-                return "Characteristic \(uuid) does not support the required operation."
-            case .subscriptionFailed(let reason):
-                return "Notification subscription failed: \(reason)"
-            case .notReady:
-                return "The Godox device is not ready for commands."
-            case .payloadTooLarge(let command, let maximum):
-                return "The \(command.label) payload exceeds the Bluetooth limit of \(maximum) bytes."
-            case .writeFailed(let command, let message):
-                return "The \(command.label) write failed: \(message)"
-            }
-        }
-    }
-
-    enum Event {
-        case stateChanged(State)
-        case discoveryReset
-        case discovered(Device)
-        case log(LogLevel, String)
-        case readyForAuthentication
-        case notification(NotificationSource, Data)
-        case commandSent(CommandKind)
-        case controlWriteStarted
-        case controlWriteCompleted
-        case commandFailed(CommandKind, ClientError)
-        case failed(ClientError)
-    }
-
-    weak var delegate: (any BluetoothClientDelegate)?
-
-    private(set) var state: State = .idle
-    private(set) var discoveredDevices: [Device] = []
+    private(set) var state: RadioTransportState = .idle
+    private(set) var discoveredDevices: [RadioCandidate] = []
 
     private static let controlServiceUUID = CBUUID(string: "FEC0")
     private static let authenticationServiceUUID = CBUUID(string: "FFF0")
@@ -134,21 +31,22 @@ final class BluetoothClient: NSObject {
         case ready
     }
 
-    private struct PendingUnacknowledgedWrite {
-        let kind: CommandKind
-        let payload: Data
+    private struct WriteContext {
+        let peripheral: CBPeripheral
+        let characteristic: CBCharacteristic
+        let access: CoreBluetoothWriteAccess
     }
 
     private var centralManager: CBCentralManager!
     private var scanRequested = false
 
     private var peripheralsByID: [UUID: CBPeripheral] = [:]
-    private var devicesByID: [UUID: Device] = [:]
+    private var devicesByID: [UUID: RadioCandidate] = [:]
     private var currentPeripheral: CBPeripheral?
-    private var currentDevice: Device?
+    private var currentDevice: RadioCandidate?
     private var pendingConnectionID: UUID?
     private var disconnectWasRequested = false
-    private var pendingFailureError: ClientError?
+    private var pendingFailureError: RadioTransportError?
     private var disconnectionWatchdog: Task<Void, Never>?
 
     private var controlService: CBService?
@@ -162,20 +60,20 @@ final class BluetoothClient: NSObject {
     private var subscriptionStep: SubscriptionStep = .idle
     private var subscriptionTask: Task<Void, Never>?
 
-    private var unacknowledgedWriteQueue: [PendingUnacknowledgedWrite] = []
-    private var controlWriteQueue: [Data] = []
-    private var controlWriteInFlight = false
+    private lazy var writeCoordinator = CoreBluetoothWriteCoordinator { [weak self] event in
+        self?.emit(event)
+    }
     private var controlWriteTask: Task<Void, Never>?
 
-    init(delegate: (any BluetoothClientDelegate)? = nil) {
-        self.delegate = delegate
+    init(eventHandler: ((TransportEvent) -> Void)? = nil) {
+        self.eventHandler = eventHandler
         super.init()
         centralManager = CBCentralManager(delegate: self, queue: .main)
     }
 
     func startScanning() {
         guard currentPeripheral == nil else {
-            let error = ClientError.busy("Disconnect the current Godox device before scanning.")
+            let error = RadioTransportError.busy("Disconnect the current Godox device before scanning.")
             emit(.failed(error))
             emit(.log(.warning, error.localizedDescription))
             return
@@ -201,20 +99,20 @@ final class BluetoothClient: NSObject {
         }
     }
 
-    func connect(to device: Device) {
+    func connect(to device: RadioCandidate) {
         connect(to: device.id)
     }
 
     func connect(to identifier: UUID) {
         guard centralManager.state == .poweredOn else {
             let reason = Self.description(for: centralManager.state)
-            let error = ClientError.bluetoothUnavailable(reason)
+            let error = RadioTransportError.bluetoothUnavailable(reason)
             emit(.failed(error))
             updateState(.bluetoothUnavailable(reason))
             return
         }
         guard let peripheral = peripheralsByID[identifier], let device = devicesByID[identifier] else {
-            let error = ClientError.unknownDevice(identifier)
+            let error = RadioTransportError.unknownDevice(identifier)
             emit(.failed(error))
             emit(.log(.error, error.localizedDescription))
             return
@@ -310,14 +208,14 @@ final class BluetoothClient: NSObject {
     }
 
     /// Writes a caller-built radio-code challenge to FFF1 without response.
-    /// The payload itself is never emitted to logs or delegate events.
+    /// The payload itself is never emitted to logs or transport log events.
     func sendAuthentication(_ payload: Data) {
-        enqueueUnacknowledgedWrite(payload, kind: .authentication)
+        enqueueDeferredWrite(payload, command: .authentication)
     }
 
     /// Writes a caller-built clock synchronization payload to FFF1 without response.
     func sendSync(_ payload: Data) {
-        enqueueUnacknowledgedWrite(payload, kind: .sync)
+        enqueueDeferredWrite(payload, command: .sync)
     }
 
     /// Writes an explicit user-requested flash test payload to FFF1 without response.
@@ -326,55 +224,36 @@ final class BluetoothClient: NSObject {
     /// unlike authentication and sync it is never queued for a later radio-ready
     /// callback. This prevents a timed-out Test from firing unexpectedly afterward.
     func sendTest(_ payload: Data) {
-        guard let peripheral = readyPeripheral(), let characteristic = authenticationWriteCharacteristic else {
-            reportCommandFailure(.test, .notReady)
-            return
-        }
-        let maximum = peripheral.maximumWriteValueLength(for: .withoutResponse)
-        guard payload.count <= maximum else {
-            reportCommandFailure(.test, .payloadTooLarge(command: .test, maximum: maximum))
-            return
-        }
-        guard characteristic.properties.contains(.writeWithoutResponse) else {
-            reportCommandFailure(
-                .test,
-                .unsupportedCharacteristic(Self.authenticationWriteUUID.uuidString)
+        guard let context = authenticationWriteContext() else {
+            writeCoordinator.sendTest(
+                payload,
+                access: nil,
+                characteristicID: Self.authenticationWriteUUID.uuidString,
+                deliver: { _ in }
             )
             return
         }
-        guard peripheral.canSendWriteWithoutResponse else {
-            reportCommandFailure(
-                .test,
-                .busy("The Bluetooth radio cannot deliver Test right now. Try again.")
+        writeCoordinator.sendTest(
+            payload,
+            access: context.access,
+            characteristicID: Self.authenticationWriteUUID.uuidString
+        ) { payload in
+            context.peripheral.writeValue(
+                payload,
+                for: context.characteristic,
+                type: .withoutResponse
             )
-            return
         }
-
-        emit(.log(.info, "Explicit flash test sent."))
-        peripheral.writeValue(payload, for: characteristic, type: .withoutResponse)
-        emit(.commandSent(.test))
     }
 
     /// Serializes caller-built A0/A1 (or heartbeat) frames through FEC7 with response.
     func sendControl(_ payload: Data) {
-        guard let peripheral = readyPeripheral(), let characteristic = controlWriteCharacteristic else {
-            reportCommandFailure(.control, .notReady)
-            return
-        }
-        let maximum = peripheral.maximumWriteValueLength(for: .withResponse)
-        guard payload.count <= maximum else {
-            reportCommandFailure(.control, .payloadTooLarge(command: .control, maximum: maximum))
-            return
-        }
-        guard characteristic.properties.contains(.write) else {
-            reportCommandFailure(
-                .control,
-                .unsupportedCharacteristic(Self.controlWriteUUID.uuidString)
-            )
-            return
-        }
-
-        controlWriteQueue.append(payload)
+        let context = controlWriteContext()
+        writeCoordinator.enqueueControl(
+            payload,
+            access: context?.access,
+            characteristicID: Self.controlWriteUUID.uuidString
+        )
         scheduleNextControlWrite()
     }
 
@@ -392,7 +271,7 @@ final class BluetoothClient: NSObject {
         )
     }
 
-    private func beginConnection(to peripheral: CBPeripheral, device: Device) {
+    private func beginConnection(to peripheral: CBPeripheral, device: RadioCandidate) {
         resetGATTState()
         currentPeripheral = peripheral
         currentDevice = device
@@ -442,53 +321,37 @@ final class BluetoothClient: NSObject {
         }
     }
 
-    private func enqueueUnacknowledgedWrite(_ payload: Data, kind: CommandKind) {
-        guard let peripheral = readyPeripheral(), let characteristic = authenticationWriteCharacteristic else {
-            reportCommandFailure(kind, .notReady)
-            return
-        }
-        let maximum = peripheral.maximumWriteValueLength(for: .withoutResponse)
-        guard payload.count <= maximum else {
-            reportCommandFailure(kind, .payloadTooLarge(command: kind, maximum: maximum))
-            return
-        }
-        guard characteristic.properties.contains(.writeWithoutResponse) else {
-            reportCommandFailure(
-                kind,
-                .unsupportedCharacteristic(Self.authenticationWriteUUID.uuidString)
-            )
-            return
-        }
-
-        unacknowledgedWriteQueue.append(PendingUnacknowledgedWrite(kind: kind, payload: payload))
-        flushUnacknowledgedWriteQueue()
+    private func enqueueDeferredWrite(_ payload: Data, command: RadioCommand) {
+        let context = authenticationWriteContext()
+        writeCoordinator.enqueueDeferred(
+            payload,
+            command: command,
+            access: context?.access,
+            characteristicID: Self.authenticationWriteUUID.uuidString
+        )
+        flushDeferredWrites(context: context)
     }
 
-    private func flushUnacknowledgedWriteQueue() {
-        guard let peripheral = readyPeripheral(),
-              let characteristic = authenticationWriteCharacteristic else {
-            return
-        }
-
-        while peripheral.canSendWriteWithoutResponse, !unacknowledgedWriteQueue.isEmpty {
-            let write = unacknowledgedWriteQueue.removeFirst()
-            peripheral.writeValue(write.payload, for: characteristic, type: .withoutResponse)
-            emit(.commandSent(write.kind))
-            switch write.kind {
-            case .authentication:
-                emit(.log(.info, "Authentication request sent."))
-            case .sync:
-                emit(.log(.info, "Clock synchronization sent."))
-            case .test:
-                assertionFailure("Test writes must never enter the deferred queue.")
-            case .control:
-                break
+    private func flushDeferredWrites(context: WriteContext? = nil) {
+        guard let context = context ?? authenticationWriteContext() else { return }
+        writeCoordinator.flushDeferred(
+            canSendWithoutResponse: {
+                context.peripheral.canSendWriteWithoutResponse
+            },
+            deliver: { payload in
+                context.peripheral.writeValue(
+                    payload,
+                    for: context.characteristic,
+                    type: .withoutResponse
+                )
             }
-        }
+        )
     }
 
     private func scheduleNextControlWrite() {
-        guard !controlWriteInFlight, controlWriteTask == nil, !controlWriteQueue.isEmpty else {
+        guard !writeCoordinator.isControlWriteInFlight,
+              controlWriteTask == nil,
+              writeCoordinator.hasPendingControlWrite else {
             return
         }
 
@@ -502,17 +365,51 @@ final class BluetoothClient: NSObject {
             guard let self else { return }
             self.controlWriteTask = nil
             guard self.currentPeripheral === expectedPeripheral,
-                  let peripheral = self.readyPeripheral(),
-                  let characteristic = self.controlWriteCharacteristic,
-                  !self.controlWriteQueue.isEmpty else {
+                  let context = self.controlWriteContext() else {
                 return
             }
-
-            let payload = self.controlWriteQueue.removeFirst()
-            self.controlWriteInFlight = true
-            peripheral.writeValue(payload, for: characteristic, type: .withResponse)
-            self.emit(.controlWriteStarted)
+            self.writeCoordinator.beginNextControlWrite { payload in
+                context.peripheral.writeValue(
+                    payload,
+                    for: context.characteristic,
+                    type: .withResponse
+                )
+            }
         }
+    }
+
+    private func authenticationWriteContext() -> WriteContext? {
+        guard let peripheral = readyPeripheral(),
+              let characteristic = authenticationWriteCharacteristic else {
+            return nil
+        }
+        return WriteContext(
+            peripheral: peripheral,
+            characteristic: characteristic,
+            access: CoreBluetoothWriteAccess(
+                maximumPayloadLength: peripheral.maximumWriteValueLength(
+                    for: .withoutResponse
+                ),
+                supportsWrite: characteristic.properties.contains(.writeWithoutResponse),
+                canSendWithoutResponse: peripheral.canSendWriteWithoutResponse
+            )
+        )
+    }
+
+    private func controlWriteContext() -> WriteContext? {
+        guard let peripheral = readyPeripheral(),
+              let characteristic = controlWriteCharacteristic else {
+            return nil
+        }
+        return WriteContext(
+            peripheral: peripheral,
+            characteristic: characteristic,
+            access: CoreBluetoothWriteAccess(
+                maximumPayloadLength: peripheral.maximumWriteValueLength(for: .withResponse),
+                supportsWrite: characteristic.properties.contains(.write),
+                canSendWithoutResponse: false
+            )
+        )
     }
 
     private func readyPeripheral() -> CBPeripheral? {
@@ -568,7 +465,7 @@ final class BluetoothClient: NSObject {
         beginCharacteristicSubscriptions()
     }
 
-    private func failSession(_ error: ClientError) {
+    private func failSession(_ error: RadioTransportError) {
         emit(.log(.error, error.localizedDescription))
         pendingFailureError = error
         disconnectWasRequested = false
@@ -588,11 +485,6 @@ final class BluetoothClient: NSObject {
             scheduleDisconnectionWatchdog(for: peripheral)
             centralManager.cancelPeripheralConnection(peripheral)
         }
-    }
-
-    private func reportCommandFailure(_ kind: CommandKind, _ error: ClientError) {
-        emit(.commandFailed(kind, error))
-        emit(.log(.error, error.localizedDescription))
     }
 
     private func finishDisconnection(
@@ -625,7 +517,7 @@ final class BluetoothClient: NSObject {
         }
 
         if let error, !requested {
-            let clientError = ClientError.disconnected(error.localizedDescription)
+            let clientError = RadioTransportError.disconnected(error.localizedDescription)
             emit(.log(.error, clientError.localizedDescription))
             publishFailure(clientError)
         } else {
@@ -658,7 +550,7 @@ final class BluetoothClient: NSObject {
         }
     }
 
-    private func publishFailure(_ error: ClientError) {
+    private func publishFailure(_ error: RadioTransportError) {
         updateState(.failed(error.localizedDescription))
         emit(.failed(error))
     }
@@ -693,19 +585,17 @@ final class BluetoothClient: NSObject {
         discoveredControlCharacteristics = false
         discoveredAuthenticationCharacteristics = false
         subscriptionStep = .idle
-        unacknowledgedWriteQueue.removeAll()
-        controlWriteQueue.removeAll()
-        controlWriteInFlight = false
+        writeCoordinator.reset()
     }
 
-    private func updateState(_ newState: State) {
+    private func updateState(_ newState: RadioTransportState) {
         guard state != newState else { return }
         state = newState
         emit(.stateChanged(newState))
     }
 
-    private func emit(_ event: Event) {
-        delegate?.bluetoothClient(didReceive: event)
+    private func emit(_ event: TransportEvent) {
+        eventHandler?(event)
     }
 
     private static func description(for state: CBManagerState) -> String {
@@ -728,22 +618,7 @@ final class BluetoothClient: NSObject {
     }
 }
 
-private extension BluetoothClient.CommandKind {
-    var label: String {
-        switch self {
-        case .authentication:
-            return "authentication"
-        case .sync:
-            return "sync"
-        case .test:
-            return "test"
-        case .control:
-            return "control"
-        }
-    }
-}
-
-extension BluetoothClient: @preconcurrency CBCentralManagerDelegate {
+extension CoreBluetoothRadioTransport: @preconcurrency CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         guard central === centralManager else { return }
 
@@ -794,7 +669,11 @@ extension BluetoothClient: @preconcurrency CBCentralManagerDelegate {
             from: advertisedName ?? peripheral.name ?? ""
         ) else { return }
 
-        let device = Device(id: peripheral.identifier, name: candidateName, rssi: RSSI.intValue)
+        let device = RadioCandidate(
+            id: peripheral.identifier,
+            name: candidateName,
+            rssi: RSSI.intValue
+        )
         peripheralsByID[device.id] = peripheral
         devicesByID[device.id] = device
         discoveredDevices = devicesByID.values.sorted {
@@ -839,7 +718,9 @@ extension BluetoothClient: @preconcurrency CBCentralManagerDelegate {
             return
         }
 
-        let clientError = ClientError.connectionFailed(error?.localizedDescription ?? "unknown error")
+        let clientError = RadioTransportError.connectionFailed(
+            error?.localizedDescription ?? "unknown error"
+        )
         pendingConnectionID = nil
         pendingFailureError = nil
         clearCurrentPeripheral(peripheral)
@@ -858,7 +739,7 @@ extension BluetoothClient: @preconcurrency CBCentralManagerDelegate {
     }
 }
 
-extension BluetoothClient: @preconcurrency CBPeripheralDelegate {
+extension CoreBluetoothRadioTransport: @preconcurrency CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard currentPeripheral === peripheral else { return }
         if let error {
@@ -982,26 +863,16 @@ extension BluetoothClient: @preconcurrency CBPeripheralDelegate {
     ) {
         guard currentPeripheral === peripheral,
               characteristic.uuid == Self.controlWriteUUID,
-              controlWriteInFlight else {
+              writeCoordinator.isControlWriteInFlight else {
             return
         }
 
-        controlWriteInFlight = false
-        if let error {
-            reportCommandFailure(
-                .control,
-                .writeFailed(command: .control, message: error.localizedDescription)
-            )
-        } else {
-            emit(.commandSent(.control))
-            emit(.controlWriteCompleted)
-            emit(.log(.info, "Control write acknowledged."))
-        }
+        writeCoordinator.completeControlWrite(errorMessage: error?.localizedDescription)
         scheduleNextControlWrite()
     }
 
     func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
         guard currentPeripheral === peripheral else { return }
-        flushUnacknowledgedWriteQueue()
+        flushDeferredWrites()
     }
 }

@@ -124,7 +124,7 @@ struct PrototypeRootView: View {
     }
 
     private func keepInspectorSelectionVisible() {
-        if let valid = LocalGroupPreferences.validSelection(
+        if let valid = GroupVisibilityPolicy.validSelection(
             current: selectedGroup,
             visibleGroups: controller.visibleGroups
         ), valid != selectedGroup {
@@ -3591,7 +3591,7 @@ private struct ConnectionSetupFlow: View {
             .disabled(!canConnect)
 
             Text(languageStore.language.localized(
-                "Si activas Recordar, el código se guarda localmente y sin cifrar en este Mac. Nunca se envía a Internet. No reutilices un PIN personal."
+                "Si activas Recordar, el código se guarda en el Keychain de este Mac, sólo para este dispositivo. Nunca se envía a Internet. No reutilices un PIN personal."
             ))
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)

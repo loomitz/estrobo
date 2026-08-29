@@ -1,6 +1,6 @@
 import Foundation
 
-enum SafeGodoxProtocolError: LocalizedError, Equatable {
+public enum SafeGodoxProtocolError: LocalizedError, Equatable {
     case invalidRadioCode
     case invalidRandomValue
     case invalidPower
@@ -10,7 +10,7 @@ enum SafeGodoxProtocolError: LocalizedError, Equatable {
     case invalidGroupSnapshot
     case invalidGlobalSnapshot
 
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .invalidRadioCode:
             return "El código del radio debe contener exactamente seis dígitos."
@@ -32,7 +32,7 @@ enum SafeGodoxProtocolError: LocalizedError, Equatable {
     }
 }
 
-enum GodoxGroup: UInt8, CaseIterable, Hashable, Identifiable {
+public enum GodoxGroup: UInt8, CaseIterable, Hashable, Identifiable, Sendable {
     case zero = 0x00
     case one = 0x01
     case two = 0x02
@@ -50,22 +50,22 @@ enum GodoxGroup: UInt8, CaseIterable, Hashable, Identifiable {
     case e = 0x0E
     case f = 0x0F
 
-    var id: UInt8 { rawValue }
-    var label: String {
+    public var id: UInt8 { rawValue }
+    public var label: String {
         if rawValue < 10 { return String(rawValue) }
         return String(UnicodeScalar(55 + Int(rawValue))!)
     }
 
-    static let lettered: [GodoxGroup] = [.a, .b, .c, .d, .e, .f]
+    public static let lettered: [GodoxGroup] = [.a, .b, .c, .d, .e, .f]
 }
 
-struct ManualPower: Hashable, Identifiable {
-    let decimalValue: Int
-    let label: String
+public struct ManualPower: Hashable, Identifiable, Sendable {
+    public let decimalValue: Int
+    public let label: String
 
-    var id: Int { decimalValue }
+    public var id: Int { decimalValue }
 
-    static let all: [ManualPower] = {
+    public static let all: [ManualPower] = {
         var result: [ManualPower] = []
         for base in stride(from: 10, through: 90, by: 10) {
             result.append(ManualPower(decimalValue: base, label: label(for: base)))
@@ -76,11 +76,11 @@ struct ManualPower: Hashable, Identifiable {
         return result
     }()
 
-    static func value(decimal: Int) -> ManualPower? {
+    public static func value(decimal: Int) -> ManualPower? {
         all.first { $0.decimalValue == decimal }
     }
 
-    static func minimumDecimalValue(for denominator: Int) -> Int? {
+    public static func minimumDecimalValue(for denominator: Int) -> Int? {
         guard denominator >= 1, denominator <= 512,
               denominator.nonzeroBitCount == 1 else {
             return nil
@@ -88,26 +88,26 @@ struct ManualPower: Hashable, Identifiable {
         return 100 - (denominator.trailingZeroBitCount * 10)
     }
 
-    static func scale(minimumDenominator: Int) -> [ManualPower] {
+    public static func scale(minimumDenominator: Int) -> [ManualPower] {
         guard let minimum = minimumDecimalValue(for: minimumDenominator) else { return [] }
         return all.filter { $0.decimalValue >= minimum }
     }
 
-    static func isSupported(_ power: ManualPower, minimumDenominator: Int) -> Bool {
+    public static func isSupported(_ power: ManualPower, minimumDenominator: Int) -> Bool {
         scale(minimumDenominator: minimumDenominator).contains(power)
     }
 
-    static func value(atSliderIndex index: Int, minimumDenominator: Int) -> ManualPower? {
+    public static func value(atSliderIndex index: Int, minimumDenominator: Int) -> ManualPower? {
         let values = scale(minimumDenominator: minimumDenominator)
         guard values.indices.contains(index) else { return nil }
         return values[index]
     }
 
-    func sliderIndex(minimumDenominator: Int) -> Int? {
+    public func sliderIndex(minimumDenominator: Int) -> Int? {
         Self.scale(minimumDenominator: minimumDenominator).firstIndex(of: self)
     }
 
-    var encodedByte: UInt8 { UInt8(100 - decimalValue) }
+    public var encodedByte: UInt8 { UInt8(100 - decimalValue) }
 
     private static func label(for value: Int) -> String {
         let fullStops = max(0, min(9, (value - 10) / 10))
@@ -131,16 +131,16 @@ struct ManualPower: Hashable, Identifiable {
 /// El A0 crudo sigue siendo tolerante para conservar compatibilidad con valores
 /// observados fuera de la UI. Este tipo representa únicamente el subconjunto que
 /// la aplicación permite crear, persistir y enviar desde sus controles.
-struct MultiFlashSettings: Equatable, Hashable {
-    static let countRange = 1...100
+public struct MultiFlashSettings: Equatable, Hashable, Sendable {
+    public static let countRange = 1...100
     // Godox Flash currently exposes 1...100 Hz across its portable Multi UI.
     // Some transmitters document higher wire values, but those remain outside
     // this editable subset until a matching flash/profile is verified.
-    static let hertzRange = 1...100
-    static let supportedPowers: [ManualPower] = stride(from: 10, through: 80, by: 10)
+    public static let hertzRange = 1...100
+    public static let supportedPowers: [ManualPower] = stride(from: 10, through: 80, by: 10)
         .compactMap(ManualPower.value(decimal:))
 
-    static let `default`: MultiFlashSettings = {
+    public static let `default`: MultiFlashSettings = {
         guard let power = ManualPower.value(decimal: 50),
               let settings = MultiFlashSettings(power: power, count: 10, hertz: 10) else {
             preconditionFailure("Los defaults Multi deben pertenecer al dominio editable")
@@ -148,11 +148,11 @@ struct MultiFlashSettings: Equatable, Hashable {
         return settings
     }()
 
-    let power: ManualPower
-    let count: Int
-    let hertz: Int
+    public let power: ManualPower
+    public let count: Int
+    public let hertz: Int
 
-    init?(power: ManualPower, count: Int, hertz: Int) {
+    public init?(power: ManualPower, count: Int, hertz: Int) {
         guard Self.supportedPowers.contains(power),
               Self.countRange.contains(count),
               Self.hertzRange.contains(hertz) else {
@@ -163,30 +163,30 @@ struct MultiFlashSettings: Equatable, Hashable {
         self.hertz = hertz
     }
 
-    init?(countByte: UInt8, hertzByte: UInt8, powerByte: UInt8) {
+    public init?(countByte: UInt8, hertzByte: UInt8, powerByte: UInt8) {
         guard let power = ManualPower.value(decimal: 100 - Int(powerByte)) else {
             return nil
         }
         self.init(power: power, count: Int(countByte), hertz: Int(hertzByte))
     }
 
-    var countByte: UInt8 { UInt8(count) }
-    var hertzByte: UInt8 { UInt8(hertz) }
-    var powerByte: UInt8 { power.encodedByte }
-    var estimatedDurationSeconds: Double { Double(count) / Double(hertz) }
+    public var countByte: UInt8 { UInt8(count) }
+    public var hertzByte: UInt8 { UInt8(hertz) }
+    public var powerByte: UInt8 { power.encodedByte }
+    public var estimatedDurationSeconds: Double { Double(count) / Double(hertz) }
     /// Límite orientativo mostrado al usuario. Siempre redondea hacia arriba
     /// para no sugerir una obturación menor que `destellos / Hz`.
-    var minimumExposureSeconds: Double {
+    public var minimumExposureSeconds: Double {
         ceil(estimatedDurationSeconds * 1_000) / 1_000
     }
 }
 
-enum ModelingLight: Hashable, Identifiable {
+public enum ModelingLight: Hashable, Identifiable, Sendable {
     case off
     case proportional
     case fixed(percent: Int)
 
-    var id: String {
+    public var id: String {
         switch self {
         case .off:
             "off"
@@ -197,7 +197,7 @@ enum ModelingLight: Hashable, Identifiable {
         }
     }
 
-    var label: String {
+    public var label: String {
         switch self {
         case .off:
             "Apagada"
@@ -208,10 +208,10 @@ enum ModelingLight: Hashable, Identifiable {
         }
     }
 
-    static let allEditableValues: [ModelingLight] =
+    public static let allEditableValues: [ModelingLight] =
         [.off, .proportional] + (10...100).map { .fixed(percent: $0) }
 
-    static let apkBackedHardwareValues: Set<ModelingLight> = [
+    public static let apkBackedHardwareValues: Set<ModelingLight> = [
         .off,
         .proportional,
         .fixed(percent: 25),
@@ -232,13 +232,13 @@ enum ModelingLight: Hashable, Identifiable {
     }
 }
 
-enum GroupOperatingMode: UInt8, CaseIterable, Hashable {
+public enum GroupOperatingMode: UInt8, CaseIterable, Hashable, Sendable {
     case autoTTL = 0x00
     case manual = 0x01
     case multi = 0x02
     case off = 0x03
 
-    var label: String {
+    public var label: String {
         switch self {
         case .autoTTL: "TTL"
         case .manual: "M"
@@ -248,17 +248,17 @@ enum GroupOperatingMode: UInt8, CaseIterable, Hashable {
     }
 }
 
-enum ModelingMode: UInt8, Hashable {
+public enum ModelingMode: UInt8, Hashable, Sendable {
     case off = 0x00
     case proportional = 0x01
     case fixed = 0x02
 }
 
-struct ModelingState: Equatable, Hashable {
-    var intensityByte: UInt8
-    var mode: ModelingMode
+public struct ModelingState: Equatable, Hashable, Sendable {
+    public var intensityByte: UInt8
+    public var mode: ModelingMode
 
-    init(_ value: ModelingLight) {
+    public init(_ value: ModelingLight) {
         switch value {
         case .off:
             intensityByte = 0
@@ -272,13 +272,13 @@ struct ModelingState: Equatable, Hashable {
         }
     }
 
-    init?(intensityByte: UInt8, modeByte: UInt8) {
+    public init?(intensityByte: UInt8, modeByte: UInt8) {
         guard let mode = ModelingMode(rawValue: modeByte) else { return nil }
         self.intensityByte = intensityByte
         self.mode = mode
     }
 
-    var value: ModelingLight {
+    public var value: ModelingLight {
         switch mode {
         case .off: .off
         case .proportional: .proportional
@@ -286,7 +286,7 @@ struct ModelingState: Equatable, Hashable {
         }
     }
 
-    var isValidForWrite: Bool {
+    public var isValidForWrite: Bool {
         switch mode {
         case .off, .proportional:
             return intensityByte <= 100
@@ -300,14 +300,14 @@ struct ModelingState: Equatable, Hashable {
 ///
 /// El nombre histórico se conserva para no confundirla con A0. A diferencia
 /// del primer corte, no fuerza modo manual, beep ni compensación a cero.
-struct ManualGroupSnapshot: Equatable {
-    var operatingMode: GroupOperatingMode
-    var power: ManualPower
-    var modelingState: ModelingState
-    var beepEnabled: Bool
-    var compensationByte: UInt8
+public struct ManualGroupSnapshot: Equatable, Sendable {
+    public var operatingMode: GroupOperatingMode
+    public var power: ManualPower
+    public var modelingState: ModelingState
+    public var beepEnabled: Bool
+    public var compensationByte: UInt8
 
-    init(
+    public init(
         power: ManualPower,
         modeling: ModelingLight,
         beepEnabled: Bool = false,
@@ -321,7 +321,7 @@ struct ManualGroupSnapshot: Equatable {
         self.compensationByte = compensationByte
     }
 
-    init?(
+    public init?(
         modeByte: UInt8,
         powerByte: UInt8,
         modelingIntensityByte: UInt8,
@@ -346,14 +346,14 @@ struct ManualGroupSnapshot: Equatable {
         self.compensationByte = compensationByte
     }
 
-    var modeling: ModelingLight {
+    public var modeling: ModelingLight {
         get { modelingState.value }
         set { modelingState = ModelingState(newValue) }
     }
 
-    var beepByte: UInt8 { beepEnabled ? 1 : 0 }
-    var isEnabledOnRadio: Bool { operatingMode != .off }
-    var label: String { power.label }
+    public var beepByte: UInt8 { beepEnabled ? 1 : 0 }
+    public var isEnabledOnRadio: Bool { operatingMode != .off }
+    public var label: String { power.label }
 }
 
 /// Instantánea completa de los nueve bytes mutables de una orden global A0.
@@ -361,18 +361,18 @@ struct ManualGroupSnapshot: Equatable {
 /// A0 comparte una sola trama para beep, modelado, ajuste relativo, Multi y
 /// standby. Conservar todos los campos en un único valor evita que un cambio
 /// aislado sobrescriba silenciosamente otro ajuste global del transmisor.
-struct GlobalRadioSnapshot: Equatable {
-    var beepEnabled: Bool
-    var modelingLightEnabled: Bool
-    var relativeAdjustmentByte: UInt8
-    var multiEnabled: Bool
-    var multiCount: UInt8
-    var multiHertz: UInt8
-    var multiPowerByte: UInt8
-    var standbyEnabled: Bool
-    var adjustmentCounter: UInt8
+public struct GlobalRadioSnapshot: Equatable, Sendable {
+    public var beepEnabled: Bool
+    public var modelingLightEnabled: Bool
+    public var relativeAdjustmentByte: UInt8
+    public var multiEnabled: Bool
+    public var multiCount: UInt8
+    public var multiHertz: UInt8
+    public var multiPowerByte: UInt8
+    public var standbyEnabled: Bool
+    public var adjustmentCounter: UInt8
 
-    init(
+    public init(
         beepEnabled: Bool,
         modelingLightEnabled: Bool,
         relativeAdjustmentByte: UInt8,
@@ -399,7 +399,7 @@ struct GlobalRadioSnapshot: Equatable {
     /// Este inicializador lleva una etiqueta deliberadamente explícita: no debe
     /// confundirse con una lectura del estado actual ni usarse para reconstruir
     /// parcialmente una trama que ya tenga valores globales conocidos.
-    init(
+    public init(
         apkDefaultsWithBeepEnabled beepEnabled: Bool,
         modelingLightEnabled: Bool,
         standbyEnabled: Bool
@@ -427,20 +427,20 @@ struct GlobalRadioSnapshot: Equatable {
 /// Superficie clean-room deliberadamente limitada: autenticación, Sync,
 /// heartbeat, disparo Test explícito e instantáneas A0/A1 completas.
 /// No contiene cambio de código del radio ni firmware/OAD.
-enum SafeGodoxProtocol {
+public enum SafeGodoxProtocol {
     /// Clasifica una respuesta A0 cuando existe. Godox Flash 1.3.3 entrega sus
     /// órdenes A0 normales con el acuse GATT y no exige una notificación FEC8.
-    static func isGlobalAcknowledgement(_ notification: Data) -> Bool {
+    public static func isGlobalAcknowledgement(_ notification: Data) -> Bool {
         let bytes = [UInt8](notification)
         return bytes.count >= 2 && bytes[0] == 0xF0 && bytes[1] == 0xA0
     }
 
-    static func isGroupAcknowledgement(_ notification: Data) -> Bool {
+    public static func isGroupAcknowledgement(_ notification: Data) -> Bool {
         let bytes = [UInt8](notification)
         return bytes.count >= 2 && bytes[0] == 0xF0 && bytes[1] == 0xA1
     }
 
-    static func authenticationRequest(
+    public static func authenticationRequest(
         radioCode: String,
         unixMilliseconds: Int64,
         randomValue: Int
@@ -458,7 +458,7 @@ enum SafeGodoxProtocol {
         return Data("\(nonce),Psub,\(radioCode)".utf8)
     }
 
-    static func isValidAuthenticationResponse(
+    public static func isValidAuthenticationResponse(
         _ data: Data,
         unixMilliseconds: Int64,
         toleranceSeconds: Int64 = 20
@@ -480,7 +480,7 @@ enum SafeGodoxProtocol {
         return circularDistance <= toleranceSeconds
     }
 
-    static func manualGroupFrame(
+    public static func manualGroupFrame(
         group: GodoxGroup,
         snapshot: ManualGroupSnapshot,
         minimumManualDenominator: Int = 512,
@@ -530,7 +530,7 @@ enum SafeGodoxProtocol {
         return Data(bytes)
     }
 
-    static func globalFrame(snapshot: GlobalRadioSnapshot) throws -> Data {
+    public static func globalFrame(snapshot: GlobalRadioSnapshot) throws -> Data {
         guard snapshot.isValidForWrite else {
             throw SafeGodoxProtocolError.invalidGlobalSnapshot
         }
@@ -551,7 +551,7 @@ enum SafeGodoxProtocol {
         return Data(bytes)
     }
 
-    static func globalSnapshot(from frame: Data) -> GlobalRadioSnapshot? {
+    public static func globalSnapshot(from frame: Data) -> GlobalRadioSnapshot? {
         let bytes = [UInt8](frame)
         guard bytes.count == 14,
               bytes[0] == 0xF0,
@@ -579,7 +579,7 @@ enum SafeGodoxProtocol {
         )
     }
 
-    static func groupSnapshot(from frame: Data) -> (GodoxGroup, ManualGroupSnapshot)? {
+    public static func groupSnapshot(from frame: Data) -> (GodoxGroup, ManualGroupSnapshot)? {
         let bytes = [UInt8](frame)
         guard bytes.count == 11,
               bytes[0] == 0xF0,
@@ -600,12 +600,12 @@ enum SafeGodoxProtocol {
         return (group, snapshot)
     }
 
-    static func synchronizationPayload(now: Date, calendar: Calendar = .current) -> Data {
+    public static func synchronizationPayload(now: Date, calendar: Calendar = .current) -> Data {
         let milliseconds = millisecondsSinceLocal2017(now: now, calendar: calendar)
         return Data("\(milliseconds),Sync".utf8)
     }
 
-    static func testPayload(now: Date, calendar: Calendar = .current) -> Data {
+    public static func testPayload(now: Date, calendar: Calendar = .current) -> Data {
         let milliseconds = millisecondsSinceLocal2017(now: now, calendar: calendar)
         return Data("\(milliseconds),Test".utf8)
     }
@@ -626,13 +626,13 @@ enum SafeGodoxProtocol {
         return Int64((now.timeIntervalSince(epoch) * 1_000).rounded(.towardZero))
     }
 
-    static func heartbeatResponse(for notification: Data) -> Data? {
+    public static func heartbeatResponse(for notification: Data) -> Data? {
         let bytes = [UInt8](notification)
         guard bytes.count == 6, bytes[0] == 0xF0, bytes[1] == 0xE0 else { return nil }
         return Data([0xF0, 0xE0])
     }
 
-    static func crc8(_ bytes: [UInt8]) -> UInt8 {
+    public static func crc8(_ bytes: [UInt8]) -> UInt8 {
         var crc: UInt8 = 0
         for byte in bytes {
             crc ^= byte

@@ -279,18 +279,23 @@ enum MenuBarAccessibilityCheck {
 
     private static func verifyMockEventOrdering() async {
         let controlledDelay = ControlledDelay()
-        let recorder = MockEventRecorder()
-        let transport = MockGodoxSessionTransport { milliseconds in
-            await controlledDelay.wait(milliseconds)
+        let recorder = SimulatedEventRecorder()
+        let transport = SimulatedRadioTransport(
+            scenario: .normal,
+            waitForMilliseconds: { milliseconds in
+                await controlledDelay.wait(milliseconds)
+            }
+        )
+        transport.eventHandler = { event in
+            recorder.record(event)
         }
-        transport.delegate = recorder
-        transport.connect(to: MockGodoxSessionTransport.device)
+        transport.connect(to: SimulatedRadioTransport.candidate)
 
         for _ in 0..<5 {
             await settleTasks()
             expect(
                 controlledDelay.resumeLongestPendingWait(),
-                "Each mock connection step must register one controlled delay"
+                "Each simulated connection step must register one controlled delay"
             )
         }
         await settleTasks()
@@ -303,7 +308,7 @@ enum MenuBarAccessibilityCheck {
                 "ready",
                 "readyForAuthentication",
             ],
-            "Mock connection events must remain ordered when several deadlines become runnable; received \(recorder.events)"
+            "Simulated connection events must remain ordered when several deadlines become runnable; received \(recorder.events)"
         )
 
         recorder.reset()
@@ -323,7 +328,7 @@ enum MenuBarAccessibilityCheck {
             await settleTasks()
             expect(
                 controlledDelay.resumeLongestPendingWait(),
-                "Each mock control step must register one controlled delay"
+                "Each simulated control step must register one controlled delay"
             )
         }
         await settleTasks()
@@ -333,7 +338,7 @@ enum MenuBarAccessibilityCheck {
                 "controlWriteCompleted",
                 "controlNotification",
             ],
-            "Mock A1 acknowledgement events must remain ordered; received \(recorder.events)"
+            "Simulated A1 acknowledgement events must remain ordered; received \(recorder.events)"
         )
     }
 
@@ -537,14 +542,14 @@ enum MenuBarAccessibilityCheck {
     }
 
     @MainActor
-    private final class MockEventRecorder: BluetoothClientDelegate {
+    private final class SimulatedEventRecorder {
         private(set) var events: [String] = []
 
         func reset() {
             events.removeAll()
         }
 
-        func bluetoothClient(didReceive event: BluetoothClient.Event) {
+        func record(_ event: TransportEvent) {
             switch event {
             case .stateChanged(.connecting(_)):
                 events.append("connecting")
