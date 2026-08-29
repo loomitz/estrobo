@@ -1,0 +1,179 @@
+name: EstroboIOS
+
+options:
+  minimumXcodeGenVersion: 2.46.0
+  xcodeVersion: "26.0"
+  projectFormat: xcode16_3
+  developmentLanguage: en
+  defaultConfig: Debug
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+configs:
+  Debug: debug
+  Release: release
+
+settings:
+  base:
+    ESTROBO_IOS_BUNDLE_IDENTIFIER: mx.loo.estrobo.dev
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    SDKROOT: iphoneos
+    SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+    SUPPORTS_MACCATALYST: NO
+    SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+    TARGETED_DEVICE_FAMILY: "1,2"
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
+    CLANG_WARN_DOCUMENTATION_COMMENTS: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+packages:
+  Estrobo:
+    path: ..
+
+targets:
+  EstroboAccessorySetupSpike:
+    type: framework
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: EstroboAccessorySetupSpike
+    dependencies:
+      - sdk: AccessorySetupKit.framework
+      - sdk: CoreBluetooth.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: mx.loo.estrobo.accessory-setup-spike
+        PRODUCT_NAME: EstroboAccessorySetupSpike
+        PRODUCT_MODULE_NAME: EstroboAccessorySetupSpike
+        GENERATE_INFOPLIST_FILE: YES
+        SKIP_INSTALL: YES
+        CODE_SIGNING_ALLOWED: NO
+
+  EstroboAdvertisementProbe:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: EstroboAdvertisementProbe
+        excludes:
+          - Info.plist
+    dependencies:
+      - sdk: CoreBluetooth.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: mx.loo.estrobo.advertisement-probe
+        PRODUCT_NAME: EstroboAdvertisementProbe
+        PRODUCT_MODULE_NAME: EstroboAdvertisementProbe
+        INFOPLIST_FILE: EstroboAdvertisementProbe/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 0.1.0
+        CODE_SIGN_STYLE: Automatic
+
+  EstroboIOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: EstroboIOS/App
+      - path: EstroboIOS/Support
+      - path: EstroboIOS/Resources
+      - path: ../Sources/EstroboCore/GodoxSessionController.swift
+        group: Shared/SessionController
+      - path: ../prototype/GodoxMacControlPrototype/Sources/GroupVisualColor.swift
+        group: Shared/EstroboUIIdentity
+      - path: ../prototype/GodoxMacControlPrototype/Sources/GroupVisualIdentity.swift
+        group: Shared/EstroboUIIdentity
+    dependencies:
+      - package: Estrobo
+        product: EstroboCore
+      - package: Estrobo
+        product: EstroboBluetooth
+      - package: Estrobo
+        product: EstroboPersistence
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: "$(ESTROBO_IOS_BUNDLE_IDENTIFIER)"
+        PRODUCT_NAME: Estrobo
+        PRODUCT_MODULE_NAME: EstroboIOS
+        INFOPLIST_FILE: EstroboIOS/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 0.1.0
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+
+  EstroboIOSTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: EstroboIOSTests
+    dependencies:
+      - target: EstroboIOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: "$(ESTROBO_IOS_BUNDLE_IDENTIFIER).tests"
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Estrobo.app/Estrobo"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+  EstroboIOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - path: EstroboIOSUITests
+      - path: EstroboIOS/Support/AccessibilityID.swift
+    dependencies:
+      - target: EstroboIOS
+      - package: Estrobo
+        product: EstroboBluetooth
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: "$(ESTROBO_IOS_BUNDLE_IDENTIFIER).uitests"
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: EstroboIOS
+
+schemes:
+  EstroboAccessorySetupSpike:
+    build:
+      targets:
+        EstroboAccessorySetupSpike: all
+    run:
+      config: Debug
+    analyze:
+      config: Debug
+
+  EstroboAdvertisementProbe:
+    build:
+      targets:
+        EstroboAdvertisementProbe: all
+    run:
+      config: Debug
+    analyze:
+      config: Debug
+
+  EstroboIOS:
+    build:
+      targets:
+        EstroboIOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - name: EstroboIOSTests
+        - name: EstroboIOSUITests
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
