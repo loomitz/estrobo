@@ -30,7 +30,7 @@ for forbidden_pattern in \
 done
 
 for forbidden_directory in \
-  Tests Test __tests__ PoC GodoxBLEPoC Sources Source src \
+  Tests Test __tests__ PoC EstroboBLEPoC GodoxBLEPoC Sources Source src \
   Build Dist DerivedData .build .swiftpm .git node_modules .venv venv \
   '*.app' '*.dSYM' '*.xcarchive' '*.xcodeproj' '*.xcworkspace'; do
   forbidden_path="$(/usr/bin/find "$app_bundle/Contents" -type d -iname "$forbidden_directory" -print -quit)"

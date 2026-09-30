@@ -53,6 +53,10 @@ Los grupos pendientes se capturan como snapshots A1 completos y forman una tanda
 
 Beep usa una secuencia A0 master + A1 subordinados y no se ejecuta si podría arrastrar otros borradores A1. Standby es A0-only y conserva los A1. El botón Multi junto a Beep es la única vía para cambiar el gate global. Al encenderlo convierte juntos todos los grupos de trabajo activos y compatibles a Multi, pone en Off a los no participantes y arma A0 Multi seguido de los A1 afectados. Mientras el gate siga activo, los controles de participación agregan o quitan grupos compatibles, pero no pueden quitar el último. Al apagar desde el botón, Estrobo arma A0 sin Multi y después A1 Manual para todos los grupos del workspace. Los grupos externos no reciben A1. Test es una acción global explícita y sólo se habilita sin borradores, recuperación, edición interactiva ni escritura en curso.
 
+Al activar el modelado global desde un cambio por grupo, Estrobo envía A0 y después vuelve a escribir los A1 de todos los grupos configurados, aunque no tengan cambios pendientes. Esto reafirma los estados de modelado apagado que el encendido global podría afectar. Antes de A0 se valida y guarda la escena completa para recuperación; no se termina la operación hasta confirmar todos los A1. Si el modelado global ya estaba activo, los cambios individuales siguen limitados a los grupos pendientes. Apagar el último modelado configurado también apaga el global.
+
+Esta reafirmación sólo cubre los grupos del workspace. No puede garantizar el estado de lámparas fuera de él ni evitar un encendido transitorio durante A0 → A1; ambos efectos requieren observación física con el transmisor y firmware utilizados.
+
 La exposición mínima mostrada es `destellos ÷ Hz`, redondeada hacia arriba a milésimas de segundo. Es una guía para elegir el tiempo de obturación, no una confirmación óptica ni una promesa del número real de destellos.
 
 ## Descartar

@@ -4,7 +4,7 @@
 
 Estrobo controla un transmisor por Bluetooth de forma local. La aplicación no crea cuentas, no tiene backend, no solicita acceso de red, no incorpora analítica ni telemetría y no envía datos a Internet.
 
-Esta política describe `0.1.x` beta. El navegador, GitHub, macOS y cualquier otra app que uses para descargar, reportar o diagnosticar tienen sus propias prácticas; no forman parte del tráfico de Estrobo.
+Esta política describe el candidato de desarrollo compartido para macOS, iOS y iPadOS. La beta pública macOS `0.1.0-beta.4` conserva el Código del radio sin cifrar en preferencias sólo por opt-in; la migración a Keychain descrita aquí pertenece al candidato y aún no es una nueva release pública. No hay una distribución pública iOS o iPadOS. El navegador, GitHub, el sistema operativo de Apple y cualquier otra app que uses para descargar, reportar o diagnosticar tienen sus propias prácticas; no forman parte del tráfico de Estrobo.
 
 ## Datos que Estrobo guarda localmente
 
@@ -16,7 +16,7 @@ Dentro del contenedor sandbox de la app pueden conservarse:
 - presets con nombre;
 - identidad visual de los grupos;
 - puntos de recuperación con UUID del radio, grupo y snapshot A1 anterior;
-- si tú lo eliges, nombre, UUID CoreBluetooth y Código del radio recordado.
+- si tú lo eliges, nombre y UUID CoreBluetooth del radio recordado; su Código del radio se conserva por separado en Keychain.
 
 Los presets y puntos de recuperación no incluyen el Código del radio. La actividad de sesión evita payloads de autenticación y códigos.
 
@@ -26,23 +26,25 @@ El Código del radio es un parámetro local de compatibilidad/proximidad de seis
 
 - **Recordarlo es opt-in y empieza apagado.**
 - Si lo activas, sólo se guarda después de completar `PWOK` y Sync.
-- Se guarda localmente y **sin cifrar** en las preferencias del sandbox; este beta no usa Keychain.
+- Se guarda en el Keychain local como un elemento exclusivo del dispositivo que sólo está disponible mientras el dispositivo está desbloqueado. La sincronización de Keychain está desactivada.
+- El nombre recordado y el UUID CoreBluetooth pueden guardarse en las preferencias de la app, pero el Código del radio no forma parte de ese registro de metadatos.
+- Si Estrobo encuentra un registro plaintext compatible de un beta anterior, migra cada código a Keychain y verifica el resultado antes de eliminar el registro anterior. Una migración incompleta falla cerrado y queda disponible para reintentarse.
 - Nunca se envía a Internet porque Estrobo no tiene flujo de red.
 - No reutilices un PIN personal.
 - **Olvidar** elimina el nombre, UUID y código guardados y limpia el valor visible.
 - Cancelar, fallar o desconectar limpia el código de la sesión en memoria según el flujo correspondiente.
 
-Estrobo conserva lectura compatible con registros locales válidos de radios ya recordados, pero el bundle público `mx.loo.estrobo` tiene una identidad de preferencias limpia respecto del bundle de prototipo. No migra automáticamente datos del prototipo.
+Cada bundle de la app tiene su propio contenedor local e identidad de acceso a Keychain. Un build de desarrollo, prototipo, TestFlight o App Store con otra identidad de bundle no hereda automáticamente los datos guardados por otro build.
 
 ## Bluetooth
 
 La app solicita permiso Bluetooth para escanear, mostrar nombre/RSSI/UUID, conectar y escribir al transmisor elegido mediante CoreBluetooth. Nombre, RSSI y UUID ayudan a reducir una selección equivocada, pero no autentican criptográficamente el radio.
 
-Los comandos viajan directamente Mac ↔ transmisor. Estrobo no sube inventarios de dispositivos, UUID, valores ni resultados a un servicio remoto.
+Los comandos viajan directamente entre el iPhone, iPad o Mac y el transmisor. Estrobo no sube inventarios de dispositivos, UUID, valores ni resultados a un servicio remoto.
 
 ## Red, analítica y telemetría
 
-El bundle mantiene App Sandbox y Bluetooth y no declara entitlements de cliente o servidor de red. El código de la app no incorpora un SDK de analítica, anuncios, crash reporting remoto ni telemetría.
+La app no tiene flujo de red cliente o servidor. Su código no incorpora un SDK de analítica, anuncios, crash reporting remoto ni telemetría.
 
 Al abrir enlaces de documentación, GitHub Releases, Issues o Private Vulnerability Reporting, la acción ocurre fuera de Estrobo en tu navegador/GitHub.
 
@@ -60,9 +62,9 @@ Los issues de GitHub son públicos. Redacta UUID completos, nombres personales y
 
 ## Eliminar datos
 
-- Usa **Olvidar** para quitar el radio y Código del radio guardados.
+- Usa **Olvidar** para quitar los metadatos del radio guardado y su Código del radio del Keychain.
 - Elimina presets o modifica el espacio de trabajo desde las opciones de la app disponibles para esos elementos.
-- Desinstalar la app no siempre elimina preferencias de macOS. Para una eliminación completa, cierra Estrobo y elimina también el contenedor de aplicación asociado con `mx.loo.estrobo` desde tu cuenta de usuario. Haz una copia de cualquier preset que quieras conservar antes de hacerlo.
+- Los sistemas operativos de Apple pueden conservar elementos de Keychain después de eliminar una app. Usa **Olvidar** antes de desinstalar. Eliminar el contenedor de la app limpia sus preferencias y diario de recuperación; en macOS también puedes retirar desde Acceso a Llaveros las entradas del servicio `mx.loo.estrobo.radio-code`. Haz una copia de cualquier preset que quieras conservar antes de borrar el contenedor.
 
 Un punto de recuperación puede mantenerse deliberadamente después de un write incierto para impedir nuevas escrituras inseguras. Se elimina cuando la recuperación confirmada termina o al retirar por completo los datos del contenedor.
 
