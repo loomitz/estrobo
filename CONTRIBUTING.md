@@ -6,13 +6,17 @@ Este repositorio **no incluye una licencia open-source**. La ausencia es intenci
 
 ## Preparar el entorno
 
-Necesitas macOS 13 o posterior y las herramientas de línea de comandos de Xcode.
+Necesitas macOS 13 o posterior y una instalación completa de Xcode. Selecciona la misma instalación para Swift, el SDK y los paquetes compartidos; las Command Line Tools aisladas pueden carecer de los plugins de macros de SwiftUI que usa el SDK.
 
 ```sh
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+export IOS_DEVELOPER_DIR="$DEVELOPER_DIR"
 make mac-prototype-check
 make mac-prototype-test
 make mac-prototype-build
 ```
+
+Ajusta la ruta al Xcode instalado. La validación local de desarrollo del candidato usa `/Applications/Xcode-beta.app/Contents/Developer`; los gates de CI usan Xcode estable e incluyen iOS 18.5.
 
 Para revisar la UI sin hardware:
 
