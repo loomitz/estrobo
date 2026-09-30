@@ -406,6 +406,7 @@ jobs:
           evidence_files=()
           for evidence_name in \
             notary-upload.zip \
+            notary-upload.zip.sha256 \
             notary-submit.json \
             notary-wait.json \
             notary-log.json \

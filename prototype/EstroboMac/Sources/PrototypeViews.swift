@@ -1468,18 +1468,7 @@ struct QuickControlsBar: View {
     }
 
     private var testHelp: String {
-        if controller.isSimulation {
-            return languageStore.language.localized("mock.testHelp")
-        }
-        if !controller.multiFlashGroups.isEmpty, controller.testBlockReason == nil {
-            return languageStore.language.localized(
-                "Ejecuta la secuencia Multi aplicada en los grupos activos; Bluetooth no confirma cuántos destellos ocurrieron"
-            )
-        }
-        return languageStore.language.localizedMessage(
-            controller.testBlockReason
-                ?? "Dispara todos los grupos activos del radio con los ajustes ya aplicados; Bluetooth no confirma el destello"
-        )
+        languageStore.language.localizedMessage(controller.testHelpMessage)
     }
 
     private var globalOffsetBinding: Binding<Double> {

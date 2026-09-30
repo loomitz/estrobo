@@ -66,6 +66,13 @@ enum WorkspaceChromeInteractionCheck {
                 menuBarSource.contains("controller.setDraftRadioEnabled(group, enabled: !isOn)") &&
                 menuBarSource.contains("controller.discardPendingChanges()") &&
                 menuBarSource.contains("controller.applyPendingChanges()") &&
+                menuBarSource.contains("controller.sendTestFlash()") &&
+                menuBarSource.contains(".disabled(!controller.canSendTest)") &&
+                menuBarSource.components(separatedBy: "controller.sendTestFlash()").count - 1 == 1 &&
+                menuBarSource.contains("controller.isTestPending") &&
+                menuBarSource.contains("controller.testHelpMessage") &&
+                menuBarSource.contains("controller.isSynchronizingValues") &&
+                !menuBarSource.contains("controller.applySequenceStatus") &&
                 menuBarSource.contains("canManagePendingChangesFromMenuBar") &&
                 menuBarSource.contains("MenuBarPendingPolicy.canManage") &&
                 menuBarSource.contains("hasPendingMultiFlashChange: controller.hasPendingMultiFlashChange") &&
@@ -80,20 +87,21 @@ enum WorkspaceChromeInteractionCheck {
                 menuBarSource.contains("Image(systemName: \"power\")") &&
                 menuBarSource.contains(".overlay(alignment: .bottomTrailing)") &&
                 menuBarSource.contains("MenuBarLayout.groupControlSize") &&
+                !menuBarSource.contains("isPending: state.hasPendingChange") &&
+                !menuBarSource.contains(".overlay(alignment: .topTrailing)") &&
                 !menuBarSource.contains("EstroboBrandAssets.markImage") &&
                 !menuBarSource.contains("MenuBarPowerButtonStyle") &&
                 menuBarSource.contains(
                     "Spacer(minLength: MenuBarLayout.minimumReadoutClearance)"
                 ),
-            "The Menu Bar panel must reuse visible groups, integrate safe activation into each badge, center readouts, preserve pending delivery, omit the popup logo, and keep a template status icon"
+            "The Menu Bar panel must reuse visible groups, keep one global pending status and one guarded global Test action, center readouts, omit the popup logo, and keep a template status icon"
         )
 
         expect(
-            !menuBarSource.contains("sendTestFlash") &&
-                !menuBarSource.contains("setDraftOperatingMode") &&
+            !menuBarSource.contains("setDraftOperatingMode") &&
                 !menuBarSource.contains("setGlobalMultiFlashEnabled") &&
                 !menuBarSource.contains("startScanning"),
-            "The first Menu Bar prototype must not expose Test, mode, Multi, or connection side effects"
+            "The Menu Bar must expose only the guarded global Test action, not mode, Multi, or connection side effects"
         )
     }
 
@@ -427,6 +435,13 @@ enum WorkspaceChromeInteractionCheck {
             spanish["menubar.pendingOne"] == "1 cambio pendiente" &&
                 spanish["menubar.pendingMany"] == "%lld cambios pendientes",
             "Spanish Menu Bar pending counts must distinguish singular and plural"
+        )
+        expect(
+            english["menubar.updatingSettings"] == "Updating settings…" &&
+                spanish["menubar.updatingSettings"] == "Actualizando ajustes…" &&
+                english["menubar.testAccessibility"] == "Global Test flash" &&
+                spanish["menubar.testAccessibility"] == "Disparo Test global",
+            "The single global update status and Test action must be localized in English and Spanish"
         )
         expect(
             english["menubar.turnOnGroup"] == "Turn on group %@" &&
