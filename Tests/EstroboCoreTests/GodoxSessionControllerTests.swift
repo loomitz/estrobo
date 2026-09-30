@@ -976,6 +976,110 @@ final class GodoxSessionControllerTests: XCTestCase {
         XCTAssertEqual(fixture.controller.phase, .connecting)
     }
 
+    func testScanCompletionPreservesSelectionAndCodeForEitherIdleCallbackTiming() {
+        for emitsIdleSynchronously in [true, false] {
+            let fixture = makeFixture()
+            fixture.transport.emitsIdleWhenStoppingScan = emitsIdleSynchronously
+            fixture.controller.startScanning()
+            fixture.transport.emit(.discovered(device))
+            fixture.controller.selectDevice(device.id)
+            fixture.controller.radioCode = "111111"
+            fixture.controller.rememberSelectedRadio = true
+
+            XCTAssertTrue(fixture.scheduler.fire(.scan))
+            XCTAssertEqual(fixture.transport.stopScanCount, 1)
+            XCTAssertEqual(fixture.controller.phase, .idle)
+            if !emitsIdleSynchronously {
+                // Demo's stopScanning delivers this callback after the deadline
+                // has already moved the controller from scanning to idle.
+                fixture.transport.emit(.stateChanged(.idle))
+            }
+
+            XCTAssertEqual(fixture.controller.selectedDeviceID, device.id)
+            XCTAssertEqual(fixture.controller.radioCode, "111111")
+            XCTAssertTrue(fixture.controller.rememberSelectedRadio)
+            XCTAssertTrue(fixture.controller.isRadioCodeValid)
+            XCTAssertEqual(fixture.scheduler.activeCount(.scan), 0)
+
+            fixture.controller.connectSelectedDevice()
+
+            XCTAssertEqual(fixture.controller.phase, .connecting)
+            XCTAssertEqual(fixture.transport.connectedCandidates, [device])
+        }
+    }
+
+    func testIdleAfterConnectingFromCompletedScanStillClearsCode() {
+        let fixture = makeFixture()
+        fixture.controller.startScanning()
+        fixture.transport.emit(.discovered(device))
+        fixture.controller.radioCode = "111111"
+        XCTAssertTrue(fixture.scheduler.fire(.scan))
+        fixture.transport.emit(.stateChanged(.idle))
+        fixture.controller.connectSelectedDevice()
+        XCTAssertEqual(fixture.controller.phase, .connecting)
+
+        fixture.transport.emit(.stateChanged(.idle))
+
+        XCTAssertEqual(fixture.controller.phase, .idle)
+        XCTAssertTrue(fixture.controller.radioCode.isEmpty)
+        XCTAssertNil(fixture.controller.connectedDeviceName)
+        XCTAssertEqual(fixture.scheduler.activeCount(.connectionSetup), 0)
+    }
+
+    func testExplicitScanCancellationClearsCodeBeforeDeferredIdle() {
+        let fixture = makeFixture()
+        fixture.controller.startScanning()
+        fixture.transport.emit(.discovered(device))
+        fixture.controller.radioCode = "111111"
+
+        fixture.controller.cancelConnectionAttempt()
+
+        XCTAssertEqual(fixture.controller.phase, .idle)
+        XCTAssertTrue(fixture.controller.radioCode.isEmpty)
+        XCTAssertEqual(fixture.transport.stopScanCount, 1)
+        XCTAssertFalse(fixture.scheduler.fire(.scan))
+        fixture.transport.emit(.stateChanged(.idle))
+        XCTAssertTrue(fixture.controller.radioCode.isEmpty)
+        fixture.controller.connectSelectedDevice()
+        XCTAssertTrue(fixture.transport.connectedCandidates.isEmpty)
+    }
+
+    func testInactiveScanClearsCodeBeforeDeferredIdle() {
+        let fixture = makeFixture()
+        fixture.controller.startScanning()
+        fixture.transport.emit(.discovered(device))
+        fixture.controller.radioCode = "111111"
+
+        fixture.controller.suspendForInactiveScene()
+        fixture.transport.emit(.stateChanged(.idle))
+        fixture.controller.resumeActiveScene()
+
+        XCTAssertEqual(fixture.controller.phase, .idle)
+        XCTAssertTrue(fixture.controller.radioCode.isEmpty)
+        XCTAssertFalse(fixture.scheduler.fire(.scan))
+        fixture.controller.connectSelectedDevice()
+        XCTAssertTrue(fixture.transport.connectedCandidates.isEmpty)
+    }
+
+    func testScanFailuresStillClearSelectedRadioCode() {
+        let failures: [TransportEvent] = [
+            .stateChanged(.bluetoothUnavailable("powered off")),
+            .failed(.disconnected("synthetic scan failure")),
+        ]
+        for failure in failures {
+            let fixture = makeFixture()
+            fixture.controller.startScanning()
+            fixture.transport.emit(.discovered(device))
+            fixture.controller.radioCode = "111111"
+
+            fixture.transport.emit(failure)
+
+            XCTAssertTrue(fixture.controller.radioCode.isEmpty)
+            fixture.controller.connectSelectedDevice()
+            XCTAssertTrue(fixture.transport.connectedCandidates.isEmpty)
+        }
+    }
+
     func testSavedRadioSearchArmsExactTargetBeforeSynchronousDiscovery() throws {
         let saved = try XCTUnwrap(SavedRadio(
             deviceID: device.id,
@@ -1842,12 +1946,14 @@ private final class RecordingRadioTransport: RadioTransport {
     private(set) var controlPayloads: [Data] = []
     private(set) var testWriteCount = 0
     private(set) var scanCount = 0
+    private(set) var stopScanCount = 0
     private(set) var connectedCandidates: [RadioCandidate] = []
     private(set) var disconnectCount = 0
     private(set) var forceResetCount = 0
     var isSimulation = false
     var failTestSynchronously = false
     var discoveryOnScan: RadioCandidate?
+    var emitsIdleWhenStoppingScan = false
 
     func startScanning() {
         scanCount += 1
@@ -1855,7 +1961,12 @@ private final class RecordingRadioTransport: RadioTransport {
             eventHandler?(.discovered(discoveryOnScan))
         }
     }
-    func stopScanning() {}
+    func stopScanning() {
+        stopScanCount += 1
+        if emitsIdleWhenStoppingScan {
+            eventHandler?(.stateChanged(.idle))
+        }
+    }
     func connect(to candidate: RadioCandidate) {
         connectedCandidates.append(candidate)
     }

@@ -53,12 +53,36 @@ final class EstroboTracerUITests: XCTestCase {
         let enabled = NSPredicate(format: "isEnabled == true")
         expectation(for: enabled, evaluatedWith: connect)
         waitForExpectations(timeout: 5)
+        // Finishing the bounded scan must not erase the selected radio or the
+        // code while the user is reading the connection form.
+        waitForEnabled(scan, timeout: 15)
+        if !connect.isEnabled {
+            attachFailureState(named: "scan-timeout-lost-radio-credentials", of: app)
+        }
+        XCTAssertTrue(
+            connect.isEnabled,
+            "Ending a scan must preserve the selected radio and its six-digit code"
+        )
+        reveal(connect, in: app)
         connect.tap()
+
+        let connectionStarted = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false OR isEnabled == false"),
+            object: connect
+        )
+        let connectionStartResult = XCTWaiter.wait(
+            for: [connectionStarted],
+            timeout: 5
+        )
+        if connectionStartResult != .completed {
+            attachFailureState(named: "connection-did-not-start", of: app)
+        }
+        XCTAssertEqual(connectionStartResult, .completed)
 
         let connectionSheet = app.descendants(matching: .any)[
             EstroboAccessibilityID.connectionSheet
         ].firstMatch
-        waitForDisappearance(connectionSheet, timeout: 15)
+        waitForDisappearance(connectionSheet, timeout: 15, app: app)
         waitForReady(in: app, label: "Listo")
 
         let slider = app.sliders[
@@ -874,6 +898,14 @@ final class EstroboTracerUITests: XCTestCase {
             let regularSidebar = app.buttons[
                 EstroboAccessibilityID.sidebarGroups
             ].firstMatch
+            // NavigationSplitView can initially show only content and detail
+            // on iOS 18. Reveal its native sidebar before checking all columns.
+            if !regularSidebar.waitForExistence(timeout: 5) {
+                let sidebarToggle = app.navigationBars.buttons["ToggleSidebar"]
+                    .firstMatch
+                XCTAssertTrue(sidebarToggle.waitForExistence(timeout: 5))
+                sidebarToggle.tap()
+            }
             XCTAssertTrue(regularSidebar.waitForExistence(timeout: 10))
             XCTAssertFalse(app.tabBars.firstMatch.exists)
             XCTAssertFalse(
@@ -1495,6 +1527,15 @@ final class EstroboTracerUITests: XCTestCase {
     }
 
     @MainActor
+    private func attachFailureState(named name: String, of app: XCUIApplication) {
+        attachScreenshot(named: name, of: app)
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "\(name)-hierarchy"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
+    }
+
+    @MainActor
     private func drag(
         _ slider: XCUIElement,
         from startOffset: CGFloat,
@@ -1572,13 +1613,21 @@ final class EstroboTracerUITests: XCTestCase {
         timeout: TimeInterval = 15
     ) {
         let status = app.buttons[EstroboAccessibilityID.sessionStatus].firstMatch
-        XCTAssertTrue(status.waitForExistence(timeout: 10))
+        guard status.waitForExistence(timeout: 10) else {
+            attachFailureState(named: "session-status-did-not-appear", of: app)
+            XCTFail("The session status must remain accessible")
+            return
+        }
         let ready = NSPredicate(
             format: "label CONTAINS[c] %@",
             label
         )
-        expectation(for: ready, evaluatedWith: status)
-        waitForExpectations(timeout: timeout)
+        let readiness = XCTNSPredicateExpectation(predicate: ready, object: status)
+        let result = XCTWaiter.wait(for: [readiness], timeout: timeout)
+        if result != .completed {
+            attachFailureState(named: "session-did-not-reach-ready", of: app)
+        }
+        XCTAssertEqual(result, .completed, "The session must reach Ready")
     }
 
     @MainActor
@@ -1683,11 +1732,16 @@ final class EstroboTracerUITests: XCTestCase {
     @MainActor
     private func waitForDisappearance(
         _ element: XCUIElement,
-        timeout: TimeInterval = 5
+        timeout: TimeInterval = 5,
+        app: XCUIApplication? = nil
     ) {
         let gone = NSPredicate(format: "exists == false")
-        expectation(for: gone, evaluatedWith: element)
-        waitForExpectations(timeout: timeout)
+        let disappearance = XCTNSPredicateExpectation(predicate: gone, object: element)
+        let result = XCTWaiter.wait(for: [disappearance], timeout: timeout)
+        if result != .completed, let app {
+            attachFailureState(named: "connection-sheet-did-not-dismiss", of: app)
+        }
+        XCTAssertEqual(result, .completed, "The presented element must disappear")
     }
 
     @MainActor

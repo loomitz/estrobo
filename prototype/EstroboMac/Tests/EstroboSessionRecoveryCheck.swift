@@ -4012,10 +4012,23 @@ enum EstroboSessionRecoveryCheck {
         )
         libraryFixture.controller.cancelConnectionAttempt()
         expect(libraryFixture.controller.canForgetSavedRadios)
+        expect(
+            libraryFixture.controller.radioCode.isEmpty,
+            "Cancelar búsqueda debe borrar el código antes de cualquier callback del transporte"
+        )
+        expect(libraryFixture.controller.selectedDeviceID == otherTestDevice.id)
 
         libraryFixture.controller.forgetSavedRadio(testDevice.id)
         expect(libraryFixture.controller.savedRadios == [secondLibraryRadio])
         expect(libraryStore.load() == .records([secondLibraryRadio]))
+        expect(
+            libraryFixture.controller.radioCode.isEmpty,
+            "Olvidar otro radio no debe volver a cargar el código cancelado"
+        )
+        expect(libraryFixture.controller.selectedDeviceID == otherTestDevice.id)
+
+        libraryFixture.controller.selectDevice(nil)
+        libraryFixture.controller.selectDevice(otherTestDevice.id)
         expect(libraryFixture.controller.radioCode == secondLibraryCode)
 
         libraryFixture.controller.forgetSavedRadio(otherTestDevice.id)

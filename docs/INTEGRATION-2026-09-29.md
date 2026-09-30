@@ -24,23 +24,25 @@ Local work was backed up before consolidation. The original iOS worktree and its
 - Make privacy, security, support and iOS installation documentation distinguish the public Beta 4 binary from this candidate.
 - Validate shared packages on both macOS architectures, run the website with its declared Node/pnpm versions, and retain the iOS 18 compatibility lane.
 - Wrap actor-isolated enum setters explicitly so stable Swift 6.1–6.3 can compile the iOS controls; verify universal slices separately for portable `lipo` parsing; replace fixed-delay macOS fixtures with bounded waits for actual events/window restoration.
+- Preserve the selected radio and its code when a bounded scan finishes and the transport reports `idle` later. Explicit cancellation, inactive scenes, Bluetooth failures and loss of an active connection still clear the code. A deterministic Core regression and the iOS form test reproduce the failure before this repair.
+- Reveal the native iPad sidebar when iOS 18 initially collapses it before checking the adaptive layout. Keep connection start, Ready, sheet dismissal and FEC8 assertions, with UI state attachments on failures.
 
 ## Verification
 
-The executable-source candidate is `a573d130bc273412fe7d2e8ee08735c8e67f652f` ([review PR #21](https://github.com/loomitz/estrobo/pull/21)). Later status-only documentation commits do not change that executable source.
+The [review PR #21](https://github.com/loomitz/estrobo/pull/21) tracks the consolidated candidate and its exact head commit. The initial integration baseline was `a573d130bc273412fe7d2e8ee08735c8e67f652f`; the final scan-completion repair changes the shared engine and requires new candidate binaries. Local bundles record their source commit in `EstroboSourceCommit`.
 
 | Local validation | Result |
 | --- | --- |
-| Shared Swift packages | 62 tests passed: 53 Core, 6 Persistence, 3 Bluetooth. |
+| Shared Swift packages | 67 tests passed after the scan-completion repair: 58 Core, 6 Persistence, 3 Bluetooth. The regression suite exposes the failure before the repair; five new cases cover synchronous/deferred scan completion plus cancellation, inactive scenes and real link failures. |
 | macOS | Typecheck and all 13 test targets passed; the CI-discovered simulation/window fixtures passed focused retests after repair. Native ad-hoc and unsigned universal development bundles contain the exact candidate SHA and pass bundle-content and slice checks; native mock launch passes. |
-| iOS | Simulator check, 31 app unit tests per idiom, the candidate document-link test, generic arm64 Release build and unsigned archive verification passed. UI: 26 iPhone passes before the compiler workaround, 8 iPad passes with it, 18 deliberate iPad omissions for phone-specific cases, and one focused iPhone pass after it; zero failures. The focused case confirms Off/Proportional/Manual and the 10% minimum. |
+| iOS | Simulator check, 31 app unit tests per idiom, the candidate document-link test, generic arm64 Release build and unsigned archive verification passed. Initial full UI: 26 iPhone passes, 8 iPad passes and 18 deliberate iPad omissions for phone-specific cases. Focused modeling confirms Off/Proportional/Manual and the 10% minimum. After the scan-completion repair, 3 iPhone and 2 iPad focused tests pass with zero omissions/failures, including connection after scan expiry, Ready, sheet dismissal and simulated FEC8 delivery. |
 | Release tools | Four suites passed, including 32 isolated DMG cases, source hygiene and exact-artifact approval checks. The portable universal-signature verifier also passed against the existing public Beta 4 artifact. |
 | Website | Fresh Node 24/pnpm 11.16 frozen-lockfile installation and build passed; 17 checked files, zero diagnostics and five generated pages. |
 | Documentation | Local Markdown links resolve; all four candidate privacy/support URLs return HTTP 200. |
 
-The [macOS/website CI run](https://github.com/loomitz/estrobo/actions/runs/36662529262) passed for this executable-source commit on arm64 and Intel. Both stable iOS compilers passed the build after the enum-setter repair. Current unit/smoke results are attached to the [review PR checks](https://github.com/loomitz/estrobo/pull/21/checks); the [full stable iOS candidate run](https://github.com/loomitz/estrobo/actions/runs/36663272611) also exercises the complete UI suite and unsigned archive after its required and iOS 18 gates. Inspect those live results when evaluating the gate rather than treating the local beta compiler as stable-Xcode proof.
+The initial baseline [macOS/website CI run](https://github.com/loomitz/estrobo/actions/runs/36662529262) passed on arm64 and Intel. Both stable iOS compilers passed the build after the enum-setter repair. The subsequent stable UI run exposed the scan-completion race; a local form test then reproduced it before the repair. Current unit/smoke results are attached to the [review PR checks](https://github.com/loomitz/estrobo/pull/21/checks). Select the latest integration-branch run in the [stable iOS candidate workflow](https://github.com/loomitz/estrobo/actions/workflows/ios-ci.yml?query=branch%3Acodex%2Fintegration-20260929) for the full UI suite and unsigned archive after its required and iOS 18 gates. Match each run to the PR head when evaluating the gate.
 
-The local post-workaround iOS archive has executable SHA-256 `55a01fcef4d45a044241827c51d2502822f34ba915fde0f92d99d29e4f783782`; its arm64 executable/dSYM UUIDs, privacy manifest, assets, development bundle ID and unsigned state were verified. It is not distributable. CLI build instructions select a complete Xcode installation explicitly so SwiftUI macro plugins, SDK and shared packages agree.
+Unsigned archive checks verify arm64 executable/dSYM UUIDs, the privacy manifest, assets, development bundle ID and absence of a distribution signature. Local validation records retain the executable hashes and source commits; earlier archive evidence does not validate a binary rebuilt after the scan-completion repair. These archives are not distributable. CLI build instructions select a complete Xcode installation explicitly so SwiftUI macro plugins, SDK and shared packages agree.
 
 ## Production decision
 
@@ -48,7 +50,7 @@ The local post-workaround iOS archive has executable SHA-256 `55a01fcef4d45a0442
 
 | Remaining gate | Required evidence |
 | --- | --- |
-| Automated release-candidate validation | Confirm the live PR checks and full stable candidate run above are green: macOS arm64/Intel, website, stable-Xcode iOS tests, iOS 18 compatibility, UI suite and unsigned archive. Documentation-only follow-ups leave the executable-source candidate unchanged. |
+| Automated release-candidate validation | Confirm the live PR checks and full stable candidate run above are green for the final head: macOS arm64/Intel, website, stable-Xcode iOS tests, iOS 18 compatibility, UI suite and unsigned archive. |
 | Physical Bluetooth and optical validation | The exact candidate installed on a recorded device/radio/firmware matrix; authentication and Sync; power minus/plus/slider matched to GATT, FEC8 and observed output; lifecycle/recovery; separate Test/Multi results. Stop if power controls are unreliable. |
 | macOS distribution | Choose a new version/build/tag and matching notes (the published Beta 4 tag is immutable and cannot be reused), then build a universal candidate, Developer ID signing, accepted app/DMG notarization, stapling, Gatekeeper and clean-Mac installation/upgrade smoke. Beta 4 signing evidence does not transfer to a new binary. |
 | iOS distribution | Deliberate final App ID/team/version/build, stable-Xcode signed archive/export, matching public privacy/support documents and signed internal-pilot validation. Current development identity/version remains explicit until that decision. |

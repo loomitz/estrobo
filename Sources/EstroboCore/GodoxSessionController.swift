@@ -3128,6 +3128,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
             scanDeadline = nil
             client.stopScanning()
             resetTransientSessionState()
+            radioCode = ""
             phase = .idle
             addActivity(.info, "Búsqueda cancelada")
             return
@@ -4401,9 +4402,17 @@ final class GodoxSessionController: NSObject, ObservableObject {
             let readyConnectionWasLost = phase == .ready && sessionDeviceID != nil
             let interruptedDeviceID = sessionDeviceID
             let scanWasActive = phase == .scanning
+            // stopScanning may report idle after the scan deadline has already
+            // changed phase. With no session, this completes discovery rather
+            // than losing an authenticated link or abandoning an attempt.
+            let preservesScanSelection = sessionDeviceID == nil && (
+                scanWasActive || phase == .idle
+            )
             resetTransientSessionState()
             if !scanWasActive {
-                radioCode = ""
+                if !preservesScanSelection {
+                    radioCode = ""
+                }
                 phase = .idle
                 connectedDeviceName = nil
             }
