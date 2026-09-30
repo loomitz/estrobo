@@ -8,6 +8,7 @@ final class EstroboTracerUITests: XCTestCase {
 
     @MainActor
     func testDemoScanReadyAdjustAndApplyTracer() throws {
+        XCUIDevice.shared.orientation = .portrait
         let app = XCUIApplication()
         app.launchArguments = [
             "--ui-testing",
@@ -21,6 +22,10 @@ final class EstroboTracerUITests: XCTestCase {
             app.descendants(matching: .any)[EstroboAccessibilityID.demoBanner]
                 .waitForExistence(timeout: 10)
         )
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            XCTAssertLessThan(app.frame.width, app.frame.height)
+        }
+        revealTabletGroupsWorkspaceIfNeeded(in: app)
 
         let status = app.buttons[
             EstroboAccessibilityID.sessionStatus
@@ -83,6 +88,7 @@ final class EstroboTracerUITests: XCTestCase {
             EstroboAccessibilityID.connectionSheet
         ].firstMatch
         waitForDisappearance(connectionSheet, timeout: 15, app: app)
+        revealTabletGroupsWorkspaceIfNeeded(in: app)
         waitForReady(in: app, label: "Listo")
 
         let slider = app.sliders[
@@ -1589,6 +1595,33 @@ final class EstroboTracerUITests: XCTestCase {
         let status = app.buttons[EstroboAccessibilityID.sessionStatus].firstMatch
         XCTAssertTrue(status.waitForExistence(timeout: 10))
         status.tap()
+    }
+
+    @MainActor
+    private func revealTabletGroupsWorkspaceIfNeeded(in app: XCUIApplication) {
+        guard UIDevice.current.userInterfaceIdiom == .pad else { return }
+        let status = app.buttons[EstroboAccessibilityID.sessionStatus].firstMatch
+        // A regular-width three-column split can start with just the inspector
+        // in portrait. Its first native sidebar toggle reveals the content.
+        if !status.waitForExistence(timeout: 3) {
+            let toggle = app.navigationBars.buttons["ToggleSidebar"].firstMatch
+            guard toggle.waitForExistence(timeout: 5) else {
+                attachFailureState(named: "tablet-content-navigation-missing", of: app)
+                XCTFail("The native split navigation must reveal Groups")
+                return
+            }
+            toggle.tap()
+        }
+        guard status.waitForExistence(timeout: 10) else {
+            attachFailureState(named: "tablet-content-did-not-appear", of: app)
+            XCTFail("Groups must expose the session action after native navigation")
+            return
+        }
+        XCTAssertTrue(status.isHittable)
+        XCTAssertTrue(
+            app.descendants(matching: .any)[EstroboAccessibilityID.globalScreen]
+                .firstMatch.waitForExistence(timeout: 5)
+        )
     }
 
     @MainActor

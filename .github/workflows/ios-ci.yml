@@ -136,9 +136,6 @@ jobs:
   candidate:
     name: Full UI tests and unsigned archive
     if: ${{ github.event_name != 'pull_request' }}
-    needs:
-      - required
-      - minimum-os
     runs-on: macos-26
     timeout-minutes: 60
     steps:
