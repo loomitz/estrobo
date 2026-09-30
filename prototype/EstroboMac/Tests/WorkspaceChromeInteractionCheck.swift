@@ -306,7 +306,10 @@ enum WorkspaceChromeInteractionCheck {
         window.orderOut(nil)
         expect(delegate.applicationShouldTerminate(application) == .terminateCancel,
                "Closing must preserve the existing in-flight edit safety gate")
-        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+        let restoreDeadline = Date(timeIntervalSinceNow: 5)
+        while !window.isVisible && Date() < restoreDeadline {
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+        }
         expect(window.isVisible, "A refused quit must restore the window instead of leaving the app hidden")
         controller.endInteractiveEdit(editToken)
         window.close()

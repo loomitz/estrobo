@@ -30,7 +30,7 @@ make ios-archive
 
 `make ios-archive` must create a Release `.xcarchive` without signing credentials and verify its arm64 executable, dSYM, privacy manifest, bundle identifier, and unsigned state. This proves archive reproducibility only; it is not a distributable TestFlight or App Store artifact.
 
-`.github/workflows/ios-ci.yml` uses a GitHub-hosted `macos-26` runner with stable Xcode 26.6 and a checksum-pinned XcodeGen 2.46.0 download. Pull requests run shared and app unit tests, the metadata/build check, a focused UI smoke on iPhone and iPad, and a generic Release build. A separate `macos-15` lane uses Xcode 16.4 and iOS 18.5 simulators to exercise the declared iOS 18 family. Pushes to `main` and manual candidate runs additionally execute the complete non-screenshot UI suite and validate the unsigned archive.
+`.github/workflows/ios-ci.yml` uses a GitHub-hosted `macos-26` runner with stable Xcode 26.6, iOS 26.5 simulators and a checksum-pinned XcodeGen 2.46.0 download. Pull requests run shared and app unit tests, the metadata/build check, a focused UI smoke on iPhone and iPad, and a generic Release build. A separate `macos-15` lane uses Xcode 16.4 and iOS 18.5 simulators to exercise the declared iOS 18 family. Pushes to `main` and manual candidate runs additionally execute the complete non-screenshot UI suite and validate the unsigned archive.
 
 ## Signed internal-pilot gate
 

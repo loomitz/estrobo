@@ -948,7 +948,7 @@ private struct GroupTracerDetailView: View {
                     coordinator.text("group.mode"),
                     selection: Binding(
                         get: { controller.groupDraft(group).draft.operatingMode },
-                        set: setOperatingMode
+                        set: { mode in setOperatingMode(mode) }
                     )
                 ) {
                     Text("M").tag(GroupOperatingMode.manual)
@@ -1045,7 +1045,9 @@ private struct GroupModelingControl: View {
                 coordinator.text("group.modeling"),
                 selection: Binding(
                     get: { currentChoice },
-                    set: setChoice
+                    // Avoid the actor-isolated method-reference reabstraction
+                    // that crashes Swift 6.1–6.3 when lowering this enum setter.
+                    set: { choice in setChoice(choice) }
                 )
             ) {
                 ForEach(supportedChoices, id: \.self) { choice in

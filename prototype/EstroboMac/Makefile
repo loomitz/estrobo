@@ -377,7 +377,8 @@ universal:
 		"$(SLICE_DIR)/arm64/$(APP_NAME)" \
 		"$(SLICE_DIR)/x86_64/$(APP_NAME)" \
 		-output "$(UNIVERSAL_EXECUTABLE)"; \
-	/usr/bin/lipo "$(UNIVERSAL_EXECUTABLE)" -verify_arch arm64 x86_64; \
+	/usr/bin/lipo "$(UNIVERSAL_EXECUTABLE)" -verify_arch arm64; \
+	/usr/bin/lipo "$(UNIVERSAL_EXECUTABLE)" -verify_arch x86_64; \
 	print "Construido sin firmar: $(UNIVERSAL_APP_BUNDLE)"
 
 release-preflight:
