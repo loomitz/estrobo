@@ -1,4 +1,4 @@
-# Godox BLE PoC — PROTOTIPO DESECHABLE
+# Estrobo BLE PoC — PROTOTIPO DESECHABLE
 
 ## Pregunta que responde
 

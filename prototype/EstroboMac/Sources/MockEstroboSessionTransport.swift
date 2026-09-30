@@ -5,7 +5,7 @@ import Foundation
 /// This transport only emits the same domain events as `BluetoothClient`; it
 /// never creates a CoreBluetooth central manager or talks to physical hardware.
 @MainActor
-final class MockGodoxSessionTransport: GodoxSessionTransport {
+final class MockEstroboSessionTransport: EstroboSessionTransport {
     static let device = BluetoothClient.Device(
         id: UUID(uuidString: "E5700B00-0000-4000-8000-000000000001")!,
         name: "ESTROBO MOCK",
@@ -199,7 +199,7 @@ final class MockGodoxSessionTransport: GodoxSessionTransport {
     private func schedule(
         after milliseconds: Int,
         generation expectedGeneration: UInt,
-        action: @escaping @MainActor (MockGodoxSessionTransport) -> Void
+        action: @escaping @MainActor (MockEstroboSessionTransport) -> Void
     ) {
         let eventID = UUID()
         scheduledEvents[eventID] = Task { @MainActor [weak self] in
@@ -252,18 +252,18 @@ enum MockRadioRuntime {
 
     static func makeControllerIfRequested(
         arguments: [String] = CommandLine.arguments
-    ) -> GodoxSessionController? {
+    ) -> EstroboSessionController? {
         guard isRequested(arguments: arguments) else { return nil }
         return makeController(
             showOnboarding: arguments.contains(onboardingLaunchArgument)
         )
     }
 
-    static func makeController(showOnboarding: Bool = false) -> GodoxSessionController {
+    static func makeController(showOnboarding: Bool = false) -> EstroboSessionController {
         var studioLibraryData: Data?
         var transmitterProfilePreferenceData: Data?
-        let controller = GodoxSessionController(
-            transport: MockGodoxSessionTransport(),
+        let controller = EstroboSessionController(
+            transport: MockEstroboSessionTransport(),
             deadlineScheduler: LiveSessionDeadlineScheduler(),
             visibilityPreferences: LocalGroupPreferences(
                 storageKey: "Estrobo.mock.visibleGroups",

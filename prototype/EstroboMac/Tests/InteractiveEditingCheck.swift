@@ -73,7 +73,7 @@ private final class InteractiveTestDeadlineScheduler: SessionDeadlineScheduling 
 }
 
 @MainActor
-private final class InteractiveFakeTransport: GodoxSessionTransport {
+private final class InteractiveFakeTransport: EstroboSessionTransport {
     weak var delegate: (any BluetoothClientDelegate)?
     let isSimulation = true
 
@@ -132,7 +132,7 @@ private let interactiveTestDevice = BluetoothClient.Device(
 
 @MainActor
 private struct InteractiveFixture {
-    let controller: GodoxSessionController
+    let controller: EstroboSessionController
     let transport: InteractiveFakeTransport
     let scheduler: InteractiveTestDeadlineScheduler
 }
@@ -145,7 +145,7 @@ private final class HarnessPresentationState: ObservableObject {
 
 @MainActor
 private struct HorizontalPowerHarness: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @ObservedObject var presentation: HarnessPresentationState
 
     var body: some View {
@@ -167,7 +167,7 @@ private struct HorizontalPowerHarness: View {
 
 @MainActor
 private struct VerticalPowerHarness: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @ObservedObject var presentation: HarnessPresentationState
 
     var body: some View {
@@ -189,7 +189,7 @@ private struct VerticalPowerHarness: View {
 
 @MainActor
 private struct FixedIntensityHarness: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @ObservedObject var presentation: HarnessPresentationState
 
     var body: some View {
@@ -742,7 +742,7 @@ enum InteractiveEditingCheck {
         )
         var transmitterPreferencesData: Data?
         var libraryData: Data?
-        let controller = GodoxSessionController(
+        let controller = EstroboSessionController(
             transport: transport,
             deadlineScheduler: scheduler,
             visibilityPreferences: LocalGroupPreferences(
@@ -804,7 +804,7 @@ enum InteractiveEditingCheck {
     }
 
     private static func alternatePowers(
-        in controller: GodoxSessionController
+        in controller: EstroboSessionController
     ) -> (first: ManualPower, last: ManualPower) {
         let baseline = controller.groupDraft(.c).baseline.power
         let alternatives = controller.allowedPowers(for: .c).filter { $0 != baseline }
@@ -830,7 +830,7 @@ enum InteractiveEditingCheck {
 
     private static func makeWindow<Content: View>(
         rootView: Content,
-        controller: GodoxSessionController,
+        controller: EstroboSessionController,
         size: NSSize
     ) -> NSWindow {
         var storedLanguage = AppLanguage.es.rawValue

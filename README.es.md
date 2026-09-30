@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="prototype/GodoxMacControlPrototype/Resources/Brand/EstroboMark1024.png" width="132" alt="Icono de la app Estrobo">
+  <img src="prototype/EstroboMac/Resources/Brand/EstroboMark1024.png" width="132" alt="Icono de la app Estrobo">
 </p>
 
 <h1 align="center">estrobo</h1>
@@ -15,7 +15,7 @@ Estrobo reúne los controles de disparadores de flash Godox compatibles en un es
 > [!IMPORTANT]
 > La beta pública `0.1.0-beta.4` es la descarga vigente. Su DMG universal exacto y la app incluida están firmados con Apple Developer ID, notarizados y engrapados por Apple, y aceptados por Gatekeeper.
 
-![Vista Canales de Estrobo en modo simulado](prototype/GodoxMacControlPrototype/QA/channels-after-dark-final-es.png)
+![Vista Canales de Estrobo en modo simulado](prototype/EstroboMac/QA/channels-after-dark-final-es.png)
 
 ## Requisitos
 
@@ -88,7 +88,7 @@ Desde un checkout de desarrollo:
 
 ```sh
 make mac-prototype-build
-/usr/bin/open -n prototype/GodoxMacControlPrototype/Build/estrobo.app --args --mock-radio
+/usr/bin/open -n prototype/EstroboMac/Build/estrobo.app --args --mock-radio
 ```
 
 La app muestra **Radio simulado** de forma explícita. Nunca activa este modo como fallback silencioso.
@@ -110,7 +110,7 @@ La app muestra **Radio simulado** de forma explícita. Nunca activa este modo co
 <details>
 <summary><strong>Ver configuración del espacio de trabajo</strong></summary>
 
-![Biblioteca de transmisores guardados en estado vacío](prototype/GodoxMacControlPrototype/QA/saved-transmitters-empty-dark-es.png)
+![Biblioteca de transmisores guardados en estado vacío](prototype/EstroboMac/QA/saved-transmitters-empty-dark-es.png)
 
 </details>
 

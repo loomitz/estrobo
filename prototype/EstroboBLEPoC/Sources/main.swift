@@ -367,7 +367,7 @@ private final class TerminalApp: BluetoothClientDelegate {
 
     private func render() {
         var output = ansiClear
-        output += "\(ansiBold)Godox BLE PoC — prototipo desechable\(ansiReset)\n"
+        output += "\(ansiBold)Estrobo BLE PoC — prototipo desechable\(ansiReset)\n"
         output += "\(ansiDim)Sin cuenta, red, firmware ni disparo\(ansiReset)\n\n"
 
         output += "\(ansiBold)Estado\(ansiReset)\n"
@@ -418,7 +418,7 @@ private final class TerminalApp: BluetoothClientDelegate {
 }
 
 @main
-private enum GodoxBLEPoCMain {
+private enum EstroboBLEPoCMain {
     @MainActor
     static func main() {
         guard let radioCode = readRadioCodeWithoutEcho() else {

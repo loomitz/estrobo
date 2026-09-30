@@ -2,7 +2,7 @@ import Foundation
 import Combine
 
 @MainActor
-final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientDelegate {
+final class EstroboSessionController: NSObject, ObservableObject, BluetoothClientDelegate {
     struct InteractiveEditToken: Hashable {
         fileprivate let id = UUID()
     }
@@ -151,7 +151,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         case failure(String)
     }
 
-    private var client: (any GodoxSessionTransport)!
+    private var client: (any EstroboSessionTransport)!
     private let deadlineScheduler: any SessionDeadlineScheduling
     private var authenticationAttempt: UUID?
     private var scanDeadline: SessionDeadlineToken?
@@ -221,7 +221,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
     }
 
     init(
-        transport: (any GodoxSessionTransport)?,
+        transport: (any EstroboSessionTransport)?,
         deadlineScheduler: any SessionDeadlineScheduling,
         visibilityPreferences initialVisibilityPreferences: LocalGroupPreferences,
         restorationStore initialRestorationStore: PendingRestorationStore,
@@ -704,8 +704,24 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         scheduleAutomaticApplyIfNeeded()
     }
 
+    /// Enabling A0 can wake lamps outside the edited group. Reassert every
+    /// configured A1, including unchanged Off states, before finishing Apply.
+    /// Never infer or overwrite the state of groups outside the workspace.
+    private var needsModelingGroupSynchronization: Bool {
+        restorationPoints.isEmpty &&
+            !globalRadioSnapshot.modelingLightEnabled &&
+            desiredGlobalSnapshot().modelingLightEnabled
+    }
+
     private var groupsEligibleForApply: [GodoxGroup] {
-        guard !restorationPoints.isEmpty else { return pendingGroups }
+        guard !restorationPoints.isEmpty else {
+            if needsModelingGroupSynchronization {
+                return managedGroups.filter {
+                    workingGroups.contains($0) || pendingGroups.contains($0)
+                }
+            }
+            return pendingGroups
+        }
         return transmitterProfile.supportedGroups.filter {
             preparedRestorations.contains($0)
         }
@@ -733,7 +749,11 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
         }
         if restorationPoints.isEmpty, !isMultiFlashDraftValid { return false }
         return eligibleGroups.allSatisfy {
-            canTransmit($0, snapshot: groupDraft($0).draft)
+            canTransmit(
+                $0,
+                snapshot: groupDraft($0).draft,
+                forceWrite: needsModelingGroupSynchronization
+            )
         }
     }
 
@@ -2960,7 +2980,7 @@ final class GodoxSessionController: NSObject, ObservableObject, BluetoothClientD
             let followup = targetGroups.isEmpty ? nil : GlobalControlFollowup(
                 groups: targetGroups,
                 purpose: .pendingChanges,
-                forceWrite: false,
+                forceWrite: needsModelingGroupSynchronization,
                 restorationGlobalSnapshot: restorationGlobal
             )
             if !submitGlobalControl(

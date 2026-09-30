@@ -79,7 +79,7 @@ jobs:
 
           # Manual rebuilds take their workflow definition from protected main,
           # while every source-bearing job checks out this exact tagged commit.
-          plist="prototype/GodoxMacControlPrototype/Info.plist"
+          plist="prototype/EstroboMac/Info.plist"
           version="$(
             git show "$commit:$plist" |
               plutil -extract CFBundleShortVersionString raw -o - -- -
@@ -148,7 +148,7 @@ jobs:
           make mac-prototype-check TARGET_ARCH="$EXPECTED_ARCH"
           make mac-prototype-test TARGET_ARCH="$EXPECTED_ARCH"
           make mac-prototype-build TARGET_ARCH="$EXPECTED_ARCH"
-          lipo prototype/GodoxMacControlPrototype/Build/estrobo.app/Contents/MacOS/estrobo \
+          lipo prototype/EstroboMac/Build/estrobo.app/Contents/MacOS/estrobo \
             -verify_arch "$EXPECTED_ARCH"
 
   sign:
@@ -284,9 +284,9 @@ jobs:
         run: |
           set -euo pipefail
           codesign --verify --deep --strict --verbose=2 \
-            prototype/GodoxMacControlPrototype/Build/Universal/estrobo.app
+            prototype/EstroboMac/Build/Universal/estrobo.app
           ditto -c -k --sequesterRsrc --keepParent \
-            prototype/GodoxMacControlPrototype/Build/Universal/estrobo.app \
+            prototype/EstroboMac/Build/Universal/estrobo.app \
             "$RUNNER_TEMP/estrobo-signed-app.zip"
 
       - name: Remove temporary signing material
@@ -372,7 +372,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          destination="prototype/GodoxMacControlPrototype/Build/Universal"
+          destination="prototype/EstroboMac/Build/Universal"
           rm -rf -- "$destination"
           mkdir -p "$destination"
           ditto -x -k \

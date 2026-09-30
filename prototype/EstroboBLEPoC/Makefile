@@ -2,14 +2,14 @@ SHELL := /bin/zsh
 
 .DEFAULT_GOAL := build
 
-APP_NAME := GodoxBLEPoC
+APP_NAME := EstroboBLEPoC
 BUILD_DIR := Build
 APP_BUNDLE := $(BUILD_DIR)/$(APP_NAME).app
 CONTENTS_DIR := $(APP_BUNDLE)/Contents
 MACOS_DIR := $(CONTENTS_DIR)/MacOS
 EXECUTABLE := $(MACOS_DIR)/$(APP_NAME)
 INFO_PLIST := Info.plist
-ENTITLEMENTS := GodoxBLEPoC.entitlements
+ENTITLEMENTS := EstroboBLEPoC.entitlements
 SOURCES := $(sort $(wildcard Sources/*.swift))
 
 SWIFTC := $(shell xcrun --find swiftc)

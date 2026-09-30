@@ -53,7 +53,7 @@ NOTARIZATION_WAIT_RESULT ?= $(NOTARIZATION_DIR)/notary-wait.json
 NOTARIZATION_LOG ?= $(NOTARIZATION_DIR)/notary-log.json
 NOTARIZATION_METADATA ?= $(NOTARIZATION_DIR)/notarization-metadata.json
 TEST_EXECUTABLE := $(BUILD_DIR)/SafeGodoxProtocolFrameCheck
-SESSION_TEST_EXECUTABLE := $(BUILD_DIR)/GodoxSessionRecoveryCheck
+SESSION_TEST_EXECUTABLE := $(BUILD_DIR)/EstroboSessionRecoveryCheck
 STUDIO_LIBRARY_TEST_EXECUTABLE := $(BUILD_DIR)/StudioLibraryStoreCheck
 LOCALIZATION_TEST_EXECUTABLE := $(BUILD_DIR)/AppLocalizationCheck
 MODELING_MENU_POINTER_TEST_EXECUTABLE := $(BUILD_DIR)/ModelingMenuMouseOrderingCheck
@@ -62,13 +62,13 @@ BRAND_ASSET_TEST_EXECUTABLE := $(BUILD_DIR)/EstroboBrandAssetsCheck
 INTERACTIVE_EDITING_TEST_EXECUTABLE := $(BUILD_DIR)/InteractiveEditingCheck
 MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE := $(BUILD_DIR)/MenuBarAccessibilityCheck
 INFO_PLIST := Info.plist
-ENTITLEMENTS := GodoxMacControlPrototype.entitlements
+ENTITLEMENTS := EstroboMac.entitlements
 RESOURCE_SOURCE_DIR := Resources
 LOCALIZATION_RESOURCES := $(sort $(wildcard $(RESOURCE_SOURCE_DIR)/*.lproj/*.strings))
 RESOURCE_FILES := $(sort $(shell find $(RESOURCE_SOURCE_DIR) -type f))
 LOCAL_SOURCES := $(sort $(wildcard Sources/*.swift))
-BLE_DEVICE_NAME_SOURCE := ../GodoxBLEPoC/Sources/GodoxBluetoothDeviceName.swift
-BLE_SOURCE := ../GodoxBLEPoC/Sources/BluetoothClient.swift
+BLE_DEVICE_NAME_SOURCE := ../EstroboBLEPoC/Sources/GodoxBluetoothDeviceName.swift
+BLE_SOURCE := ../EstroboBLEPoC/Sources/BluetoothClient.swift
 BLE_SOURCES := $(BLE_DEVICE_NAME_SOURCE) $(BLE_SOURCE)
 SOURCES := $(LOCAL_SOURCES) $(BLE_SOURCES)
 
@@ -140,10 +140,10 @@ test-session-recovery:
 		Sources/SavedRadioStore.swift \
 		Sources/StudioLibraryStore.swift \
 		Sources/SessionDeadlineScheduler.swift \
-		Sources/GodoxSessionTransport.swift \
-		Sources/GodoxSessionController.swift \
+		Sources/EstroboSessionTransport.swift \
+		Sources/EstroboSessionController.swift \
 		$(BLE_SOURCES) \
-		Tests/GodoxSessionRecoveryCheck.swift \
+		Tests/EstroboSessionRecoveryCheck.swift \
 		-o "$(SESSION_TEST_EXECUTABLE)"
 	@"$(SESSION_TEST_EXECUTABLE)"
 
@@ -194,7 +194,7 @@ test-workspace-chrome:
 		-framework SwiftUI \
 		-framework AppKit \
 		-framework CoreBluetooth \
-		$(filter-out Sources/GodoxMacControlPrototypeApp.swift,$(LOCAL_SOURCES)) \
+		$(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) \
 		$(BLE_SOURCES) \
 		Tests/WorkspaceChromeInteractionCheck.swift \
 		-o "$(WORKSPACE_CHROME_TEST_EXECUTABLE)"
@@ -222,7 +222,7 @@ test-interactive-editing:
 		-framework SwiftUI \
 		-framework AppKit \
 		-framework CoreBluetooth \
-		$(filter-out Sources/GodoxMacControlPrototypeApp.swift,$(LOCAL_SOURCES)) \
+		$(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) \
 		$(BLE_SOURCES) \
 		Tests/InteractiveEditingCheck.swift \
 		-o "$(INTERACTIVE_EDITING_TEST_EXECUTABLE)"
@@ -238,7 +238,7 @@ test-menu-bar-accessibility: build
 		-framework SwiftUI \
 		-framework AppKit \
 		-framework CoreBluetooth \
-		$(filter-out Sources/GodoxMacControlPrototypeApp.swift,$(LOCAL_SOURCES)) \
+		$(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) \
 		$(BLE_SOURCES) \
 		Tests/MenuBarAccessibilityCheck.swift \
 		-o "$(MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE)"

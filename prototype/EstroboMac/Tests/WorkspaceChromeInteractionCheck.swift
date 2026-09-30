@@ -12,6 +12,7 @@ enum WorkspaceChromeInteractionCheck {
         checkMenuBarRuntimeContract()
         checkMenuBarPendingPolicy()
         checkTerminationSafety()
+        checkWindowLifecycle()
         checkMenuBarStrings()
         checkLanguagePickerHitTargets()
         print("Settings-only view switching, shared Menu Bar controls, header, footer, and language hit targets verified")
@@ -28,10 +29,12 @@ enum WorkspaceChromeInteractionCheck {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
         let sourcesURL = projectURL.appendingPathComponent("Sources")
-        let appURL = sourcesURL.appendingPathComponent("GodoxMacControlPrototypeApp.swift")
+        let appURL = sourcesURL.appendingPathComponent("EstroboApp.swift")
+        let delegateURL = sourcesURL.appendingPathComponent("PrototypeAppDelegate.swift")
         let menuBarURL = sourcesURL.appendingPathComponent("MenuBarControlView.swift")
 
         guard let appSource = try? String(contentsOf: appURL, encoding: .utf8),
+              let delegateSource = try? String(contentsOf: delegateURL, encoding: .utf8),
               let menuBarSource = try? String(contentsOf: menuBarURL, encoding: .utf8) else {
             fail("Could not read the Menu Bar source contract")
         }
@@ -46,12 +49,10 @@ enum WorkspaceChromeInteractionCheck {
                 appSource.contains(".menuBarExtraStyle(.window)") &&
                 appSource.contains("@StateObject private var languageStore") &&
                 appSource.contains("appDelegate.controller = sessionController") &&
-                appSource.contains("controller.terminationBlockReason") &&
+                delegateSource.contains("controller.terminationBlockReason") &&
                 !appSource.contains(".onAppear { appDelegate.controller = controller }") &&
-                appSource.contains(
-                    "func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {\n        false"
-                ),
-            "The Menu Bar extra and main window must share controller/language state and survive closing the window"
+                appSource.contains("appDelegate.createMainWindow = { openWindow(id: \"main\") }"),
+            "The Menu Bar and main window must share session state and support recreating the main scene"
         )
 
         expect(
@@ -258,6 +259,49 @@ enum WorkspaceChromeInteractionCheck {
                 operatingMode: draftMode
             )
         )
+    }
+
+    private static func checkWindowLifecycle() {
+        let application = NSApplication.shared
+        let delegate = PrototypeAppDelegate()
+        expect(delegate.applicationShouldTerminateAfterLastWindowClosed(application),
+               "Closing the last main window must request a complete, safety-gated quit")
+        expect(delegate.applicationShouldTerminate(application) == .terminateNow,
+               "An idle app must be allowed to exit")
+
+        var createdWindows = 0
+        delegate.createMainWindow = { createdWindows += 1 }
+        expect(!delegate.applicationShouldHandleReopen(application, hasVisibleWindows: false),
+               "The delegate must handle Dock reopening itself")
+        expect(createdWindows == 1, "Reopening without a main window must recreate the SwiftUI scene")
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 100, y: 100, width: 300, height: 200),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "estrobo"
+        window.isReleasedWhenClosed = false
+        window.orderOut(nil)
+        _ = delegate.applicationShouldHandleReopen(application, hasVisibleWindows: false)
+        expect(window.isVisible, "Dock reopening must restore a hidden main window")
+        expect(createdWindows == 1, "Reopening must reuse the existing window")
+        window.miniaturize(nil)
+        delegate.showMainWindow()
+        expect(!window.isMiniaturized && window.isVisible,
+               "Reopening must restore a minimized window")
+
+        let controller = MockRadioRuntime.makeController()
+        delegate.controller = controller
+        let editToken = controller.beginInteractiveEdit()
+        window.orderOut(nil)
+        expect(delegate.applicationShouldTerminate(application) == .terminateCancel,
+               "Closing must preserve the existing in-flight edit safety gate")
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+        expect(window.isVisible, "A refused quit must restore the window instead of leaving the app hidden")
+        controller.endInteractiveEdit(editToken)
+        window.close()
     }
 
     private static func checkTerminationSafety() {

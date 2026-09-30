@@ -1,19 +1,19 @@
 import SwiftUI
 import AppKit
 
-// Every control delegates to GodoxSessionController; esta vista no construye
+// Every control delegates to EstroboSessionController; esta vista no construye
 // payloads Bluetooth ni toca credenciales directamente.
 
 @MainActor
 struct PrototypeRootView: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
 
     @EnvironmentObject private var languageStore: AppLanguageStore
     @State private var variant: PrototypeVariant
     @State private var selectedGroup: GodoxGroup = .b
     private let workspaceViewPreferences: WorkspaceViewPreferences
 
-    init(controller: GodoxSessionController) {
+    init(controller: EstroboSessionController) {
         self.controller = controller
         let preferences = WorkspaceViewPreferences()
         workspaceViewPreferences = preferences
@@ -135,7 +135,7 @@ struct PrototypeRootView: View {
 
 @MainActor
 private struct WorkspaceConfigurationFlow: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
 
     @State private var profileID: String
@@ -147,7 +147,7 @@ private struct WorkspaceConfigurationFlow: View {
     @State private var showsGroupPicker = false
     @State private var showsSavedTransmitters = false
 
-    init(controller: GodoxSessionController) {
+    init(controller: EstroboSessionController) {
         self.controller = controller
         let profile = controller.transmitterProfile
         let startsEmpty = !controller.hasStoredWorkspaceConfiguration
@@ -1070,7 +1070,7 @@ private struct AddWorkingGroupsSheet: View {
 
 @MainActor
 private struct SavedTransmittersSheet: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
     @Environment(\.dismiss) private var dismiss
     @State private var radioPendingForget: SavedRadio?
@@ -1282,7 +1282,7 @@ private struct SavedTransmittersSheet: View {
 
 @MainActor
 struct QuickControlsBar: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -1292,7 +1292,7 @@ struct QuickControlsBar: View {
     @State private var limitFeedbackPulses = false
     @State private var limitFeedbackGeneration = 0
     @State private var lastDragLimitDirection: Int?
-    @State private var interactiveEditToken: GodoxSessionController.InteractiveEditToken?
+    @State private var interactiveEditToken: EstroboSessionController.InteractiveEditToken?
 
     var body: some View {
         let canAttemptGlobalAdjustment = !controller.makeGlobalPowerAnchor().isEmpty
@@ -1765,7 +1765,7 @@ private struct GlobalStateToggleStyle: ToggleStyle {
 
 @MainActor
 private struct MultiFlashConsole: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
@@ -1884,7 +1884,7 @@ private struct MultiFlashConsole: View {
 
 @MainActor
 private struct MultiConsoleIdentity: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
 
     var body: some View {
@@ -1925,7 +1925,7 @@ private struct MultiConsoleIdentity: View {
 
 @MainActor
 private struct MultiConsolePowerRail: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
 
     var body: some View {
@@ -2032,9 +2032,9 @@ private struct MultiConsoleNumericControl: View {
     let range: ClosedRange<Int>
     let enabled: Bool
     let setValue: (Int) -> Void
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
-    @State private var interactiveEditToken: GodoxSessionController.InteractiveEditToken?
+    @State private var interactiveEditToken: EstroboSessionController.InteractiveEditToken?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -2125,7 +2125,7 @@ private struct MultiConsoleNumericControl: View {
 
 @MainActor
 private struct MultiConsoleOutcome: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
 
     var body: some View {
@@ -2230,7 +2230,7 @@ private struct MultiConsoleOutcome: View {
 @MainActor
 private struct MultiParticipantButton: View {
     let group: GodoxGroup
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
 
     private var isParticipating: Bool {
@@ -2319,7 +2319,7 @@ private enum HeaderMetrics {
 
 @MainActor
 private struct PrototypeHeader: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @Binding var variant: PrototypeVariant
     @EnvironmentObject private var languageStore: AppLanguageStore
     @State private var showsConfiguration = false
@@ -2455,7 +2455,7 @@ private struct PrototypeHeader: View {
 
 @MainActor
 private struct PresetLibrarySheet: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
     @Environment(\.dismiss) private var dismiss
 
@@ -3009,7 +3009,7 @@ private struct LanguageToggle: View {
 
 @MainActor
 private struct LocalConfigurationPopover: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @Binding var variant: PrototypeVariant
     @EnvironmentObject private var languageStore: AppLanguageStore
     @Environment(\.dismiss) private var dismiss
@@ -3402,7 +3402,7 @@ private struct SettingsAppearancePicker: View {
 
 @MainActor
 private struct ConnectionPanel: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
 
     private var isSessionSurfaceCompact: Bool {
@@ -3498,7 +3498,7 @@ private struct ConnectionPanel: View {
 
 @MainActor
 private struct ConnectionSetupFlow: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
     @State private var showsSavedTransmitters = false
 
@@ -3889,7 +3889,7 @@ private struct ActivityStrip: View {
 
 @MainActor
 private struct WorkspaceFooter: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
 
     var body: some View {
         HStack(spacing: 18) {
@@ -3905,7 +3905,7 @@ private struct WorkspaceFooter: View {
 
 @MainActor
 private struct FooterApplyControls: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
 
     var body: some View {
@@ -4121,7 +4121,7 @@ private struct WorkspaceVariantSelector: View {
 
 @MainActor
 private struct ApplyBar: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
 
     var body: some View {
@@ -4422,7 +4422,7 @@ private struct ApplyBar: View {
 
 @MainActor
 private struct ChannelsLayout: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
 
     var body: some View {
         GeometryReader { geometry in
@@ -4495,7 +4495,7 @@ private struct StudioChannelStrip: View {
     let setOperatingMode: (GroupOperatingMode) -> Void
     let setRadioEnabled: (Bool) -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
-    @EnvironmentObject private var controller: GodoxSessionController
+    @EnvironmentObject private var controller: EstroboSessionController
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -4854,7 +4854,7 @@ private struct ChannelRow: View {
 
 @MainActor
 private struct InspectorLayout: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @Binding var selectedGroup: GodoxGroup
 
     var body: some View {
@@ -4904,7 +4904,7 @@ private struct InspectorRailButton: View {
     let isSelected: Bool
     let select: () -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
-    @EnvironmentObject private var controller: GodoxSessionController
+    @EnvironmentObject private var controller: EstroboSessionController
 
     var body: some View {
         let identity = group.visualIdentity
@@ -5023,7 +5023,7 @@ private struct InspectorEditor: View {
     let setOperatingMode: (GroupOperatingMode) -> Void
     let setRadioEnabled: (Bool) -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
-    @EnvironmentObject private var controller: GodoxSessionController
+    @EnvironmentObject private var controller: EstroboSessionController
 
     var body: some View {
         VStack(spacing: 11) {
@@ -5232,7 +5232,7 @@ private struct InspectorEditor: View {
 
 @MainActor
 private struct MatrixLayout: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
 
     private let columns = [
         GridItem(.adaptive(minimum: 250, maximum: 360), spacing: 10)
@@ -5285,7 +5285,7 @@ private struct MatrixGroupCard: View {
     let setOperatingMode: (GroupOperatingMode) -> Void
     let setRadioEnabled: (Bool) -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
-    @EnvironmentObject private var controller: GodoxSessionController
+    @EnvironmentObject private var controller: EstroboSessionController
 
     var body: some View {
         VStack(spacing: 9) {
@@ -5411,7 +5411,7 @@ private extension View {
     func multiExcludedGroupOverlay(
         group: GodoxGroup,
         state: GroupDraft,
-        controller: GodoxSessionController,
+        controller: EstroboSessionController,
         compact: Bool
     ) -> some View {
         modifier(MultiExcludedGroupModifier(
@@ -5427,7 +5427,7 @@ private extension View {
 private struct MultiExcludedGroupModifier: ViewModifier {
     let group: GodoxGroup
     let state: GroupDraft
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     let compact: Bool
 
     private var isExcluded: Bool {
@@ -5458,7 +5458,7 @@ private struct MultiExcludedGroupModifier: ViewModifier {
 @MainActor
 private struct MultiExcludedGroupOverlay: View {
     let group: GodoxGroup
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     let compact: Bool
     @EnvironmentObject private var languageStore: AppLanguageStore
 
@@ -5612,7 +5612,7 @@ private struct GroupStateControls: View {
     let setOperatingMode: (GroupOperatingMode) -> Void
     let setRadioEnabled: (Bool) -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
-    @EnvironmentObject private var controller: GodoxSessionController
+    @EnvironmentObject private var controller: EstroboSessionController
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -5877,8 +5877,8 @@ struct VerticalDiscretePowerControl: View {
     let enabled: Bool
     let onChange: (ManualPower) -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
-    @EnvironmentObject private var controller: GodoxSessionController
-    @State private var interactiveEditToken: GodoxSessionController.InteractiveEditToken?
+    @EnvironmentObject private var controller: EstroboSessionController
+    @State private var interactiveEditToken: EstroboSessionController.InteractiveEditToken?
 
     private let railX: CGFloat = 88
     private let railInset: CGFloat = 10
@@ -6073,8 +6073,8 @@ struct DiscretePowerSlider: View {
     let enabled: Bool
     let onChange: (ManualPower) -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
-    @EnvironmentObject private var controller: GodoxSessionController
-    @State private var interactiveEditToken: GodoxSessionController.InteractiveEditToken?
+    @EnvironmentObject private var controller: EstroboSessionController
+    @State private var interactiveEditToken: EstroboSessionController.InteractiveEditToken?
 
     var body: some View {
         Slider(
@@ -6468,8 +6468,8 @@ struct VerticalFixedIntensityControl: View {
     let compact: Bool
     let onChange: (Int) -> Void
     @EnvironmentObject private var languageStore: AppLanguageStore
-    @EnvironmentObject private var controller: GodoxSessionController
-    @State private var interactiveEditToken: GodoxSessionController.InteractiveEditToken?
+    @EnvironmentObject private var controller: EstroboSessionController
+    @State private var interactiveEditToken: EstroboSessionController.InteractiveEditToken?
 
     private let railInset: CGFloat = 9
 

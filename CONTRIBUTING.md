@@ -17,7 +17,7 @@ make mac-prototype-build
 Para revisar la UI sin hardware:
 
 ```sh
-/usr/bin/open -n prototype/GodoxMacControlPrototype/Build/estrobo.app --args --mock-radio
+/usr/bin/open -n prototype/EstroboMac/Build/estrobo.app --args --mock-radio
 ```
 
 El modo simulado debe identificarse como **Radio simulado**. Nunca debe activarse como fallback de una sesión real.

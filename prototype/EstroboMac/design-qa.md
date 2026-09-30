@@ -56,7 +56,7 @@
 
 ## Interacción
 
-- La vista nativa se probó con `MockGodoxSessionTransport`; no se inicializó
+- La vista nativa se probó con `MockEstroboSessionTransport`; no se inicializó
   Bluetooth ni se enviaron órdenes a hardware.
 - Pulsar el bloque B cambió su valor accesible de **Encendido** a **Apagado**,
   mostró OFF y deshabilitó menos, selector y más. La evidencia del estado está

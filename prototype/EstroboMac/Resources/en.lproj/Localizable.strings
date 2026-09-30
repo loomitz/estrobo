@@ -68,7 +68,7 @@
 "apply.discardAll" = "Discard all";
 
 /* Existing SwiftUI literal keys */
-"GODOX CONTROL" = "estrobo";
+"ESTROBO" = "estrobo";
 "estrobo" = "estrobo";
 "Control de flashes para tethering" = "Flash control for tethered shooting";
 "RADIO SIMULADO" = "SIMULATED RADIO";

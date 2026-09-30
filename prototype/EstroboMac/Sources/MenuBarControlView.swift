@@ -7,7 +7,7 @@ import SwiftUI
 /// Bluetooth session or a second source of truth.
 @MainActor
 struct MenuBarControlView: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
 
     @EnvironmentObject private var languageStore: AppLanguageStore
     @Environment(\.openWindow) private var openWindow
@@ -331,6 +331,7 @@ struct MenuBarControlView: View {
         if let existingWindow = NSApplication.shared.windows.first(where: {
             !($0 is NSPanel) && $0.title.lowercased() == "estrobo"
         }) {
+            if existingWindow.isMiniaturized { existingWindow.deminiaturize(nil) }
             existingWindow.makeKeyAndOrderFront(nil)
         } else {
             openWindow(id: "main")
@@ -348,7 +349,7 @@ struct MenuBarControlView: View {
 
 @MainActor
 struct MenuBarStatusLabel: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     @EnvironmentObject private var languageStore: AppLanguageStore
 
     var body: some View {
@@ -398,7 +399,7 @@ struct MenuBarStatusLabel: View {
 
 @MainActor
 private struct MenuBarPowerRow: View {
-    @ObservedObject var controller: GodoxSessionController
+    @ObservedObject var controller: EstroboSessionController
     let group: GodoxGroup
 
     @EnvironmentObject private var languageStore: AppLanguageStore
@@ -883,7 +884,7 @@ enum MenuBarLayout {
 enum MenuBarAccessibilityActions {
     static func adjustPower(
         _ direction: AccessibilityAdjustmentDirection,
-        controller: GodoxSessionController,
+        controller: EstroboSessionController,
         group: GodoxGroup,
         enabled: Bool
     ) {

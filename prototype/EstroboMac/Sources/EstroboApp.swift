@@ -6,9 +6,9 @@ import AppKit
 
 @main
 @MainActor
-struct GodoxMacControlPrototypeApp: App {
+struct EstroboApp: App {
     @NSApplicationDelegateAdaptor(PrototypeAppDelegate.self) private var appDelegate
-    @StateObject private var controller: GodoxSessionController
+    @StateObject private var controller: EstroboSessionController
     @StateObject private var appearanceStore: AppAppearanceStore
     @StateObject private var languageStore: AppLanguageStore
     @AppStorage(MenuBarVisibilityPreferences.storageKey)
@@ -16,7 +16,7 @@ struct GodoxMacControlPrototypeApp: App {
 
     init() {
         let sessionController = MockRadioRuntime.makeControllerIfRequested()
-            ?? GodoxSessionController()
+            ?? EstroboSessionController()
         _controller = StateObject(wrappedValue: sessionController)
         _appearanceStore = StateObject(wrappedValue: AppAppearanceStore())
         _languageStore = StateObject(wrappedValue: AppLanguageStore())
@@ -36,6 +36,7 @@ struct GodoxMacControlPrototypeApp: App {
     var body: some Scene {
         WindowGroup("estrobo", id: "main") {
             PrototypeRootView(controller: controller)
+                .background(MainWindowReopenRegistration(appDelegate: appDelegate))
                 .environmentObject(appearanceStore)
                 .environmentObject(languageStore)
                 .environment(\.locale, languageStore.locale)
@@ -59,23 +60,14 @@ struct GodoxMacControlPrototypeApp: App {
     }
 }
 
-@MainActor
-final class PrototypeAppDelegate: NSObject, NSApplicationDelegate {
-    weak var controller: GodoxSessionController?
+private struct MainWindowReopenRegistration: View {
+    @Environment(\.openWindow) private var openWindow
+    let appDelegate: PrototypeAppDelegate
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        false
-    }
-
-    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard let controller,
-              let blockReason = controller.terminationBlockReason else {
-            return .terminateNow
+    var body: some View {
+        Color.clear.onAppear {
+            // Retain the scene action even if its last window has been closed.
+            appDelegate.createMainWindow = { openWindow(id: "main") }
         }
-        controller.noteTerminationBlocked(blockReason)
-        NSApplication.shared.activate(ignoringOtherApps: true)
-        NSApplication.shared.windows.first(where: { !($0 is NSPanel) })?
-            .makeKeyAndOrderFront(nil)
-        return .terminateCancel
     }
 }

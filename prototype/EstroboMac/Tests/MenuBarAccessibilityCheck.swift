@@ -214,11 +214,11 @@ enum MenuBarAccessibilityCheck {
     private static func verifyMockEventOrdering() async {
         let controlledDelay = ControlledDelay()
         let recorder = MockEventRecorder()
-        let transport = MockGodoxSessionTransport { milliseconds in
+        let transport = MockEstroboSessionTransport { milliseconds in
             await controlledDelay.wait(milliseconds)
         }
         transport.delegate = recorder
-        transport.connect(to: MockGodoxSessionTransport.device)
+        transport.connect(to: MockEstroboSessionTransport.device)
 
         for _ in 0..<5 {
             await settleTasks()
@@ -271,7 +271,7 @@ enum MenuBarAccessibilityCheck {
         )
     }
 
-    private static func phaseDiagnostic(_ controller: GodoxSessionController) -> String {
+    private static func phaseDiagnostic(_ controller: EstroboSessionController) -> String {
         let phase: String
         if case .failed(let message) = controller.phase {
             phase = "failed(\(message))"

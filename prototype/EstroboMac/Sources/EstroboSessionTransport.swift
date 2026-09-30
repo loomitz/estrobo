@@ -1,7 +1,7 @@
 import Foundation
 
 @MainActor
-protocol GodoxSessionTransport: AnyObject {
+protocol EstroboSessionTransport: AnyObject {
     var delegate: (any BluetoothClientDelegate)? { get set }
     var isSimulation: Bool { get }
 
@@ -16,8 +16,8 @@ protocol GodoxSessionTransport: AnyObject {
     func sendControl(_ payload: Data)
 }
 
-extension GodoxSessionTransport {
+extension EstroboSessionTransport {
     var isSimulation: Bool { false }
 }
 
-extension BluetoothClient: GodoxSessionTransport {}
+extension BluetoothClient: EstroboSessionTransport {}

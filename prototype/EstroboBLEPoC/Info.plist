@@ -5,15 +5,15 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>es_MX</string>
 	<key>CFBundleDisplayName</key>
-	<string>Godox BLE PoC</string>
+	<string>Estrobo BLE PoC</string>
 	<key>CFBundleExecutable</key>
-	<string>GodoxBLEPoC</string>
+	<string>EstroboBLEPoC</string>
 	<key>CFBundleIdentifier</key>
-	<string>mx.loo.godox.GodoxBLEPoC</string>
+	<string>mx.loo.estrobo.ble-poc</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>GodoxBLEPoC</string>
+	<string>EstroboBLEPoC</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -23,6 +23,6 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Godox BLE PoC usa Bluetooth para descubrir y controlar localmente tu transmisor Godox.</string>
+	<string>Estrobo BLE PoC usa Bluetooth para descubrir y controlar localmente tu transmisor Godox.</string>
 </dict>
 </plist>

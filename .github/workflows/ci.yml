@@ -57,5 +57,5 @@ jobs:
 
       - name: Verify native executable slice
         run: |
-          lipo prototype/GodoxMacControlPrototype/Build/estrobo.app/Contents/MacOS/estrobo \
+          lipo prototype/EstroboMac/Build/estrobo.app/Contents/MacOS/estrobo \
             -verify_arch "$EXPECTED_ARCH"

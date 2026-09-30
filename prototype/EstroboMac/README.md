@@ -17,7 +17,7 @@ La ejecución normal usa Bluetooth real. Cierra cualquier otra app conectada al 
 Para trabajar sin hardware:
 
 ```sh
-/usr/bin/open -n prototype/GodoxMacControlPrototype/Build/estrobo.app --args --mock-radio
+/usr/bin/open -n prototype/EstroboMac/Build/estrobo.app --args --mock-radio
 ```
 
 `--mock-radio` muestra un radio sintético de forma explícita, no crea un central CoreBluetooth y no envía comandos físicos. Nunca se activa como fallback silencioso.
@@ -41,3 +41,9 @@ Para trabajar sin hardware:
 - [Contribuir](../../CONTRIBUTING.md)
 
 No publiques builds, Códigos del radio, payloads de autenticación, APKs, claves, certificados privados ni datos personales.
+
+## Project naming
+
+The macOS application lives in `prototype/EstroboMac`; the Bluetooth proof of concept lives in `prototype/EstroboBLEPoC`. The local repository directory is `estrobo`. Godox names in protocol, device discovery, and capability code identify the supported hardware manufacturer.
+
+Persisted preference keys retain the historical `GodoxMacControlPrototype.*` namespace so existing transmitter libraries, presets, language settings, and pending restorations remain available. The application bundle identifier remains `mx.loo.estrobo`.

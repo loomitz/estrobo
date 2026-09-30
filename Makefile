@@ -1,17 +1,17 @@
-MAC_PROTOTYPE_DIR := $(CURDIR)/prototype/GodoxMacControlPrototype
+MAC_PROTOTYPE_DIR := $(CURDIR)/prototype/EstroboMac
 BUILD_DIR ?= $(MAC_PROTOTYPE_DIR)/Build
 DIST_DIR ?= $(CURDIR)/Dist
 
 .PHONY: poc poc-build poc-clean mac-prototype mac-prototype-build mac-prototype-check mac-prototype-test mac-prototype-signing-certificate-check mac-prototype-universal mac-prototype-release mac-prototype-release-verify mac-prototype-release-verify-existing mac-prototype-package mac-prototype-package-existing mac-prototype-developer-id-tools-test mac-prototype-developer-id-certificate-check mac-prototype-developer-id-release mac-prototype-developer-id-release-verify mac-prototype-developer-id-verify-signed-existing mac-prototype-developer-id-notarize-existing mac-prototype-developer-id-resume-notarization-existing mac-prototype-developer-id-verify-existing mac-prototype-developer-id-package-existing mac-prototype-clean
 
 poc:
-	$(MAKE) -C prototype/GodoxBLEPoC run
+	$(MAKE) -C prototype/EstroboBLEPoC run
 
 poc-build:
-	$(MAKE) -C prototype/GodoxBLEPoC build
+	$(MAKE) -C prototype/EstroboBLEPoC build
 
 poc-clean:
-	$(MAKE) -C prototype/GodoxBLEPoC clean
+	$(MAKE) -C prototype/EstroboBLEPoC clean
 
 mac-prototype:
 	$(MAKE) -C "$(MAC_PROTOTYPE_DIR)" run BUILD_DIR="$(abspath $(BUILD_DIR))"

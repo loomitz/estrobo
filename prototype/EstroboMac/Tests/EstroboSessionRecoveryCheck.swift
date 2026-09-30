@@ -52,7 +52,7 @@ private final class ManualSessionDeadlineScheduler: SessionDeadlineScheduling {
 }
 
 @MainActor
-private final class FakeGodoxSessionTransport: GodoxSessionTransport {
+private final class FakeEstroboSessionTransport: EstroboSessionTransport {
     weak var delegate: (any BluetoothClientDelegate)?
 
     private(set) var scanCount = 0
@@ -231,7 +231,7 @@ private final class MemoryTransmitterProfilePreferencesStorage {
 
 @main
 @MainActor
-enum GodoxSessionRecoveryCheck {
+enum EstroboSessionRecoveryCheck {
     static func main() async {
         checkFirstLaunchRequiresExplicitGroupSelection()
         checkControlsRequireReadySession()
@@ -269,6 +269,7 @@ enum GodoxSessionRecoveryCheck {
         checkUnresolvablePersistedMultiDraftDoesNotTrapTermination()
         checkStoredMultiFlashLimitMigrationPersists()
         checkBeepIncludesGlobalA0Gate()
+        checkModelingActivationReassertsConfiguredGroups()
         checkGlobalStandbyPreservesGroups()
         checkGlobalControlsDoNotApplyPendingGroupChanges()
         checkPresetPreservesGlobalBeep()
@@ -1529,6 +1530,103 @@ enum GodoxSessionRecoveryCheck {
             }
         )
         expect(fixture.transport.testWriteCount == 0)
+    }
+
+    private static func checkModelingActivationReassertsConfiguredGroups() {
+        let restorationMemory = MemoryRestorationStorage()
+        let restorationStore = restorationMemory.makeStore()
+        let fixture = makeFixture(restorationStore: restorationStore)
+        completeDefaultWorkspace(fixture)
+        prepareConfiguredReadyConnection(fixture)
+
+        // Begin with every configured modeling light off and A0 confirmed off.
+        fixture.controller.setDraftModeling(.c, modeling: .off)
+        fixture.controller.applyPendingChanges()
+        confirmCurrentGroup(fixture)
+        expect(fixture.controller.phase == .ready)
+        let originalB = fixture.controller.groupDraft(.b).baseline
+        let originalC = fixture.controller.groupDraft(.c).baseline
+        expect(originalB.modeling == .off && originalC.modeling == .off)
+
+        let start = fixture.transport.controlWriteCount
+        fixture.controller.setDraftModeling(.b, modeling: .fixed(percent: 25))
+        fixture.controller.applyPendingChanges()
+        expect(fixture.transport.controlWriteCount == start + 1)
+        expect(SafeGodoxProtocol.globalSnapshot(
+            from: fixture.transport.controlPayloads[start]
+        )?.modelingLightEnabled == true)
+        expect(
+            Set(fixture.controller.restorationPoints.keys) == Set([GodoxGroup.b, .c]),
+            "Before global modeling activation, recovery must cover unchanged groups too"
+        )
+
+        confirmCurrentGroup(fixture)
+        expect(fixture.controller.phase == .applying)
+        expect(fixture.transport.controlWriteCount == start + 3)
+        let frames = Array(fixture.transport.controlPayloads.dropFirst(start + 1))
+        expect(frames.compactMap { SafeGodoxProtocol.groupSnapshot(from: $0)?.0 } == [.b, .c])
+        expect(SafeGodoxProtocol.groupSnapshot(from: frames[0])?.1.modeling == .fixed(percent: 25))
+        expect(
+            SafeGodoxProtocol.groupSnapshot(from: frames[1])?.1 == originalC,
+            "A0 can activate other lamps; the unchanged Off group must receive its full A1"
+        )
+        expect(Set(fixture.controller.restorationPoints.keys) == Set([GodoxGroup.b, .c]))
+        confirmCurrentGroup(fixture)
+        expect(fixture.controller.phase == .ready)
+        expect(fixture.controller.restorationPoints.isEmpty)
+
+        // Turning off the last light closes the global gate as well as its A1.
+        let offStart = fixture.transport.controlWriteCount
+        fixture.controller.setDraftModeling(.b, modeling: .off)
+        fixture.controller.applyPendingChanges()
+        expect(SafeGodoxProtocol.globalSnapshot(
+            from: fixture.transport.controlPayloads[offStart]
+        )?.modelingLightEnabled == false)
+        confirmCurrentGroup(fixture)
+        expect(fixture.transport.controlWriteCount == offStart + 2)
+        expect(fixture.controller.groupDraft(.b).baseline == originalB)
+        expect(fixture.controller.groupDraft(.c).baseline == originalC)
+        expect(fixture.controller.phase == .ready)
+
+        // With the master already enabled, an individual Off stays local and
+        // must not switch off another group's intentionally enabled light.
+        fixture.controller.setDraftModeling(.b, modeling: .fixed(percent: 25))
+        fixture.controller.applyPendingChanges()
+        confirmCurrentGroup(fixture)
+        confirmCurrentGroup(fixture)
+        let localStart = fixture.transport.controlWriteCount
+        fixture.controller.setDraftModeling(.c, modeling: .proportional)
+        fixture.controller.applyPendingChanges()
+        confirmCurrentGroup(fixture)
+        fixture.controller.setDraftModeling(.b, modeling: .off)
+        fixture.controller.applyPendingChanges()
+        confirmCurrentGroup(fixture)
+        let localFrames = Array(fixture.transport.controlPayloads.dropFirst(localStart))
+        expect(localFrames.count == 2)
+        expect(localFrames.compactMap { SafeGodoxProtocol.groupSnapshot(from: $0)?.0 } == [.c, .b])
+        expect(fixture.controller.groupDraft(.c).baseline.modeling == .proportional)
+        fixture.controller.setDraftModeling(.c, modeling: .off)
+        fixture.controller.applyPendingChanges()
+        confirmCurrentGroup(fixture)
+
+        // If the unchanged Off group's delivery fails after B has confirmed,
+        // recovery must still retain both originals and the global Off state.
+        fixture.controller.setDraftModeling(.b, modeling: .fixed(percent: 25))
+        fixture.controller.applyPendingChanges()
+        let originals = fixture.controller.restorationPoints
+        expect(Set(originals.keys) == Set([GodoxGroup.b, .c]))
+        expect(originals.values.allSatisfy { $0.globalSnapshot?.modelingLightEnabled == false })
+        confirmCurrentGroup(fixture)
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.commandFailed(
+            .control,
+            .writeFailed(command: .control, message: "synthetic modeling reassertion failure")
+        ))
+        expect(fixture.controller.phase == .disconnecting)
+        expect(fixture.controller.restorationPoints == originals)
+        expect(restorationStore.load() == .batch(points: originals))
+        expect(!fixture.controller.canApply)
+        expect(!fixture.controller.canSendTest)
     }
 
     private static func checkConnectionAndManualValueSynchronization() {
@@ -4125,8 +4223,8 @@ enum GodoxSessionRecoveryCheck {
 
     private static func prepareConnection(
         _ fixture: (
-            controller: GodoxSessionController,
-            transport: FakeGodoxSessionTransport,
+            controller: EstroboSessionController,
+            transport: FakeEstroboSessionTransport,
             scheduler: ManualSessionDeadlineScheduler
         )
     ) {
@@ -4138,8 +4236,8 @@ enum GodoxSessionRecoveryCheck {
 
     private static func completeDefaultWorkspace(
         _ fixture: (
-            controller: GodoxSessionController,
-            transport: FakeGodoxSessionTransport,
+            controller: EstroboSessionController,
+            transport: FakeEstroboSessionTransport,
             scheduler: ManualSessionDeadlineScheduler
         )
     ) {
@@ -4159,8 +4257,8 @@ enum GodoxSessionRecoveryCheck {
 
     private static func confirmCurrentGroup(
         _ fixture: (
-            controller: GodoxSessionController,
-            transport: FakeGodoxSessionTransport,
+            controller: EstroboSessionController,
+            transport: FakeEstroboSessionTransport,
             scheduler: ManualSessionDeadlineScheduler
         )
     ) {
@@ -4178,8 +4276,8 @@ enum GodoxSessionRecoveryCheck {
 
     private static func prepareReadyConnection(
         _ fixture: (
-            controller: GodoxSessionController,
-            transport: FakeGodoxSessionTransport,
+            controller: EstroboSessionController,
+            transport: FakeEstroboSessionTransport,
             scheduler: ManualSessionDeadlineScheduler
         )
     ) {
@@ -4199,8 +4297,8 @@ enum GodoxSessionRecoveryCheck {
 
     private static func prepareConfiguredReadyConnection(
         _ fixture: (
-            controller: GodoxSessionController,
-            transport: FakeGodoxSessionTransport,
+            controller: EstroboSessionController,
+            transport: FakeEstroboSessionTransport,
             scheduler: ManualSessionDeadlineScheduler
         )
     ) {
@@ -4228,11 +4326,11 @@ enum GodoxSessionRecoveryCheck {
         transmitterProfilePreferences initialTransmitterProfilePreferences: TransmitterProfilePreferences? = nil,
         studioLibraryStore initialStudioLibraryStore: StudioLibraryStore? = nil
     ) -> (
-        controller: GodoxSessionController,
-        transport: FakeGodoxSessionTransport,
+        controller: EstroboSessionController,
+        transport: FakeEstroboSessionTransport,
         scheduler: ManualSessionDeadlineScheduler
     ) {
-        let transport = FakeGodoxSessionTransport()
+        let transport = FakeEstroboSessionTransport()
         let scheduler = ManualSessionDeadlineScheduler()
         let visibility = LocalGroupPreferences(
             storageKey: "session-recovery-test-visibility",
@@ -4274,7 +4372,7 @@ enum GodoxSessionRecoveryCheck {
                 return true
             }
         )
-        let controller = GodoxSessionController(
+        let controller = EstroboSessionController(
             transport: transport,
             deadlineScheduler: scheduler,
             visibilityPreferences: visibility,

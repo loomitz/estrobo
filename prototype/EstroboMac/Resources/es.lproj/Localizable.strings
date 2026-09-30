@@ -68,7 +68,7 @@
 "apply.discardAll" = "Descartar todo";
 
 /* Claves literales existentes de SwiftUI */
-"GODOX CONTROL" = "estrobo";
+"ESTROBO" = "estrobo";
 "estrobo" = "estrobo";
 "Control de flashes para tethering" = "Control de flashes para tethering";
 "RADIO SIMULADO" = "RADIO SIMULADO";
