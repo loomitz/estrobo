@@ -52,8 +52,8 @@ private final class ManualSessionDeadlineScheduler: SessionDeadlineScheduling {
 }
 
 @MainActor
-private final class FakeEstroboSessionTransport: EstroboSessionTransport {
-    weak var delegate: (any BluetoothClientDelegate)?
+private final class FakeRadioTransport: RadioTransport {
+    var eventHandler: ((TransportEvent) -> Void)?
 
     private(set) var scanCount = 0
     private(set) var stopScanCount = 0
@@ -79,7 +79,7 @@ private final class FakeEstroboSessionTransport: EstroboSessionTransport {
         emit(.stateChanged(.idle))
     }
 
-    func connect(to device: BluetoothClient.Device) {
+    func connect(to device: RadioCandidate) {
         connectCount += 1
         emit(.stateChanged(.connecting(device)))
     }
@@ -120,23 +120,24 @@ private final class FakeEstroboSessionTransport: EstroboSessionTransport {
         controlPayloads.append(payload)
     }
 
-    func emit(_ event: BluetoothClient.Event) {
-        delegate?.bluetoothClient(didReceive: event)
+    func emit(_ event: TransportEvent) {
+        eventHandler?(event)
     }
 }
 
-private let testDevice = BluetoothClient.Device(
+private let testDevice = RadioCandidate(
     id: UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!,
     name: "GDBH-TEST",
     rssi: -42
 )
 
-private let otherTestDevice = BluetoothClient.Device(
+private let otherTestDevice = RadioCandidate(
     id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
     name: "Ami-OTHER",
     rssi: -20
 )
 
+@MainActor
 private final class MemorySavedRadioStorage {
     var object: Any?
     var acceptsWrites = true
@@ -160,6 +161,7 @@ private final class MemorySavedRadioStorage {
     }
 }
 
+@MainActor
 private final class MemoryRestorationStorage {
     var object: Any?
     var acceptsWrites = true
@@ -181,6 +183,7 @@ private final class MemoryRestorationStorage {
     }
 }
 
+@MainActor
 private final class MemoryChangeDeliveryStorage {
     var value: String?
 
@@ -195,6 +198,7 @@ private final class MemoryChangeDeliveryStorage {
     }
 }
 
+@MainActor
 private final class MemoryStudioLibraryStorage {
     var object: Any?
     var acceptsWrites = true
@@ -212,6 +216,7 @@ private final class MemoryStudioLibraryStorage {
     }
 }
 
+@MainActor
 private final class MemoryTransmitterProfilePreferencesStorage {
     var object: Any?
     var acceptsWrites = true
@@ -243,6 +248,8 @@ enum EstroboSessionRecoveryCheck {
         checkSilentAuthenticationRecoversWithoutCallback()
         checkDiscoverySilenceRecovers()
         checkScanCanExpireAndBeCancelled()
+        checkForegroundSuspensionStopsScanAndIsIdempotent()
+        await checkForegroundSuspensionCancelsScheduledSync()
         checkConnectionAndManualValueSynchronization()
         checkNewWorkingGroupsCanBeActivated()
         checkInitialSynchronizationRequiresRestorationJournal()
@@ -258,6 +265,7 @@ enum EstroboSessionRecoveryCheck {
         checkWorkspaceGroupsCanBeReconfiguredWhileReady()
         checkTestRequiresReadyAndNoPendingChanges()
         checkTestDeliverySuccessFailureAndTimeout()
+        checkForegroundSuspensionCancelsPendingTest()
         checkManualAndAutoTTLModeTransitions()
         checkMultiFlashGlobalAndGroupSequencing()
         checkMultiFlashUnderlyingModeAndGlobalSelection()
@@ -271,6 +279,8 @@ enum EstroboSessionRecoveryCheck {
         checkBeepIncludesGlobalA0Gate()
         checkModelingActivationReassertsConfiguredGroups()
         checkGlobalStandbyPreservesGroups()
+        checkGlobalStandbyJournalFailurePreventsA0()
+        checkGlobalStandbyUncertaintyRequiresRecovery()
         checkGlobalControlsDoNotApplyPendingGroupChanges()
         checkPresetPreservesGlobalBeep()
         checkAutomaticGlobalPowerAdjustmentIsAtomicAndSerialized()
@@ -283,6 +293,8 @@ enum EstroboSessionRecoveryCheck {
         checkAnchoredGlobalPowerAdjustmentIsAtomic()
         checkAnchoredGlobalPowerAdjustmentHonorsSafetyGates()
         checkAutomaticDebounceCancelsAndRearms()
+        checkForegroundSuspensionCancelsAutomaticDelivery()
+        checkForegroundResumeKeepsReadySession()
         checkManualModeCancelsAutomaticSend()
         checkAutomaticSerializesTwoGroups()
         checkHeartbeatFloodIsCoalescedPerSession()
@@ -295,6 +307,7 @@ enum EstroboSessionRecoveryCheck {
         checkAutomaticSchedulingResumesAfterRestoration()
         checkReadySessionAppliesNormalChanges()
         checkUncertainWriteRequiresPersistedRecovery()
+        checkForegroundSuspensionPreservesUncertainWriteRecovery()
         print("Conexión, debounce, cola de cambios y recuperación incierta verificadas sin Bluetooth")
     }
 
@@ -386,9 +399,14 @@ enum EstroboSessionRecoveryCheck {
 
     private static func checkMultiFlashGlobalAndGroupSequencing() {
         let deliveryMemory = MemoryChangeDeliveryStorage()
+        let restorationMemory = MemoryRestorationStorage()
         let preferences = deliveryMemory.makePreferences()
         preferences.save(.manual)
-        let fixture = makeFixture(changeDeliveryPreferences: preferences)
+        let restorationStore = restorationMemory.makeStore()
+        let fixture = makeFixture(
+            changeDeliveryPreferences: preferences,
+            restorationStore: restorationStore
+        )
         completeDefaultWorkspace(fixture)
         prepareConfiguredReadyConnection(fixture)
 
@@ -514,12 +532,19 @@ enum EstroboSessionRecoveryCheck {
         expect(hertzGlobal.multiCount == configuredMulti.countByte)
         expect(hertzGlobal.multiHertz == UInt8(hertzOnly))
         expect(hertzGlobal.multiPowerByte == configuredMulti.powerByte)
+        guard case .batch(let hertzPoints) = restorationStore.load() else {
+            preconditionFailure("Un cambio Multi A0-only debe preparar journal durable")
+        }
+        expect(Set(hertzPoints.keys) == Set(fixture.controller.workingGroups))
+        expect(hertzPoints.values.allSatisfy { $0.deviceID == testDevice.id })
+        expect(hertzPoints.values.allSatisfy { $0.globalSnapshot?.multiHertz == configuredMulti.hertzByte })
         fixture.transport.emit(.controlWriteStarted)
         fixture.transport.emit(.controlWriteCompleted)
         expect(fixture.transport.controlWriteCount == hertzStart + 1)
         expect(fixture.controller.phase == .ready)
         expect(fixture.controller.multiFlashBaseline.hertz == hertzOnly)
         expect(fixture.controller.pendingCount == 0)
+        expect(restorationStore.load() == .none)
 
         fixture.controller.setMultiFlashParticipation(.b, enabled: false)
         expect(fixture.controller.groupDraft(.b).draft.operatingMode == .off)
@@ -1354,9 +1379,14 @@ enum EstroboSessionRecoveryCheck {
 
     private static func checkGlobalStandbyPreservesGroups() {
         let deliveryMemory = MemoryChangeDeliveryStorage()
+        let restorationMemory = MemoryRestorationStorage()
         let preferences = deliveryMemory.makePreferences()
         preferences.save(.manual)
-        let fixture = makeFixture(changeDeliveryPreferences: preferences)
+        let restorationStore = restorationMemory.makeStore()
+        let fixture = makeFixture(
+            changeDeliveryPreferences: preferences,
+            restorationStore: restorationStore
+        )
         prepareReadyConnection(fixture)
 
         let originalGroups = Dictionary(uniqueKeysWithValues: fixture.controller.workingGroups.map {
@@ -1376,6 +1406,15 @@ enum EstroboSessionRecoveryCheck {
         expect(!fixture.controller.canEdit(.c))
         expect(!fixture.controller.canSendTest)
         expect(!fixture.controller.canToggleGlobalStandby, "No debe competir otro toggle con A0 pendiente")
+        guard case .batch(let standbyPoints) = restorationStore.load() else {
+            preconditionFailure("Standby debe persistir una tanda de recuperación antes de A0")
+        }
+        expect(Set(standbyPoints.keys) == Set(fixture.controller.workingGroups))
+        for group in fixture.controller.workingGroups {
+            expect(standbyPoints[group]?.deviceID == testDevice.id)
+            expect(standbyPoints[group]?.snapshot == originalGroups[group])
+            expect(standbyPoints[group]?.globalSnapshot?.standbyEnabled == false)
+        }
 
         fixture.transport.emit(.controlWriteStarted)
         fixture.transport.emit(.controlWriteCompleted)
@@ -1386,6 +1425,7 @@ enum EstroboSessionRecoveryCheck {
             "Standby sólo debe escribir A0; no debe apagar los grupos con A1"
         )
         expect(fixture.controller.canToggleGlobalStandby)
+        expect(restorationStore.load() == .none)
 
         fixture.controller.setGlobalStandby(false)
         guard let resumeFrame = fixture.transport.controlPayloads.last,
@@ -1408,6 +1448,53 @@ enum EstroboSessionRecoveryCheck {
                 "Standby debe preservar íntegramente el grupo \(group.label)"
             )
         }
+    }
+
+    private static func checkGlobalStandbyJournalFailurePreventsA0() {
+        let restorationMemory = MemoryRestorationStorage()
+        restorationMemory.acceptsWrites = false
+        let fixture = makeFixture(
+            restorationStore: restorationMemory.makeStore()
+        )
+        prepareReadyConnection(fixture)
+        let writesBeforeStandby = fixture.transport.controlWriteCount
+
+        fixture.controller.setGlobalStandby(true)
+
+        expect(fixture.transport.controlWriteCount == writesBeforeStandby)
+        expect(!fixture.controller.isGlobalStandbyEnabled)
+        expect(fixture.controller.restorationPoints.isEmpty)
+        expect(restorationMemory.object == nil)
+    }
+
+    private static func checkGlobalStandbyUncertaintyRequiresRecovery() {
+        let restorationMemory = MemoryRestorationStorage()
+        let restorationStore = restorationMemory.makeStore()
+        let fixture = makeFixture(restorationStore: restorationStore)
+        prepareReadyConnection(fixture)
+
+        fixture.controller.setGlobalStandby(true)
+        fixture.transport.emit(.controlWriteStarted)
+        fixture.transport.emit(.commandFailed(
+            .control,
+            .writeFailed(command: .control, message: "fallo A0 sintético")
+        ))
+
+        guard case .batch(let persistedPoints) = restorationStore.load() else {
+            preconditionFailure("Un A0 incierto debe conservar el journal durable")
+        }
+        expect(!persistedPoints.isEmpty)
+        expect(fixture.controller.restorationPoints == persistedPoints)
+        expect(persistedPoints.values.allSatisfy { $0.deviceID == testDevice.id })
+        expect(!fixture.controller.canSendTest)
+
+        fixture.controller.startScanning()
+        fixture.transport.emit(.discovered(otherTestDevice))
+        fixture.controller.radioCode = dummyPassword(9)
+        let connectionCount = fixture.transport.connectCount
+        fixture.controller.connectSelectedDevice()
+        expect(fixture.transport.connectCount == connectionCount)
+        expect(fixture.controller.restorationPoints == persistedPoints)
     }
 
     private static func checkGlobalControlsDoNotApplyPendingGroupChanges() {
@@ -2369,12 +2456,20 @@ enum EstroboSessionRecoveryCheck {
         timedOut.scheduler.fire(.testDelivery)
 
         expect(!timedOut.controller.isTestPending)
+        expect(
+            timedOut.transport.testWriteCount == 1,
+            "El timeout no debe reintentar ni volver a encolar Test"
+        )
         expect(timedOut.controller.phase == .disconnecting)
         expect(timedOut.controller.restorationPoints.isEmpty)
         expect(timedOut.controller.pendingCount == 0)
         expect(timedOut.transport.controlWriteCount == 0)
         timedOut.scheduler.fire(.disconnectRecovery)
         expectFailure(timedOut.controller.phase, containing: "Test")
+        expect(
+            timedOut.transport.testWriteCount == 1,
+            "La recuperación de desconexión no debe reintentar Test"
+        )
         expect(timedOut.controller.restorationPoints.isEmpty)
     }
 
@@ -3823,9 +3918,10 @@ enum EstroboSessionRecoveryCheck {
         expect(newStore.upsert(rememberedRadio))
         let newFixture = makeFixture(savedRadioStore: newStore)
         let newPassword = dummyPassword(6)
-        newFixture.controller.rememberSelectedRadio = true
         newFixture.controller.startScanning()
         newFixture.transport.emit(.discovered(otherTestDevice))
+        // Remembering is a choice for the selected radio; discovery resets it.
+        newFixture.controller.rememberSelectedRadio = true
         newFixture.controller.radioCode = newPassword
         newFixture.controller.connectSelectedDevice()
 
@@ -3944,7 +4040,7 @@ enum EstroboSessionRecoveryCheck {
     }
 
     private static func checkDuplicateRadioNamesRequireExplicitSelection() {
-        let duplicate = BluetoothClient.Device(
+        let duplicate = RadioCandidate(
             id: UUID(uuidString: "99999999-8888-7777-6666-555555555555")!,
             name: testDevice.name,
             rssi: -18
@@ -3961,7 +4057,7 @@ enum EstroboSessionRecoveryCheck {
 
         fixture.controller.selectDevice(duplicate.id)
         expect(fixture.controller.selectedDeviceID == duplicate.id)
-        fixture.transport.emit(.discovered(BluetoothClient.Device(
+        fixture.transport.emit(.discovered(RadioCandidate(
             id: duplicate.id,
             name: duplicate.name,
             rssi: -17
@@ -3977,7 +4073,7 @@ enum EstroboSessionRecoveryCheck {
         let fixture = makeFixture()
         fixture.controller.startScanning()
 
-        let unsafe = BluetoothClient.Device(
+        let unsafe = RadioCandidate(
             id: UUID(uuidString: "77777777-8888-9999-AAAA-BBBBBBBBBBBB")!,
             name: "GDBH-\u{202E}TSET\u{202C}",
             rssi: -10
@@ -3988,7 +4084,7 @@ enum EstroboSessionRecoveryCheck {
             "Un transporte no debe poder inyectar controles de dirección en selección o UI"
         )
 
-        let decomposed = BluetoothClient.Device(
+        let decomposed = RadioCandidate(
             id: UUID(uuidString: "66666666-7777-8888-9999-AAAAAAAAAAAA")!,
             name: "  GDBH-Cafe\u{301}  ",
             rssi: -30
@@ -3997,7 +4093,7 @@ enum EstroboSessionRecoveryCheck {
         expect(fixture.controller.devices.map(\.name) == ["GDBH-Café"])
         expect(fixture.controller.selectedDeviceID == decomposed.id)
 
-        let composedDuplicate = BluetoothClient.Device(
+        let composedDuplicate = RadioCandidate(
             id: UUID(uuidString: "55555555-6666-7777-8888-999999999999")!,
             name: "GDBH-Café",
             rssi: -20
@@ -4011,12 +4107,12 @@ enum EstroboSessionRecoveryCheck {
 
         let widthFixture = makeFixture()
         widthFixture.controller.startScanning()
-        let asciiWidth = BluetoothClient.Device(
+        let asciiWidth = RadioCandidate(
             id: UUID(uuidString: "44444444-5555-6666-7777-888888888888")!,
             name: "GD-1",
             rssi: -30
         )
-        let fullWidth = BluetoothClient.Device(
+        let fullWidth = RadioCandidate(
             id: UUID(uuidString: "33333333-4444-5555-6666-777777777777")!,
             name: "GD-１",
             rssi: -20
@@ -4221,10 +4317,220 @@ enum EstroboSessionRecoveryCheck {
         expect(fixture.transport.stopScanCount == 2)
     }
 
+    private static func checkForegroundSuspensionStopsScanAndIsIdempotent() {
+        let fixture = makeFixture()
+        fixture.controller.startScanning()
+        fixture.transport.emit(.discovered(testDevice))
+        fixture.controller.radioCode = dummyPassword(4)
+        expect(fixture.transport.scanCount == 1)
+        expect(fixture.scheduler.activeCount(.scan) == 1)
+
+        fixture.controller.suspendForInactiveScene()
+        expect(!fixture.controller.isSceneActive)
+        expect(fixture.controller.phase == .idle)
+        expect(fixture.transport.stopScanCount == 1)
+        expect(fixture.transport.disconnectCount == 0)
+        expect(fixture.scheduler.activeCount(.scan) == 0)
+        expect(fixture.controller.restorationPoints.isEmpty)
+        expect(fixture.controller.foregroundSessionRequirement == nil)
+
+        fixture.controller.startScanning()
+        fixture.controller.radioCode = dummyPassword(5)
+        fixture.controller.connectSelectedDevice()
+        expect(fixture.transport.scanCount == 1)
+        expect(fixture.transport.connectCount == 0)
+
+        fixture.controller.suspendForInactiveScene()
+        expect(fixture.transport.stopScanCount == 1)
+        expect(fixture.transport.disconnectCount == 0)
+
+        let writeCounts = (
+            sync: fixture.transport.syncWriteCount,
+            test: fixture.transport.testWriteCount,
+            control: fixture.transport.controlWriteCount
+        )
+        fixture.controller.resumeActiveScene()
+        fixture.controller.resumeActiveScene()
+        expect(fixture.controller.isSceneActive)
+        expect(fixture.controller.foregroundSessionState == .active)
+        expect(fixture.transport.scanCount == 1, "Resume nunca debe rearmar scan")
+        expect(fixture.transport.syncWriteCount == writeCounts.sync)
+        expect(fixture.transport.testWriteCount == writeCounts.test)
+        expect(fixture.transport.controlWriteCount == writeCounts.control)
+        expect(!fixture.scheduler.fireNext(.scan))
+    }
+
+    private static func checkForegroundSuspensionCancelsPendingTest() {
+        let fixture = makeFixture()
+        prepareReadyConnection(fixture)
+
+        fixture.controller.sendTestFlash()
+        expect(fixture.transport.testWriteCount == 1)
+        expect(fixture.controller.isTestPending)
+        expect(fixture.scheduler.activeCount(.testDelivery) == 1)
+
+        fixture.controller.suspendForInactiveScene()
+        expect(!fixture.controller.isTestPending)
+        expect(fixture.scheduler.activeCount(.testDelivery) == 0)
+        expect(fixture.transport.disconnectCount == 0)
+        expect(fixture.transport.forceResetCount == 0)
+
+        fixture.transport.emit(.commandSent(.test))
+        fixture.controller.resumeActiveScene()
+        expect(fixture.controller.foregroundSessionRequirement == nil)
+        expect(fixture.controller.phase == .ready)
+        expect(!fixture.scheduler.fireNext(.testDelivery))
+        expect(
+            fixture.transport.testWriteCount == 1,
+            "Test pendiente al suspender nunca debe reintentarse"
+        )
+    }
+
+    private static func checkForegroundSuspensionCancelsScheduledSync() async {
+        let fixture = makeFixture()
+        prepareConnection(fixture)
+        fixture.transport.emit(.stateChanged(.ready(testDevice)))
+        fixture.transport.emit(.readyForAuthentication)
+        fixture.transport.emit(.notification(.authentication, validAuthenticationResponse()))
+        expect(fixture.controller.phase == .synchronizing)
+        expect(fixture.transport.syncWriteCount == 0)
+
+        fixture.controller.suspendForInactiveScene()
+        fixture.controller.resumeActiveScene()
+        try? await Task.sleep(for: .milliseconds(650))
+
+        expect(
+            fixture.transport.syncWriteCount == 0,
+            "La tarea Sync programada no debe sobrevivir a background"
+        )
+        expect(fixture.transport.controlWriteCount == 0)
+        expect(
+            fixture.controller.foregroundSessionRequirement == .reconnectAndSynchronize
+        )
+    }
+
+    private static func checkForegroundSuspensionCancelsAutomaticDelivery() {
+        let deliveryMemory = MemoryChangeDeliveryStorage()
+        let preferences = deliveryMemory.makePreferences()
+        preferences.save(.automatic)
+        let fixture = makeFixture(changeDeliveryPreferences: preferences)
+        prepareReadyConnection(fixture)
+
+        guard let changedPower = ManualPower.value(decimal: 23) else {
+            preconditionFailure("Falta la potencia foreground de prueba")
+        }
+        fixture.controller.setDraftPower(.c, power: changedPower)
+        expect(fixture.scheduler.activeCount(.automaticApply) == 1)
+        expect(fixture.controller.pendingGroups == [.c])
+
+        let controlWritesBeforeSuspension = fixture.transport.controlWriteCount
+        fixture.controller.suspendForInactiveScene()
+        expect(fixture.scheduler.activeCount(.automaticApply) == 0)
+        expect(!fixture.controller.isAutomaticApplyScheduled)
+        expect(fixture.controller.groupDraft(.c).draft.power == changedPower)
+
+        fixture.controller.applyPendingChanges()
+        fixture.controller.synchronizeValuesToRadio()
+        fixture.controller.setGlobalBeep(true)
+        fixture.controller.setGlobalStandby(true)
+        fixture.controller.sendTestFlash()
+        expect(fixture.transport.controlWriteCount == controlWritesBeforeSuspension)
+        expect(fixture.transport.testWriteCount == 0)
+
+        expect(!fixture.scheduler.fireNext(.automaticApply))
+        fixture.controller.resumeActiveScene()
+        expect(fixture.scheduler.activeCount(.automaticApply) == 1)
+        expect(
+            fixture.transport.controlWriteCount == controlWritesBeforeSuspension,
+            "Resume debe rearmar el debounce sin transmitir de inmediato"
+        )
+        expect(fixture.controller.pendingGroups == [.c], "El borrador local debe conservarse")
+        expect(fixture.controller.foregroundSessionRequirement == nil)
+        fixture.scheduler.fire(.automaticApply)
+        expect(fixture.transport.controlWriteCount == controlWritesBeforeSuspension + 1)
+        confirmCurrentGroup(fixture)
+        expect(fixture.controller.phase == .ready)
+    }
+
+    private static func checkForegroundResumeKeepsReadySession() {
+        let fixture = makeFixture()
+        completeDefaultWorkspace(fixture)
+        prepareConfiguredReadyConnection(fixture)
+
+        fixture.controller.suspendForInactiveScene()
+        let writesAtSuspension = (
+            scan: fixture.transport.scanCount,
+            sync: fixture.transport.syncWriteCount,
+            test: fixture.transport.testWriteCount,
+            control: fixture.transport.controlWriteCount
+        )
+        fixture.controller.resumeActiveScene()
+
+        expect(fixture.controller.foregroundSessionState == .active)
+        expect(fixture.controller.phase == .ready)
+        expect(fixture.controller.foregroundInterruptionNotice == nil)
+        expect(fixture.transport.disconnectCount == 0)
+        expect(fixture.transport.forceResetCount == 0)
+        expect(fixture.transport.scanCount == writesAtSuspension.scan)
+        expect(fixture.transport.syncWriteCount == writesAtSuspension.sync)
+        expect(fixture.transport.testWriteCount == writesAtSuspension.test)
+        expect(fixture.transport.controlWriteCount == writesAtSuspension.control)
+    }
+
+    private static func checkForegroundSuspensionPreservesUncertainWriteRecovery() {
+        let restorationMemory = MemoryRestorationStorage()
+        let restorationStore = restorationMemory.makeStore()
+        let fixture = makeFixture(restorationStore: restorationStore)
+        prepareReadyConnection(fixture)
+
+        guard let changedPower = ManualPower.value(decimal: 23) else {
+            preconditionFailure("Falta la potencia de recuperación foreground")
+        }
+        let original = fixture.controller.groupDraft(.c).baseline
+        let expectedPoint = GroupRestorationPoint(
+            deviceID: testDevice.id,
+            snapshot: original
+        )
+        fixture.controller.setDraftPower(.c, power: changedPower)
+        fixture.controller.applyPendingChanges()
+        fixture.transport.emit(.controlWriteStarted)
+        expect(restorationStore.load() == .batch(points: [.c: expectedPoint]))
+
+        let writesAtSuspension = fixture.transport.controlWriteCount
+        fixture.controller.suspendForInactiveScene()
+        expect(
+            fixture.controller.restorationPoints == [.c: expectedPoint],
+            "La suspensión no debe borrar PhysicalOperationSafetyState"
+        )
+        expect(restorationStore.load() == .batch(points: [.c: expectedPoint]))
+        expect(
+            fixture.controller.foregroundSessionRequirement == .recover(deviceID: testDevice.id)
+        )
+
+        fixture.controller.resumeActiveScene()
+        expect(fixture.transport.controlWriteCount == writesAtSuspension)
+        expect(
+            fixture.controller.foregroundSessionState ==
+                .actionRequired(.recover(deviceID: testDevice.id))
+        )
+
+        fixture.controller.startScanning()
+        fixture.transport.emit(.discovered(otherTestDevice))
+        fixture.controller.radioCode = dummyPassword(7)
+        let connectionCount = fixture.transport.connectCount
+        fixture.controller.connectSelectedDevice()
+        expect(
+            fixture.transport.connectCount == connectionCount,
+            "La recuperación foreground debe exigir el mismo UUID"
+        )
+        expect(fixture.controller.restorationPoints == [.c: expectedPoint])
+        expect(restorationStore.load() == .batch(points: [.c: expectedPoint]))
+    }
+
     private static func prepareConnection(
         _ fixture: (
-            controller: EstroboSessionController,
-            transport: FakeEstroboSessionTransport,
+            controller: GodoxSessionController,
+            transport: FakeRadioTransport,
             scheduler: ManualSessionDeadlineScheduler
         )
     ) {
@@ -4236,8 +4542,8 @@ enum EstroboSessionRecoveryCheck {
 
     private static func completeDefaultWorkspace(
         _ fixture: (
-            controller: EstroboSessionController,
-            transport: FakeEstroboSessionTransport,
+            controller: GodoxSessionController,
+            transport: FakeRadioTransport,
             scheduler: ManualSessionDeadlineScheduler
         )
     ) {
@@ -4257,8 +4563,8 @@ enum EstroboSessionRecoveryCheck {
 
     private static func confirmCurrentGroup(
         _ fixture: (
-            controller: EstroboSessionController,
-            transport: FakeEstroboSessionTransport,
+            controller: GodoxSessionController,
+            transport: FakeRadioTransport,
             scheduler: ManualSessionDeadlineScheduler
         )
     ) {
@@ -4276,8 +4582,8 @@ enum EstroboSessionRecoveryCheck {
 
     private static func prepareReadyConnection(
         _ fixture: (
-            controller: EstroboSessionController,
-            transport: FakeEstroboSessionTransport,
+            controller: GodoxSessionController,
+            transport: FakeRadioTransport,
             scheduler: ManualSessionDeadlineScheduler
         )
     ) {
@@ -4297,8 +4603,8 @@ enum EstroboSessionRecoveryCheck {
 
     private static func prepareConfiguredReadyConnection(
         _ fixture: (
-            controller: EstroboSessionController,
-            transport: FakeEstroboSessionTransport,
+            controller: GodoxSessionController,
+            transport: FakeRadioTransport,
             scheduler: ManualSessionDeadlineScheduler
         )
     ) {
@@ -4326,11 +4632,11 @@ enum EstroboSessionRecoveryCheck {
         transmitterProfilePreferences initialTransmitterProfilePreferences: TransmitterProfilePreferences? = nil,
         studioLibraryStore initialStudioLibraryStore: StudioLibraryStore? = nil
     ) -> (
-        controller: EstroboSessionController,
-        transport: FakeEstroboSessionTransport,
+        controller: GodoxSessionController,
+        transport: FakeRadioTransport,
         scheduler: ManualSessionDeadlineScheduler
     ) {
-        let transport = FakeEstroboSessionTransport()
+        let transport = FakeRadioTransport()
         let scheduler = ManualSessionDeadlineScheduler()
         let visibility = LocalGroupPreferences(
             storageKey: "session-recovery-test-visibility",
@@ -4372,7 +4678,7 @@ enum EstroboSessionRecoveryCheck {
                 return true
             }
         )
-        let controller = EstroboSessionController(
+        let controller = GodoxSessionController(
             transport: transport,
             deadlineScheduler: scheduler,
             visibilityPreferences: visibility,

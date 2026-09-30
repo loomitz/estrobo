@@ -32,6 +32,7 @@ export NOTARY_KEYCHAIN_PROFILE NOTARY_API_KEY_PATH NOTARY_API_KEY_ID NOTARY_API_
 MACOSX_DEPLOYMENT_TARGET := 13.0
 BUNDLE_IDENTIFIER := mx.loo.estrobo
 REPOSITORY_ROOT := ../..
+MODULE_DEVELOPER_DIR ?= $(if $(DEVELOPER_DIR),$(DEVELOPER_DIR),$(shell xcode-select -p))
 SIGNING_CERTIFICATE ?= $(REPOSITORY_ROOT)/release/signing/estrobo-beta-signing.cer
 SIGNING_CERTIFICATE_SHA256 ?= $(REPOSITORY_ROOT)/release/signing/estrobo-beta-signing.sha256
 DEVELOPER_ID_CERTIFICATE ?= $(REPOSITORY_ROOT)/release/signing/estrobo-developer-id-application.cer
@@ -79,16 +80,25 @@ WORKSPACE_CHROME_TEST_EXECUTABLE := $(BUILD_DIR)/WorkspaceChromeInteractionCheck
 BRAND_ASSET_TEST_EXECUTABLE := $(BUILD_DIR)/EstroboBrandAssetsCheck
 INTERACTIVE_EDITING_TEST_EXECUTABLE := $(BUILD_DIR)/InteractiveEditingCheck
 MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE := $(BUILD_DIR)/MenuBarAccessibilityCheck
+RADIO_TRANSPORT_ADAPTER_TEST_EXECUTABLE := $(BUILD_DIR)/RadioTransportAdapterCheck
+SIMULATED_TRANSPORT_TEST_EXECUTABLE := $(BUILD_DIR)/SimulatedRadioTransportCheck
+SECURE_PERSISTENCE_TEST_EXECUTABLE := $(BUILD_DIR)/SecurePersistenceCheck
 INFO_PLIST := Info.plist
 ENTITLEMENTS := EstroboMac.entitlements
 RESOURCE_SOURCE_DIR := Resources
 LOCALIZATION_RESOURCES := $(sort $(wildcard $(RESOURCE_SOURCE_DIR)/*.lproj/*.strings))
 RESOURCE_FILES := $(sort $(shell find $(RESOURCE_SOURCE_DIR) -type f))
 LOCAL_SOURCES := $(sort $(wildcard Sources/*.swift))
-BLE_DEVICE_NAME_SOURCE := ../EstroboBLEPoC/Sources/GodoxBluetoothDeviceName.swift
-BLE_SOURCE := ../EstroboBLEPoC/Sources/BluetoothClient.swift
-BLE_SOURCES := $(BLE_DEVICE_NAME_SOURCE) $(BLE_SOURCE)
-SOURCES := $(LOCAL_SOURCES) $(BLE_SOURCES)
+CORE_SOURCES := $(sort $(wildcard ../../Sources/EstroboCore/*.swift))
+SESSION_CONTROLLER_SOURCE := ../../Sources/EstroboCore/GodoxSessionController.swift
+CORE_LIBRARY_SOURCES := $(filter-out $(SESSION_CONTROLLER_SOURCE),$(CORE_SOURCES))
+PERSISTENCE_SOURCES := $(sort $(wildcard ../../Sources/EstroboPersistence/*.swift))
+BLUETOOTH_SOURCES := $(sort $(wildcard ../../Sources/EstroboBluetooth/*.swift))
+RADIO_TRANSPORT_SOURCE := ../../Sources/EstroboCore/RadioTransport.swift
+WRITE_COORDINATOR_SOURCE := ../../Sources/EstroboBluetooth/CoreBluetoothWriteCoordinator.swift
+SIMULATED_TRANSPORT_SOURCE := ../../Sources/EstroboBluetooth/SimulatedRadioTransport.swift
+SHARED_SOURCES := $(CORE_SOURCES) $(PERSISTENCE_SOURCES) $(BLUETOOTH_SOURCES)
+SOURCES := $(LOCAL_SOURCES) $(SHARED_SOURCES)
 
 SWIFTC := $(shell xcrun --find swiftc)
 MACOS_SDK := $(shell xcrun --sdk macosx --show-sdk-path)
@@ -96,10 +106,11 @@ TARGET_ARCH ?= $(shell uname -m)
 COMMIT ?= $(shell git -C "$(REPOSITORY_ROOT)" rev-parse HEAD 2>/dev/null || printf uncommitted)
 
 .PHONY: build check test test-protocol test-session-recovery test-studio-library test-localization test-modeling-menu-pointer test-workspace-chrome test-brand-assets test-interactive-editing test-menu-bar-accessibility test-launch-responsiveness signing-certificate-check universal release-preflight release release-verify release-verify-existing package package-existing developer-id-certificate-check developer-id-preflight developer-id-release developer-id-release-verify developer-id-local-release developer-id-verify-signed-existing developer-id-notarize-existing developer-id-local-notarize-existing developer-id-resume-notarization-existing developer-id-local-resume-notarization-existing developer-id-verify-existing developer-id-package-existing developer-id-local-source-verify developer-id-dmg-create-existing developer-id-dmg-resume-existing developer-id-dmg-verify-existing developer-id-local-approval-finalize developer-id-local-approval-verify run clean
+.PHONY: check-module-boundaries test-radio-transport-adapter test-simulated-radio-transport test-secure-persistence
 
 build: $(EXECUTABLE)
 
-check:
+check: check-module-boundaries
 	"$(SWIFTC)" \
 		-parse-as-library \
 		-warnings-as-errors \
@@ -109,9 +120,22 @@ check:
 		-framework SwiftUI \
 		-framework AppKit \
 		-framework CoreBluetooth \
+		-framework Security \
 		$(SOURCES)
 
-test: test-protocol test-session-recovery test-studio-library test-localization test-modeling-menu-pointer test-workspace-chrome test-brand-assets test-interactive-editing test-menu-bar-accessibility test-launch-responsiveness
+# Build each SwiftPM module independently. This proves that the session
+# controller is owned by EstroboCore and that the Bluetooth/Persistence
+# adapters consume only Core's public ports. The legacy app typecheck below
+# remains the compatibility proof for its monolithic shared-source build.
+check-module-boundaries:
+	@set -euo pipefail; \
+		export DEVELOPER_DIR="$(MODULE_DEVELOPER_DIR)"; \
+		cd "$(REPOSITORY_ROOT)"; \
+		swift build --target EstroboCore --arch "$(TARGET_ARCH)"; \
+		swift build --target EstroboBluetooth --arch "$(TARGET_ARCH)"; \
+		swift build --target EstroboPersistence --arch "$(TARGET_ARCH)"
+
+test: test-protocol test-session-recovery test-studio-library test-localization test-modeling-menu-pointer test-workspace-chrome test-brand-assets test-interactive-editing test-menu-bar-accessibility test-launch-responsiveness test-radio-transport-adapter test-simulated-radio-transport test-secure-persistence
 
 test-protocol:
 	@/bin/mkdir -p "$(BUILD_DIR)"
@@ -122,18 +146,13 @@ test-protocol:
 		-framework Combine \
 		-framework SwiftUI \
 		-framework AppKit \
+		-framework Security \
 		Sources/AppLocalization.swift \
-		Sources/SafeGodoxProtocol.swift \
+		Sources/WorkspaceViewPreferences.swift \
 		Sources/GroupVisualIdentity.swift \
 		Sources/GroupVisualColor.swift \
-		Sources/GodoxCapabilities.swift \
-		Sources/ControlModel.swift \
-		Sources/ChangeDeliveryPreferences.swift \
-		Sources/TransmitterProfilePreferences.swift \
-		Sources/LocalGroupPreferences.swift \
-		Sources/PendingRestorationStore.swift \
-		$(BLE_DEVICE_NAME_SOURCE) \
-		Sources/SavedRadioStore.swift \
+		$(CORE_LIBRARY_SOURCES) \
+		$(PERSISTENCE_SOURCES) \
 		Tests/SafeGodoxProtocolFrameCheck.swift \
 		-o "$(TEST_EXECUTABLE)"
 	@"$(TEST_EXECUTABLE)"
@@ -146,21 +165,12 @@ test-session-recovery:
 		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
 		-framework Combine \
 		-framework CoreBluetooth \
+		-framework Security \
 		Sources/AppLocalization.swift \
 		Sources/AppTerminationSafety.swift \
-		Sources/SafeGodoxProtocol.swift \
-		Sources/GodoxCapabilities.swift \
-		Sources/ControlModel.swift \
-		Sources/ChangeDeliveryPreferences.swift \
-		Sources/TransmitterProfilePreferences.swift \
-		Sources/LocalGroupPreferences.swift \
-		Sources/PendingRestorationStore.swift \
-		Sources/SavedRadioStore.swift \
-		Sources/StudioLibraryStore.swift \
-		Sources/SessionDeadlineScheduler.swift \
-		Sources/EstroboSessionTransport.swift \
-		Sources/EstroboSessionController.swift \
-		$(BLE_SOURCES) \
+		$(CORE_LIBRARY_SOURCES) \
+		$(PERSISTENCE_SOURCES) \
+		$(SESSION_CONTROLLER_SOURCE) \
 		Tests/EstroboSessionRecoveryCheck.swift \
 		-o "$(SESSION_TEST_EXECUTABLE)"
 	@"$(SESSION_TEST_EXECUTABLE)"
@@ -171,8 +181,8 @@ test-studio-library:
 		-warnings-as-errors \
 		-sdk "$(MACOS_SDK)" \
 		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
-		Sources/SafeGodoxProtocol.swift \
-		Sources/StudioLibraryStore.swift \
+		$(CORE_LIBRARY_SOURCES) \
+		../../Sources/EstroboPersistence/StudioLibraryStore.swift \
 		Tests/StudioLibraryStoreCheck.swift \
 		-o "$(STUDIO_LIBRARY_TEST_EXECUTABLE)"
 	@"$(STUDIO_LIBRARY_TEST_EXECUTABLE)"
@@ -212,8 +222,9 @@ test-workspace-chrome:
 		-framework SwiftUI \
 		-framework AppKit \
 		-framework CoreBluetooth \
+		-framework Security \
 		$(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) \
-		$(BLE_SOURCES) \
+		$(SHARED_SOURCES) \
 		Tests/WorkspaceChromeInteractionCheck.swift \
 		-o "$(WORKSPACE_CHROME_TEST_EXECUTABLE)"
 	@"$(WORKSPACE_CHROME_TEST_EXECUTABLE)"
@@ -240,8 +251,9 @@ test-interactive-editing:
 		-framework SwiftUI \
 		-framework AppKit \
 		-framework CoreBluetooth \
+		-framework Security \
 		$(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) \
-		$(BLE_SOURCES) \
+		$(SHARED_SOURCES) \
 		Tests/InteractiveEditingCheck.swift \
 		-o "$(INTERACTIVE_EDITING_TEST_EXECUTABLE)"
 	@"$(INTERACTIVE_EDITING_TEST_EXECUTABLE)"
@@ -256,8 +268,9 @@ test-menu-bar-accessibility: build
 		-framework SwiftUI \
 		-framework AppKit \
 		-framework CoreBluetooth \
+		-framework Security \
 		$(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) \
-		$(BLE_SOURCES) \
+		$(SHARED_SOURCES) \
 		Tests/MenuBarAccessibilityCheck.swift \
 		-o "$(MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE)"
 	@ESTROBO_TEST_APP_BUNDLE="$(APP_BUNDLE)" \
@@ -265,6 +278,43 @@ test-menu-bar-accessibility: build
 
 test-launch-responsiveness: build
 	@/bin/zsh Tests/AppLaunchResponsivenessCheck.sh "$(APP_BUNDLE)"
+
+test-radio-transport-adapter:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		$(RADIO_TRANSPORT_SOURCE) \
+		$(WRITE_COORDINATOR_SOURCE) \
+		Tests/RadioTransportAdapterCheck.swift \
+		-o "$(RADIO_TRANSPORT_ADAPTER_TEST_EXECUTABLE)"
+	@"$(RADIO_TRANSPORT_ADAPTER_TEST_EXECUTABLE)"
+
+test-simulated-radio-transport:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		$(CORE_LIBRARY_SOURCES) \
+		$(SIMULATED_TRANSPORT_SOURCE) \
+		Tests/SimulatedRadioTransportCheck.swift \
+		-o "$(SIMULATED_TRANSPORT_TEST_EXECUTABLE)"
+	@"$(SIMULATED_TRANSPORT_TEST_EXECUTABLE)"
+
+test-secure-persistence:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework Security \
+		$(CORE_LIBRARY_SOURCES) \
+		$(PERSISTENCE_SOURCES) \
+		Tests/SecurePersistenceCheck.swift \
+		-o "$(SECURE_PERSISTENCE_TEST_EXECUTABLE)"
+	@"$(SECURE_PERSISTENCE_TEST_EXECUTABLE)"
 
 signing-certificate-check:
 	@"$(SIGNING_CERTIFICATE_VERIFY_SCRIPT)" \
@@ -288,6 +338,7 @@ $(EXECUTABLE): $(SOURCES) $(INFO_PLIST) $(ENTITLEMENTS) $(RESOURCE_FILES)
 		-framework SwiftUI \
 		-framework AppKit \
 		-framework CoreBluetooth \
+		-framework Security \
 		-o "$(EXECUTABLE)" \
 		$(SOURCES)
 	/usr/bin/codesign --force --sign - \
@@ -318,6 +369,7 @@ universal:
 			-framework SwiftUI \
 			-framework AppKit \
 			-framework CoreBluetooth \
+			-framework Security \
 			-o "$(SLICE_DIR)/$${arch}/$(APP_NAME)" \
 			$(SOURCES); \
 	done; \
@@ -652,5 +704,5 @@ run: build
 	@/usr/bin/open -n "$(APP_BUNDLE)"
 
 clean:
-	@/bin/rm -rf -- "$(APP_BUNDLE)" "$(LEGACY_APP_BUNDLE)" "$(UNIVERSAL_DIR)" "$(SLICE_DIR)" "$(BUILD_DIR)/Notarization" "$(TEST_EXECUTABLE)" "$(SESSION_TEST_EXECUTABLE)" "$(STUDIO_LIBRARY_TEST_EXECUTABLE)" "$(LOCALIZATION_TEST_EXECUTABLE)" "$(MODELING_MENU_POINTER_TEST_EXECUTABLE)" "$(WORKSPACE_CHROME_TEST_EXECUTABLE)" "$(BRAND_ASSET_TEST_EXECUTABLE)" "$(INTERACTIVE_EDITING_TEST_EXECUTABLE)"
+	@/bin/rm -rf -- "$(APP_BUNDLE)" "$(LEGACY_APP_BUNDLE)" "$(UNIVERSAL_DIR)" "$(SLICE_DIR)" "$(BUILD_DIR)/Notarization" "$(TEST_EXECUTABLE)" "$(SESSION_TEST_EXECUTABLE)" "$(STUDIO_LIBRARY_TEST_EXECUTABLE)" "$(LOCALIZATION_TEST_EXECUTABLE)" "$(MODELING_MENU_POINTER_TEST_EXECUTABLE)" "$(WORKSPACE_CHROME_TEST_EXECUTABLE)" "$(BRAND_ASSET_TEST_EXECUTABLE)" "$(INTERACTIVE_EDITING_TEST_EXECUTABLE)" "$(MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE)" "$(RADIO_TRANSPORT_ADAPTER_TEST_EXECUTABLE)" "$(SIMULATED_TRANSPORT_TEST_EXECUTABLE)" "$(SECURE_PERSISTENCE_TEST_EXECUTABLE)"
 	@print "Eliminados los artefactos de $(APP_NAME)"

@@ -1,9 +1,11 @@
-# Preparación para Developer ID y notarización de Estrobo
+# Investigación histórica: Developer ID y notarización de Estrobo
 
 Fecha de investigación: 2026-08-07
+
+Estado al retomar el proyecto, 2026-09-29: este documento conserva la investigación previa a la distribución con Apple. La beta pública `v0.1.0-beta.4` ya se distribuye como DMG universal firmado con Developer ID, notarizado y stapled; sus verificaciones no validan un binario nuevo. El contrato vigente está en [el checklist de release](../RELEASE-CHECKLIST.md) y [el estado de integración](../INTEGRATION-2026-09-29.md). Las referencias a membresía pendiente y ZIP público que siguen abajo describen el alcance histórico, no el estado actual.
 Alcance: distribución directa de una app macOS fuera de Mac App Store, con fuentes primarias oficiales de Apple vigentes al momento de la revisión. No se crearon cuentas, certificados, identificadores, perfiles ni credenciales.
 
-Estado de implementación: el carril manual Developer ID descrito aquí ya quedó preparado en el repositorio, separado del workflow autosignado y sin autoridad de publicación. Sus artefactos de Actions se cifran porque el repositorio es público. La firma y notarización reales siguen bloqueadas hasta contar con membresía, certificado y credenciales Apple.
+Estado de implementación al realizar esta investigación: el carril manual Developer ID descrito aquí quedó preparado en el repositorio, separado del workflow autosignado y sin autoridad de publicación. Sus artefactos de Actions se cifran porque el repositorio es público. En esa fecha faltaba verificar la firma y notarización reales con el certificado y las credenciales Apple.
 
 ## Conclusión ejecutiva
 

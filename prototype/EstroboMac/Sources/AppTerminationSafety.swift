@@ -43,7 +43,7 @@ enum AppTerminationSafety {
 }
 
 @MainActor
-extension EstroboSessionController {
+extension GodoxSessionController {
     var terminationBlockReason: String? {
         AppTerminationSafety.blockReason(
             pendingCount: pendingCount,

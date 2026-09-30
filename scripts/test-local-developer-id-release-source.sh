@@ -16,7 +16,7 @@ trap '/bin/rm -rf -- "$temporary_dir"' EXIT
 
 fixture_root="$temporary_dir/fixture"
 fixture_script_dir="$fixture_root/scripts"
-fixture_prototype_dir="$fixture_root/prototype/GodoxMacControlPrototype"
+fixture_prototype_dir="$fixture_root/prototype/EstroboMac"
 /bin/mkdir -p "$fixture_script_dir" "$fixture_prototype_dir"
 /bin/cp "$source_verifier" "$fixture_script_dir/verify-local-developer-id-release-source.sh"
 /bin/chmod 755 "$fixture_script_dir/verify-local-developer-id-release-source.sh"
@@ -98,8 +98,16 @@ case "${1:-}" in
     fi
     ;;
   ls-files)
+    for required_input in Package.swift Sources prototype/EstroboMac/Sources prototype/EstroboMac/Resources prototype/EstroboBLEPoC/Sources; do
+      if (( ${argv[(Ie)$required_input]} == 0 )); then
+        print -u2 "release source gate omitted build input: $required_input"
+        exit 64
+      fi
+    done
     if [[ "${FAKE_IGNORED_BUILD_INPUT:-0}" == 1 ]]; then
-      print 'prototype/GodoxMacControlPrototype/Resources/.env'
+      print 'prototype/EstroboMac/Resources/.env'
+    elif [[ "${FAKE_IGNORED_SHARED_SOURCE:-0}" == 1 ]]; then
+      print 'Sources/EstroboCore/IgnoredSource.swift'
     fi
     ;;
   fetch)
@@ -274,6 +282,12 @@ expect_failure ignored-build-input \
   FAKE_IGNORED_BUILD_INPUT=1
 [[ ! -e "$temporary_dir/state-ignored-build-input/fetch.count" ]] || \
   fail "ignored build input reached Git fetch"
+
+expect_failure ignored-shared-source \
+  'ignored files are present in release build inputs' \
+  FAKE_IGNORED_SHARED_SOURCE=1
+[[ ! -e "$temporary_dir/state-ignored-shared-source/fetch.count" ]] || \
+  fail "ignored shared source reached Git fetch"
 
 expect_failure head-not-origin-main \
   'HEAD is not exactly the fetched origin/main' \

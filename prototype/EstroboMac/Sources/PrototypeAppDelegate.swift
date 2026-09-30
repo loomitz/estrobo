@@ -1,8 +1,12 @@
 import AppKit
 
+#if canImport(EstroboCore)
+import EstroboCore
+#endif
+
 @MainActor
 final class PrototypeAppDelegate: NSObject, NSApplicationDelegate {
-    weak var controller: EstroboSessionController?
+    weak var controller: GodoxSessionController?
     var createMainWindow: (() -> Void)?
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

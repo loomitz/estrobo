@@ -151,7 +151,7 @@
 "Recordar este radio y su código en este Mac" = "Remember this trigger and its radio code on this Mac";
 "Hay radios con el mismo nombre. Elige usando RSSI y el sufijo UUID; estos datos ayudan a distinguirlos, pero no autentican el transmisor." = "Some triggers have the same name. Choose using RSSI and the UUID suffix; these details help distinguish them, but do not authenticate the transmitter.";
 "Conectar" = "Connect";
-"Si activas Recordar, el código se guarda localmente y sin cifrar en este Mac. Nunca se envía a Internet. No reutilices un PIN personal." = "If you enable Remember, the code is stored locally and unencrypted on this Mac. It is never sent over the Internet. Do not reuse a personal PIN.";
+"Si activas Recordar, el código se guarda en el Keychain de este Mac, sólo para este dispositivo. Nunca se envía a Internet. No reutilices un PIN personal." = "If you enable Remember, the code is stored in this Mac's device-only Keychain. It is never sent over the Internet. Do not reuse a personal PIN.";
 "El radio admite una sola conexión Bluetooth a la vez. Cierra antes cualquier otra app conectada al transmisor." = "The trigger supports only one Bluetooth connection at a time. First close any other app connected to it.";
 
 "Sin actividad todavía" = "No activity yet";

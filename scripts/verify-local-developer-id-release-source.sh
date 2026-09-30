@@ -18,17 +18,19 @@ done
 
 script_dir="${0:A:h}"
 repository_root="${script_dir:h}"
-plist="$repository_root/prototype/GodoxMacControlPrototype/Info.plist"
-prototype_makefile="$repository_root/prototype/GodoxMacControlPrototype/Makefile"
+plist="$repository_root/prototype/EstroboMac/Info.plist"
+prototype_makefile="$repository_root/prototype/EstroboMac/Makefile"
 expected_repository="loomitz/estrobo"
 expected_arm_check="macOS 15 (arm64)"
 expected_intel_check="macOS 15 (x86_64)"
 expected_github_actions_app_id="15368"
 git_command="${GIT_COMMAND:-/usr/bin/git}"
 build_input_paths=(
-  prototype/GodoxMacControlPrototype/Sources
-  prototype/GodoxMacControlPrototype/Resources
-  prototype/GodoxBLEPoC/Sources
+  Package.swift
+  Sources
+  prototype/EstroboMac/Sources
+  prototype/EstroboMac/Resources
+  prototype/EstroboBLEPoC/Sources
 )
 
 if [[ -n "${GH_COMMAND:-}" ]]; then

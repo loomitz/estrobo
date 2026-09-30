@@ -113,6 +113,10 @@ jobs:
             echo "Expected $EXPECTED_ARCH runner, received $actual_arch" >&2
             exit 1
           fi
+          echo "MODULE_DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+
+      - name: Test shared Swift packages
+        run: swift test --arch "$EXPECTED_ARCH"
 
       - name: Type-check, test, and build
         run: |

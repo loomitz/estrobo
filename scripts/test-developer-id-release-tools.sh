@@ -22,7 +22,7 @@ for script in \
 done
 
 candidate_workflow="$repository_root/.github/workflows/developer-id-candidate.yml"
-prototype_makefile="$repository_root/prototype/GodoxMacControlPrototype/Makefile"
+prototype_makefile="$repository_root/prototype/EstroboMac/Makefile"
 [[ -r "$candidate_workflow" ]] || fail "Developer ID candidate workflow is missing"
 /usr/bin/grep -Fq \
   'export NOTARY_KEYCHAIN_PROFILE NOTARY_API_KEY_PATH NOTARY_API_KEY_ID NOTARY_API_ISSUER_ID' \
@@ -45,10 +45,35 @@ fi
 if /usr/bin/grep -Fq 'NOTARY_KEYCHAIN_PROFILE' "$candidate_workflow"; then
   fail "candidate workflow must remain API-key-only"
 fi
-/usr/bin/ruby -ryaml - "$candidate_workflow" <<'RUBY' || \
+legacy_workflow="$repository_root/.github/workflows/release-beta.yml"
+/usr/bin/ruby -ryaml - "$candidate_workflow" "$legacy_workflow" <<'RUBY' || \
   fail "candidate workflow uploads an unencrypted Actions artifact"
 workflow = YAML.safe_load(File.read(ARGV.fetch(0)), aliases: true)
 jobs = workflow.fetch("jobs")
+if YAML.dump(jobs).include?("prototype/GodoxMacControlPrototype/")
+  raise "current candidate workflow still uses the pre-rename prototype path"
+end
+
+legacy_workflow = YAML.safe_load(File.read(ARGV.fetch(1)), aliases: true)
+legacy_events = legacy_workflow["on"] || legacy_workflow[true]
+raise "legacy workflow is not manual-only" unless legacy_events.keys == ["workflow_dispatch"]
+legacy_jobs = legacy_workflow.fetch("jobs")
+legacy_source = YAML.dump(legacy_jobs)
+if legacy_source.include?("prototype/EstroboMac/")
+  raise "historical rebuilds must use paths from the immutable beta 1/2 tag trees"
+end
+legacy_validation = legacy_jobs.fetch("validate").fetch("steps").find { |step| step["id"] == "release" }.fetch("run")
+unless legacy_validation.include?("v0.1.0-beta.1|v0.1.0-beta.2)") &&
+    legacy_validation.include?('plist="prototype/GodoxMacControlPrototype/Info.plist"')
+  raise "legacy workflow lost the historical tag or source-path restriction"
+end
+%w[
+  prototype/GodoxMacControlPrototype/Build/estrobo.app/Contents/MacOS/estrobo
+  prototype/GodoxMacControlPrototype/Build/Universal/estrobo.app
+  prototype/GodoxMacControlPrototype/Build/Universal
+].each do |historical_path|
+  raise "historical build path is missing: #{historical_path}" unless legacy_source.include?(historical_path)
+end
 unless jobs.fetch("sign-and-notarize").fetch("if").include?("github.run_attempt == 1")
   raise "signing job reruns can create duplicate notarization submissions"
 end

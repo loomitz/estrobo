@@ -1,0 +1,186 @@
+name: iOS CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IOS_DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+  ESTROBO_IOS_SIMULATOR_OS: "26.5"
+  IOS_BUNDLE_IDENTIFIER: mx.loo.estrobo.ci
+  XCODEGEN_VERSION: 2.46.0
+  XCODEGEN_SHA256: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+
+jobs:
+  required:
+    name: Required iOS gate
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      # actions/checkout v7.0.1, pinned to its verified commit.
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Select and verify stable Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "$IOS_DEVELOPER_DIR"
+          DEVELOPER_DIR="$IOS_DEVELOPER_DIR" xcodebuild -version
+          DEVELOPER_DIR="$IOS_DEVELOPER_DIR" xcrun simctl list runtimes
+
+      - name: Install pinned XcodeGen
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION.zip"
+          curl --fail --location --silent --show-error \
+            --retry 3 \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip" \
+            --output "$archive"
+          echo "$XCODEGEN_SHA256  $archive" | shasum -a 256 -c -
+          ditto -x -k "$archive" "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+
+      - name: Test shared Swift packages
+        run: make ios-core-test
+
+      - name: Validate project and simulator build
+        run: make ios-check
+
+      - name: Test iPhone and iPad app targets
+        run: make ios-test
+
+      - name: Run focused iPhone and iPad UI smoke
+        run: make ios-ui-smoke
+
+      - name: Build Release for a generic iOS device
+        run: make ios-release-build
+
+      # actions/upload-artifact v7.0.1, pinned to its verified commit.
+      - name: Preserve test results on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ios-unit-test-results
+          path: ios/DerivedData/**/Logs/Test/*.xcresult
+          if-no-files-found: warn
+          retention-days: 7
+
+  minimum-os:
+    name: iOS 18 compatibility gate
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      IOS_DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      ESTROBO_IOS_SIMULATOR_OS: "18.5"
+    steps:
+      # actions/checkout v7.0.1, pinned to its verified commit.
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Select Xcode 16 and verify iOS 18 simulators
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "$IOS_DEVELOPER_DIR"
+          DEVELOPER_DIR="$IOS_DEVELOPER_DIR" xcodebuild -version
+          DEVELOPER_DIR="$IOS_DEVELOPER_DIR" xcrun simctl list devices available
+
+      - name: Install pinned XcodeGen
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION.zip"
+          curl --fail --location --silent --show-error \
+            --retry 3 \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip" \
+            --output "$archive"
+          echo "$XCODEGEN_SHA256  $archive" | shasum -a 256 -c -
+          ditto -x -k "$archive" "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+
+      - name: Validate and build with the iOS 18 SDK
+        run: make ios-check
+
+      - name: Test app targets on iOS 18.5
+        run: make ios-test
+
+      - name: Run focused UI smoke on iOS 18.5
+        run: make ios-ui-smoke
+
+      # actions/upload-artifact v7.0.1, pinned to its verified commit.
+      - name: Preserve iOS 18 test results on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ios-18-test-results
+          path: ios/DerivedData/**/Logs/Test/*.xcresult
+          if-no-files-found: warn
+          retention-days: 7
+
+  candidate:
+    name: Full UI tests and unsigned archive
+    if: ${{ github.event_name != 'pull_request' }}
+    needs:
+      - required
+      - minimum-os
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      # actions/checkout v7.0.1, pinned to its verified commit.
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Select and verify stable Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "$IOS_DEVELOPER_DIR"
+          DEVELOPER_DIR="$IOS_DEVELOPER_DIR" xcodebuild -version
+          DEVELOPER_DIR="$IOS_DEVELOPER_DIR" xcrun simctl list runtimes
+
+      - name: Install pinned XcodeGen
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION.zip"
+          curl --fail --location --silent --show-error \
+            --retry 3 \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip" \
+            --output "$archive"
+          echo "$XCODEGEN_SHA256  $archive" | shasum -a 256 -c -
+          ditto -x -k "$archive" "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+
+      - name: Run full iPhone and iPad UI tests
+        run: make ios-ui-test
+
+      - name: Create and validate unsigned Release archive
+        run: ESTROBO_IOS_ARCHIVE_PATH="$RUNNER_TEMP/Estrobo.xcarchive" make ios-archive
+
+      # actions/upload-artifact v7.0.1, pinned to its verified commit.
+      - name: Preserve candidate UI test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ios-ui-test-results
+          path: ios/DerivedData/**/Logs/Test/*.xcresult
+          if-no-files-found: warn
+          retention-days: 7

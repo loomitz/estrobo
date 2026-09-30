@@ -1,5 +1,6 @@
 import Foundation
 
+@MainActor
 private final class MemoryStudioLibraryStorage {
     var object: Any?
     var acceptsWrites = true
@@ -18,6 +19,7 @@ private final class MemoryStudioLibraryStorage {
 }
 
 @main
+@MainActor
 enum StudioLibraryStoreCheck {
     static func main() throws {
         checkPresetNameValidation()

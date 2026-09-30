@@ -10,7 +10,9 @@ MACOS_DIR := $(CONTENTS_DIR)/MacOS
 EXECUTABLE := $(MACOS_DIR)/$(APP_NAME)
 INFO_PLIST := Info.plist
 ENTITLEMENTS := EstroboBLEPoC.entitlements
-SOURCES := $(sort $(wildcard Sources/*.swift))
+CORE_SOURCES := ../../Sources/EstroboCore/GodoxBluetoothDeviceName.swift ../../Sources/EstroboCore/RadioTransport.swift ../../Sources/EstroboCore/SafeGodoxProtocol.swift
+BLUETOOTH_SOURCES := $(sort $(wildcard ../../Sources/EstroboBluetooth/*.swift))
+SOURCES := $(sort $(wildcard Sources/*.swift) $(CORE_SOURCES) $(BLUETOOTH_SOURCES))
 
 SWIFTC := $(shell xcrun --find swiftc)
 SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)

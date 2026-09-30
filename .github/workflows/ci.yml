@@ -41,6 +41,10 @@ jobs:
             echo "Expected $EXPECTED_ARCH runner, received $actual_arch" >&2
             exit 1
           fi
+          echo "MODULE_DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+
+      - name: Test shared Swift packages
+        run: swift test --arch "$EXPECTED_ARCH"
 
       - name: Type-check
         run: make mac-prototype-check TARGET_ARCH="$EXPECTED_ARCH"
@@ -59,3 +63,32 @@ jobs:
         run: |
           lipo prototype/EstroboMac/Build/estrobo.app/Contents/MacOS/estrobo \
             -verify_arch "$EXPECTED_ARCH"
+
+  website:
+    name: Website build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      # actions/checkout v7.0.1, pinned to its verified commit.
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # actions/setup-node v7.0.0, pinned to its verified commit.
+      - name: Select supported Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: "24"
+
+      - name: Install the declared pnpm version
+        run: npm install --global pnpm@11.16.0
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check and build the website
+        run: pnpm build
