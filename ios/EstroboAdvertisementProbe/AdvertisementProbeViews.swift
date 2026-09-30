@@ -27,7 +27,7 @@ struct AdvertisementProbeRootView: View {
                             } label: {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(observation.title)
-                                    Text(observation.id.uuidString)
+                                    Text(observation.redactedIdentifier)
                                         .font(.caption.monospaced())
                                         .foregroundStyle(.secondary)
                                     Text("RSSI \(observation.rssi) · \(observation.sampleCount) samples")
@@ -62,7 +62,7 @@ private struct AdvertisementDetailView: View {
 
     var body: some View {
         List {
-            value("Peripheral UUID", observation.id.uuidString)
+            value("Peripheral UUID", observation.redactedIdentifier)
             value("Peripheral name", observation.peripheralName ?? "None")
             value("Local name", observation.localName ?? "None")
             value("RSSI", "\(observation.rssi)")

@@ -315,6 +315,11 @@ struct SavedRadiosView: View {
                         .font(.caption)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
+                    if controller.lastConnectedRadioID == radio.deviceID {
+                        Text(coordinator.text("saved.last-connected"))
+                            .font(.caption.bold())
+                            .foregroundStyle(EstroboTheme.interactiveAccent)
+                    }
                 }
                 Spacer()
                 Label(
@@ -328,6 +333,32 @@ struct SavedRadiosView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             }
+
+            Toggle(
+                isOn: Binding(
+                    get: {
+                        controller.isAutomaticConnectionEnabled(
+                            for: radio.deviceID
+                        )
+                    },
+                    set: { enabled in
+                        controller.setAutomaticConnectionEnabled(
+                            enabled,
+                            for: radio.deviceID
+                        )
+                    }
+                )
+            ) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(coordinator.text("saved.auto-connect"))
+                    Text(coordinator.text("saved.auto-connect.detail"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .accessibilityIdentifier(
+                EstroboAccessibilityID.savedRadioAutoConnect(radio.deviceID)
+            )
 
             Button(role: .destructive) {
                 radioPendingForget = radio

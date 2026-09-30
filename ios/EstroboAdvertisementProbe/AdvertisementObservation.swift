@@ -25,6 +25,10 @@ struct AdvertisementObservation: Identifiable, Equatable, Sendable {
         localName ?? peripheralName ?? "Unnamed advertisement"
     }
 
+    var redactedIdentifier: String {
+        "CB-REDACTED-\(id.uuidString.suffix(4))"
+    }
+
     var logSummary: String {
         let company = manufacturerCompanyIdentifier.map {
             String(format: "0x%04X", $0)
@@ -43,7 +47,7 @@ struct AdvertisementObservation: Identifiable, Equatable, Sendable {
         let connectable = isConnectable.map(String.init) ?? "unknown"
 
         return [
-            "peripheral=\(id.uuidString)",
+            "peripheral=\(redactedIdentifier)",
             "name=\(peripheralName ?? "none")",
             "localName=\(localName ?? "none")",
             "serviceUUIDs=\(serviceList)",

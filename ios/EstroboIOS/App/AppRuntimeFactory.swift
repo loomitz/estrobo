@@ -49,6 +49,12 @@ enum AppRuntimeFactory {
             )!
             _ = persistence.savedRadios.upsert(primary)
             _ = persistence.savedRadios.upsert(reserve)
+            _ = persistence.radioConnectionPreferences.save(
+                RadioConnectionPreferenceState(
+                    lastConnectedRadioID: primary.deviceID,
+                    automaticConnectionRadioID: nil
+                )
+            )
         }
 
         if seed == .recoveryWrongUUID {
@@ -69,6 +75,7 @@ enum AppRuntimeFactory {
             restorationStore: persistence.restorations,
             savedRadioStore: persistence.savedRadios,
             changeDeliveryPreferences: persistence.changeDelivery,
+            radioConnectionPreferences: persistence.radioConnectionPreferences,
             transmitterProfilePreferences: persistence.transmitterProfiles,
             studioLibraryStore: persistence.studioLibrary
         )
@@ -90,7 +97,22 @@ enum AppRuntimeFactory {
     /// CoreBluetooth and persistent adapters, so the coordinator invokes it
     /// only after the education screen is acknowledged.
     static func makeLive() -> AppRuntime {
+        makeLive(persistence: PersistenceServicesFactory.live())
+    }
+
+    /// Restores the live shell only when a transmitter credential is already
+    /// remembered. First-run users still see the Bluetooth explanation before
+    /// CoreBluetooth is constructed.
+    static func makeLiveRestoringRememberedRadio() -> AppRuntime? {
         let persistence = PersistenceServicesFactory.live()
+        guard case .records(let radios) = persistence.savedRadios.load(),
+              !radios.isEmpty else {
+            return nil
+        }
+        return makeLive(persistence: persistence)
+    }
+
+    private static func makeLive(persistence: PersistenceServices) -> AppRuntime {
         let controller = GodoxSessionController(
             transport: RadioTransportFactory.live(),
             deadlineScheduler: LiveSessionDeadlineScheduler(),
@@ -98,8 +120,11 @@ enum AppRuntimeFactory {
             restorationStore: persistence.restorations,
             savedRadioStore: persistence.savedRadios,
             changeDeliveryPreferences: persistence.changeDelivery,
+            radioConnectionPreferences: persistence.radioConnectionPreferences,
             transmitterProfilePreferences: persistence.transmitterProfiles,
-            studioLibraryStore: persistence.studioLibrary
+            studioLibraryStore: persistence.studioLibrary,
+            requiresExplicitInitialValueSynchronizationConfirmation: false,
+            stagesNewWorkingGroupsAtSafeMinimum: true
         )
         return AppRuntime(
             controller: controller,

@@ -29,7 +29,7 @@ enum EstroboAccessibilityID {
     static let connectionConnect = "estrobo.connection.connect"
     static let connectionPWOK = "estrobo.connection.pwok"
     static let connectionSync = "estrobo.connection.sync"
-    static let connectionReady = "estrobo.connection.ready"
+    static let connectionSyncCancel = "estrobo.connection.sync.cancel"
     static let connectionPermissionDenied = "estrobo.connection.permission-denied"
     static let connectionDismiss = "estrobo.connection.dismiss"
     static let recoveryGate = "estrobo.recovery.gate"
@@ -57,15 +57,16 @@ enum EstroboAccessibilityID {
     static let discard = "estrobo.changes.discard"
     static let pendingStatus = "estrobo.changes.pending"
     static let deliveryMode = "estrobo.changes.delivery-mode"
+    static let deliveryAutomaticFeedback = "estrobo.changes.delivery.automatic-feedback"
 
     static let globalBeep = "estrobo.global.beep"
+    static let globalModeling = "estrobo.global.modeling"
     static let globalStandby = "estrobo.global.standby"
-    static let globalStandbyConfirmation = "estrobo.global.standby.confirmation"
-    static let globalStandbyConfirm = "estrobo.global.standby.confirm"
-    static let globalStandbyCancel = "estrobo.global.standby.cancel"
     static let globalPowerDecrease = "estrobo.global.power.decrease"
     static let globalPowerIncrease = "estrobo.global.power.increase"
+    static let globalPowerSlider = "estrobo.global.power.slider"
     static let globalPowerStatus = "estrobo.global.power.status"
+    static let testSend = "estrobo.test.send"
     static let testOpenConfirmation = "estrobo.test.open-confirmation"
     static let testConfirmation = "estrobo.test.confirmation"
     static let testConfirm = "estrobo.test.confirm"
@@ -73,10 +74,7 @@ enum EstroboAccessibilityID {
     static let testPending = "estrobo.test.pending"
     static let testSent = "estrobo.test.sent"
     static let testFailed = "estrobo.test.failed"
-    static let multiOpenConfirmation = "estrobo.multi.open-confirmation"
-    static let multiConfirmation = "estrobo.multi.confirmation"
-    static let multiConfirm = "estrobo.multi.confirm"
-    static let multiCancel = "estrobo.multi.cancel"
+    static let multiToggle = "estrobo.multi.toggle"
     static let multiEnabled = "estrobo.multi.enabled"
     static let multiPower = "estrobo.multi.power"
     static let multiCount = "estrobo.multi.count"
@@ -97,9 +95,17 @@ enum EstroboAccessibilityID {
     static let compatibility = "estrobo.settings.compatibility"
     static let compatibilityEdit = "estrobo.settings.compatibility.edit"
     static let compatibilitySave = "estrobo.settings.compatibility.save"
+    static let compatibilityConnection = "estrobo.settings.compatibility.connection"
+    static let compatibilityProfile = "estrobo.settings.compatibility.profile"
+    static let compatibilityGroupsSummary = "estrobo.settings.compatibility.groups-summary"
+    static let compatibilityAddGroups = "estrobo.settings.compatibility.add-groups"
+    static let compatibilityAddGroupsSheet = "estrobo.settings.compatibility.add-groups.sheet"
+    static let compatibilityAddGroupsConfirm = "estrobo.settings.compatibility.add-groups.confirm"
     static let language = "estrobo.settings.language"
     static let appearance = "estrobo.settings.appearance"
     static let sceneSafety = "estrobo.settings.scene-safety"
+    static let privacyPolicy = "estrobo.settings.privacy-policy"
+    static let support = "estrobo.settings.support"
 
     static func workspaceGroup(_ group: String) -> String {
         "estrobo.onboarding.group.\(group.lowercased())"
@@ -114,7 +120,7 @@ enum EstroboAccessibilityID {
     }
 
     static func candidate(_ identifier: UUID) -> String {
-        "estrobo.connection.candidate.\(identifier.uuidString.lowercased())"
+        "estrobo.connection.candidate.\(redactedPeripheralToken(identifier))"
     }
 
     static func groupRow(_ group: String) -> String {
@@ -125,12 +131,28 @@ enum EstroboAccessibilityID {
         "estrobo.group.\(group.lowercased()).detail"
     }
 
+    static func groupDetailOpen(_ group: String) -> String {
+        "estrobo.group.\(group.lowercased()).detail.open"
+    }
+
     static func groupMode(_ group: String) -> String {
         "estrobo.group.\(group.lowercased()).mode"
     }
 
     static func groupPower(_ group: String) -> String {
         "estrobo.group.\(group.lowercased()).power"
+    }
+
+    static func groupPowerSlider(_ group: String) -> String {
+        "estrobo.group.\(group.lowercased()).power.slider"
+    }
+
+    static func groupDetailPower(_ group: String) -> String {
+        "estrobo.group.\(group.lowercased()).detail.power"
+    }
+
+    static func groupDetailPowerSlider(_ group: String) -> String {
+        "estrobo.group.\(group.lowercased()).detail.power.slider"
     }
 
     static func groupPowerIncrease(_ group: String) -> String {
@@ -143,6 +165,14 @@ enum EstroboAccessibilityID {
 
     static func groupModeling(_ group: String) -> String {
         "estrobo.group.\(group.lowercased()).modeling"
+    }
+
+    static func groupModelingManualSlider(_ group: String) -> String {
+        "estrobo.group.\(group.lowercased()).modeling.manual.slider"
+    }
+
+    static func groupStandbyOverlay(_ group: String) -> String {
+        "estrobo.group.\(group.lowercased()).standby-overlay"
     }
 
     static func groupBeep(_ group: String) -> String {
@@ -174,11 +204,15 @@ enum EstroboAccessibilityID {
     }
 
     static func savedRadio(_ identifier: UUID) -> String {
-        "estrobo.saved-radio.\(identifier.uuidString.lowercased())"
+        "estrobo.saved-radio.\(redactedPeripheralToken(identifier))"
     }
 
     static func savedRadioForget(_ identifier: UUID) -> String {
         "\(savedRadio(identifier)).forget"
+    }
+
+    static func savedRadioAutoConnect(_ identifier: UUID) -> String {
+        "\(savedRadio(identifier)).auto-connect"
     }
 
     static func demoScenario(_ scenario: SimulatedRadioScenario) -> String {
@@ -187,5 +221,29 @@ enum EstroboAccessibilityID {
 
     static func compatibilityGroup(_ group: String) -> String {
         "estrobo.settings.compatibility.group.\(group.lowercased())"
+    }
+
+    static func compatibilityGroupRow(_ group: String) -> String {
+        "\(compatibilityGroup(group)).row"
+    }
+
+    static func compatibilityGroupChoice(_ group: String) -> String {
+        "\(compatibilityGroup(group)).choice"
+    }
+
+    static func compatibilityModels(_ group: String) -> String {
+        "\(compatibilityGroup(group)).models"
+    }
+
+    static func compatibilityModelCount(_ group: String) -> String {
+        "\(compatibilityModels(group)).selected-count"
+    }
+
+    static func compatibilityModel(_ group: String, model: String) -> String {
+        "\(compatibilityModels(group)).\(model.lowercased())"
+    }
+
+    private static func redactedPeripheralToken(_ identifier: UUID) -> String {
+        "redacted-\(identifier.uuidString.suffix(4).lowercased())"
     }
 }

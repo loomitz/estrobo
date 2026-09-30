@@ -76,8 +76,8 @@ capture_family() {
         ' "$exported/manifest.json"
     )
 
-    if (( family_count != 6 )); then
-        print -u2 "error: expected exactly six current $family PNG attachments; exported $family_count."
+    if (( family_count != 7 )); then
+        print -u2 "error: expected exactly seven current $family PNG attachments; exported $family_count."
         exit 1
     fi
 }
@@ -85,16 +85,16 @@ capture_family() {
 capture_family iphone
 capture_family ipad
 
-if (( captured_count != 12 )); then
-    print -u2 "error: expected exactly twelve attachments from the current iPhone/iPad capture; exported $captured_count."
+if (( captured_count != 14 )); then
+    print -u2 "error: expected exactly fourteen attachments from the current iPhone/iPad capture; exported $captured_count."
     exit 1
 fi
 
 for family in iphone ipad; do
     local_count=$(find "$staged_output" -maxdepth 1 -type f \
         -name "estrobo-reference-$family-*.png" | wc -l | tr -d ' ')
-    if (( local_count != 6 )); then
-        print -u2 "error: expected exactly six staged $family reference screenshots; found $local_count."
+    if (( local_count != 7 )); then
+        print -u2 "error: expected exactly seven staged $family reference screenshots; found $local_count."
         exit 1
     fi
 
@@ -122,8 +122,8 @@ cp "$staged_output"/*.png "$output_dir/"
 
 final_count=$(find "$output_dir" -maxdepth 1 -type f \
     -name 'estrobo-reference-*.png' | wc -l | tr -d ' ')
-if (( final_count != 12 )); then
-    print -u2 "error: expected exactly twelve installed reference screenshots; found $final_count."
+if (( final_count != 14 )); then
+    print -u2 "error: expected exactly fourteen installed reference screenshots; found $final_count."
     exit 1
 fi
 

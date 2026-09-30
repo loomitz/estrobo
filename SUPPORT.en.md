@@ -2,22 +2,22 @@
 
 <p align="center"><a href="SUPPORT.md">Español</a> &nbsp;·&nbsp; <strong>English</strong></p>
 
-Estrobo is a limited public beta, and its support channel is **GitHub Issues**. There is no published support email address.
+Estrobo is a limited beta, and its support channel is **GitHub Issues**. There is no published support email address.
 
 ## Before opening an issue
 
 1. Read [Troubleshooting](docs/TROUBLESHOOTING.md).
-2. Confirm that you are using the latest public beta and macOS 13 or later.
+2. Confirm that you are using the latest build available to you on macOS 13 or later, iOS 18 or later, or iPadOS 18 or later.
 3. Quit any other app connected to the trigger.
-4. Try to reproduce the problem with `--mock-radio` if it involves the interface, interaction, presets, or session state.
+4. If the issue involves the interface, interaction, presets, or session state, try to reproduce it in iPhone/iPad Demo mode or with `--mock-radio` on Mac.
 5. Search for an existing issue to avoid duplicates.
 
-[Open an issue in this repository](../../issues/new) only for non-sensitive information.
+[Open an issue in this repository](https://github.com/loomitz/estrobo/issues/new) only for non-sensitive information.
 
 ## Useful information
 
 - Estrobo version and build;
-- macOS version and Intel/Apple Silicon architecture;
+- platform, operating-system version, and iPhone/iPad model or Mac architecture;
 - visible session phase and exact message;
 - expected and observed steps;
 - whether it also occurs in simulated mode;
@@ -41,7 +41,7 @@ For vulnerabilities, use [GitHub Private Vulnerability Reporting](SECURITY.md).
 
 Compatibility is expanded only after reversible physical validation for each model and firmware combination. A BLE name, RSSI, UUID, or `FEC8` acknowledgment is not enough to claim support. You may be asked to reproduce the problem in simulated mode or participate in a coordinated physical validation gate; no date or SLA is promised.
 
-The `Psub`/`PWOK` handshake is mandatory; the Radio Code is the trigger’s local PIN, not a strong credential. The official beta uses Developer ID signing and notarization: if Gatekeeper does not identify it as `Notarized Developer ID`, verify the checksum and download it again before opening an issue.
+The `Psub`/`PWOK` handshake is mandatory; the Radio Code is the trigger’s local PIN, not a strong credential. On macOS, the official beta uses Developer ID signing and notarization: if Gatekeeper does not identify it as `Notarized Developer ID`, verify the checksum and download it again before opening an issue. On iOS and iPadOS, use only the TestFlight or App Store build published by Estrobo when one is available; Estrobo never requires a configuration profile or third-party installer.
 
 ## Independent project
 

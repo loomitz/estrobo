@@ -129,14 +129,17 @@ public struct ManualPower: Hashable, Identifiable, Sendable {
 /// Ajustes globales de una ráfaga Multi que Estrobo puede editar con seguridad.
 ///
 /// El A0 crudo sigue siendo tolerante para conservar compatibilidad con valores
-/// observados fuera de la UI. Este tipo representa únicamente el subconjunto que
-/// la aplicación permite crear, persistir y enviar desde sus controles.
+/// observados fuera de la UI. Este tipo representa el dominio tipado aceptado;
+/// cada plataforma puede presentar un subconjunto discreto propio.
 public struct MultiFlashSettings: Equatable, Hashable, Sendable {
     public static let countRange = 1...100
-    // Godox Flash currently exposes 1...100 Hz across its portable Multi UI.
-    // Some transmitters document higher wire values, but those remain outside
-    // this editable subset until a matching flash/profile is verified.
+    // Preserve the existing continuous editor scale used by the macOS app.
+    // Platform-specific controls may expose a different discrete subset.
     public static let hertzRange = 1...100
+    // A0 stores Hz in one byte. Estrobo accepts typed settings through the
+    // highest value exposed by the iOS Multi control while the raw A0 codec
+    // remains tolerant of other observed byte values for recovery purposes.
+    public static let acceptedHertzRange = 1...199
     public static let supportedPowers: [ManualPower] = stride(from: 10, through: 80, by: 10)
         .compactMap(ManualPower.value(decimal:))
 
@@ -155,7 +158,7 @@ public struct MultiFlashSettings: Equatable, Hashable, Sendable {
     public init?(power: ManualPower, count: Int, hertz: Int) {
         guard Self.supportedPowers.contains(power),
               Self.countRange.contains(count),
-              Self.hertzRange.contains(hertz) else {
+              Self.acceptedHertzRange.contains(hertz) else {
             return nil
         }
         self.power = power

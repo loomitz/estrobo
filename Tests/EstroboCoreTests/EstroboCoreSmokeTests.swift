@@ -36,4 +36,43 @@ final class EstroboCoreSmokeTests: XCTestCase {
         XCTAssertEqual(decoded.0, .b)
         XCTAssertEqual(decoded.1, snapshot)
     }
+
+    func testMultiFlashAccepts199HertzWithoutWideningLegacyEditorRange() throws {
+        XCTAssertEqual(MultiFlashSettings.hertzRange, 1...100)
+        XCTAssertEqual(MultiFlashSettings.acceptedHertzRange, 1...199)
+
+        let power = try XCTUnwrap(ManualPower.value(decimal: 50))
+        let legacy = try XCTUnwrap(
+            MultiFlashSettings(power: power, count: 10, hertz: 55)
+        )
+        let maximum = try XCTUnwrap(
+            MultiFlashSettings(power: power, count: 10, hertz: 199)
+        )
+
+        XCTAssertEqual(legacy.hertz, 55)
+        XCTAssertEqual(maximum.hertzByte, 0xC7)
+        XCTAssertEqual(
+            MultiFlashSettings(
+                countByte: maximum.countByte,
+                hertzByte: maximum.hertzByte,
+                powerByte: maximum.powerByte
+            ),
+            maximum
+        )
+        XCTAssertNil(MultiFlashSettings(power: power, count: 10, hertz: 200))
+
+        var snapshot = GlobalRadioSnapshot(
+            apkDefaultsWithBeepEnabled: false,
+            modelingLightEnabled: false,
+            standbyEnabled: false
+        )
+        snapshot.multiHertz = maximum.hertzByte
+        let frame = try SafeGodoxProtocol.globalFrame(snapshot: snapshot)
+
+        XCTAssertEqual([UInt8](frame)[9], 0xC7)
+        XCTAssertEqual(
+            SafeGodoxProtocol.globalSnapshot(from: frame)?.multiHertz,
+            0xC7
+        )
+    }
 }

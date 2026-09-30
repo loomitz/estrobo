@@ -41,7 +41,6 @@ enum EstroboAppearance: String, CaseIterable, Identifiable {
 
 enum PhoneWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
     case groups
-    case global
     case presets
     case settings
 
@@ -51,7 +50,6 @@ enum PhoneWorkspaceSection: String, CaseIterable, Identifiable, Hashable {
 enum TabletDestination: String, CaseIterable, Identifiable, Hashable {
     case connection
     case groups
-    case global
     case presets
     case savedRadios
     case settings

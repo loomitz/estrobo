@@ -6,12 +6,24 @@ import EstroboCore
 
 public enum SimulatedRadioScenario: String, CaseIterable, Sendable {
     case normal
+    case delayedSuccess = "delayed-success"
     case authenticationRejected
     case syncTimeout
     case controlWriteFailure
     case fec8Timeout
     case disconnectDuringWrite
     case bluetoothDenied
+
+    /// Keep the deterministic UI-test timing seam out of the user-facing Demo Lab.
+    public static let allCases: [SimulatedRadioScenario] = [
+        .normal,
+        .authenticationRejected,
+        .syncTimeout,
+        .controlWriteFailure,
+        .fec8Timeout,
+        .disconnectDuringWrite,
+        .bluetoothDenied,
+    ]
 }
 
 /// Deterministic, in-process adapter for Demo mode and automated tests.
@@ -262,7 +274,9 @@ final class SimulatedRadioTransport: RadioTransport {
             self.eventHandler?(.controlWriteStarted)
 
             do {
-                try await self.waitForMilliseconds(25)
+                try await self.waitForMilliseconds(
+                    self.scenario == .delayedSuccess ? 1_200 : 25
+                )
             } catch {
                 return
             }
@@ -285,8 +299,8 @@ final class SimulatedRadioTransport: RadioTransport {
                 ))
                 return
 
-            case .normal, .authenticationRejected, .syncTimeout, .fec8Timeout,
-                 .bluetoothDenied:
+            case .normal, .delayedSuccess, .authenticationRejected, .syncTimeout,
+                 .fec8Timeout, .bluetoothDenied:
                 self.eventHandler?(.commandSent(.control))
                 self.eventHandler?(.controlWriteCompleted)
                 self.finishControlWrite()

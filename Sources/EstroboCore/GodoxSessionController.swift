@@ -15,10 +15,42 @@ enum ForegroundSessionRequirement: Equatable, Sendable {
     }
 }
 
+@MainActor
+private final class EphemeralRadioConnectionPreferences:
+    RadioConnectionPreferencesStore {
+    private var state = RadioConnectionPreferenceState(
+        lastConnectedRadioID: nil,
+        automaticConnectionRadioID: nil
+    )
+
+    func load() -> RadioConnectionPreferenceState { state }
+
+    func save(_ state: RadioConnectionPreferenceState) -> Bool {
+        self.state = state
+        return true
+    }
+}
+
 enum ForegroundSessionState: Equatable, Sendable {
     case active
     case inactive(requirement: ForegroundSessionRequirement?)
     case actionRequired(ForegroundSessionRequirement)
+}
+
+enum TestDeliveryOutcome: Equatable, Sendable {
+    case simulated
+    case delivered
+    case failed
+}
+
+struct TestDeliveryResult: Equatable, Sendable {
+    let attemptID: UUID
+    let outcome: TestDeliveryOutcome
+}
+
+enum PendingGlobalMultiFlashTransition: Equatable, Sendable {
+    case enabling
+    case disabling
 }
 
 @MainActor
@@ -33,6 +65,9 @@ final class GodoxSessionController: NSObject, ObservableObject {
     @Published var radioCode = ""
     @Published var rememberSelectedRadio = false
     @Published private(set) var savedRadios: [SavedRadio]
+    @Published private(set) var lastConnectedRadioID: UUID?
+    @Published private(set) var automaticConnectionRadioID: UUID?
+    @Published private(set) var pendingSavedRadioConnectionID: UUID?
     @Published private(set) var connectedDeviceName: String?
     @Published private(set) var groups: [GodoxGroup: GroupDraft]
     @Published private(set) var transmitterProfile: TransmitterProfile
@@ -55,15 +90,21 @@ final class GodoxSessionController: NSObject, ObservableObject {
     @Published private(set) var isAutomaticApplyScheduled = false
     @Published private(set) var applySequenceStatus: ApplySequenceStatus?
     @Published private(set) var isTestPending = false
+    @Published private(set) var testDeliveryResult: TestDeliveryResult?
     @Published private(set) var isSynchronizingValues = false
+    @Published private(set) var isInitialValueSynchronizationAwaitingConfirmation = false
     @Published private(set) var lastValueSynchronizationAt: Date?
     @Published private(set) var presets: [StudioPreset] = []
     @Published private(set) var activePresetID: UUID?
     @Published private(set) var globalBeepEnabled = false
+    @Published private(set) var isGlobalModelingLightEnabled = false
     @Published private(set) var multiFlashBaseline = MultiFlashSettings.default
     @Published private(set) var multiFlashDraft = MultiFlashSettings.default
+    @Published private(set) var pendingGlobalMultiFlashTransition:
+        PendingGlobalMultiFlashTransition?
     @Published private(set) var isGlobalStandbyEnabled = false
     @Published private(set) var isGlobalControlPending = false
+    @Published private(set) var isDirectGlobalActionPending = false
     @Published private(set) var activeInteractiveEditCount = 0
     @Published private(set) var foregroundSessionState: ForegroundSessionState = .active
 
@@ -92,6 +133,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
         case valueSynchronization(ApplySequencePurpose)
         case pendingChanges
         case beep
+        case modeling
         case standby
 
         var keepsConnectionFlowVisible: Bool {
@@ -138,6 +180,14 @@ final class GodoxSessionController: NSObject, ObservableObject {
         let normalizedPowers: [(group: GodoxGroup, power: ManualPower)]
     }
 
+    /// Process-local credential used only to recover the same physical session.
+    /// It is never published, logged or persisted unless the user separately
+    /// enabled the existing Remember option.
+    private struct SessionReconnectCredential {
+        let deviceID: UUID
+        let radioCode: String
+    }
+
     private enum ControlIntent {
         case global(
             intentID: UUID,
@@ -174,6 +224,8 @@ final class GodoxSessionController: NSObject, ObservableObject {
 
     private let client: any RadioTransport
     private let deadlineScheduler: any SessionDeadlineScheduling
+    private let requiresExplicitInitialValueSynchronizationConfirmation: Bool
+    private let stagesNewWorkingGroupsAtSafeMinimum: Bool
     private var authenticationAttempt: UUID?
     private var scanDeadline: SessionDeadlineToken?
     private var connectionSetupDeadline: SessionDeadlineToken?
@@ -181,12 +233,14 @@ final class GodoxSessionController: NSObject, ObservableObject {
     private var automaticApplyDeadline: SessionDeadlineToken?
     private var valueSynchronizationSettleDeadline: SessionDeadlineToken?
     private var testDeliveryDeadline: SessionDeadlineToken?
+    private var pendingTestAttemptID: UUID?
     private var pendingDisconnectResolution: DisconnectResolution?
     private var authenticationTimeout: SessionDeadlineToken?
     private var synchronizationDelay: Task<Void, Never>?
     private var synchronizationTimeout: Task<Void, Never>?
     private var controlTimeout: Task<Void, Never>?
     private var pendingHeartbeatIntentID: UUID?
+    private var deferredHeartbeatResponse: Data?
     private var heartbeatTimeout: SessionDeadlineToken?
     private var radioResponseTimeouts: [GodoxGroup: Task<Void, Never>] = [:]
     private var controlIntents: [ControlIntent] = []
@@ -198,6 +252,14 @@ final class GodoxSessionController: NSObject, ObservableObject {
     private var acceptsTransportEvents = true
     private var foregroundRequirementSessionID: UUID?
     private var foregroundTransportSyncSessionID: UUID?
+    private var foregroundReconnectDeviceID: UUID?
+    private var foregroundReconnectWasAttempted = false
+    private var sessionReconnectCredential: SessionReconnectCredential?
+    private var pendingForegroundReconnectCredential: SessionReconnectCredential?
+    // The live adapter publishes a failed state and its matching semantic error
+    // synchronously. Recovery may re-enter the adapter between those callbacks.
+    private var pendingTransportFailureEcho: (token: UUID, message: String)?
+    private var shouldResumeAutomaticApplyAfterForeground = false
     private var shouldSaveRadioAfterAuthentication = false
     private var selectedDeviceWasChosenExplicitly = false
     private var sessionDeviceID: UUID?
@@ -210,6 +272,11 @@ final class GodoxSessionController: NSObject, ObservableObject {
     private var applySequenceJournalKind: ApplySequenceJournalKind = .none
     private var automaticApplySuppressedForLocalPreset = false
     private var interactiveEditTokens: Set<InteractiveEditToken> = []
+    private var retainedConnectionWasLostWhileInactive = false
+    /// Continuous controls may emit many draft values per second. Persist the
+    /// final value once the last gesture releases so disk-backed stores never
+    /// block the MainActor between visual slider updates.
+    private var interactiveEditNeedsPersistence = false
     private var globalRadioSnapshot = GlobalRadioSnapshot(
         apkDefaultsWithBeepEnabled: false,
         modelingLightEnabled: false,
@@ -220,11 +287,18 @@ final class GodoxSessionController: NSObject, ObservableObject {
     private let restorationStore: any RestorationRepository
     private let savedRadioStore: any SavedRadioRepository
     private let changeDeliveryPreferences: any ChangeDeliveryPreferencesStore
+    private let radioConnectionPreferences: any RadioConnectionPreferencesStore
     private let transmitterProfilePreferences: any TransmitterProfilePreferencesStore
     private let studioLibraryStore: any StudioLibraryRepository
 
     var restorationPoints: [GodoxGroup: GroupRestorationPoint] {
         physicalSafetyState.restorationPoints
+    }
+
+    /// A forward write owns its durable rollback journal until it either
+    /// succeeds or becomes uncertain; only the latter requires user recovery.
+    var requiresPhysicalRecovery: Bool {
+        !restorationPoints.isEmpty && applySequenceJournalKind != .forward
     }
 
     var preparedRestorations: Set<GodoxGroup> {
@@ -238,11 +312,17 @@ final class GodoxSessionController: NSObject, ObservableObject {
         restorationStore initialRestorationStore: any RestorationRepository,
         savedRadioStore initialSavedRadioStore: any SavedRadioRepository,
         changeDeliveryPreferences initialChangeDeliveryPreferences: any ChangeDeliveryPreferencesStore,
+        radioConnectionPreferences initialRadioConnectionPreferences: (any RadioConnectionPreferencesStore)? = nil,
         transmitterProfilePreferences initialTransmitterProfilePreferences: any TransmitterProfilePreferencesStore,
-        studioLibraryStore initialStudioLibraryStore: any StudioLibraryRepository
+        studioLibraryStore initialStudioLibraryStore: any StudioLibraryRepository,
+        requiresExplicitInitialValueSynchronizationConfirmation: Bool = false,
+        stagesNewWorkingGroupsAtSafeMinimum: Bool = false
     ) {
         client = transport
         self.deadlineScheduler = deadlineScheduler
+        self.requiresExplicitInitialValueSynchronizationConfirmation =
+            requiresExplicitInitialValueSynchronizationConfirmation
+        self.stagesNewWorkingGroupsAtSafeMinimum = stagesNewWorkingGroupsAtSafeMinimum
         let loadedLibrary: StudioLibrary?
         let studioLibraryLoadWasInvalid: Bool
         switch initialStudioLibraryStore.load() {
@@ -289,21 +369,45 @@ final class GodoxSessionController: NSObject, ObservableObject {
         restorationStore = initialRestorationStore
         savedRadioStore = initialSavedRadioStore
         changeDeliveryPreferences = initialChangeDeliveryPreferences
+        let resolvedRadioConnectionPreferences =
+            initialRadioConnectionPreferences ?? EphemeralRadioConnectionPreferences()
+        radioConnectionPreferences = resolvedRadioConnectionPreferences
         transmitterProfilePreferences = initialTransmitterProfilePreferences
         studioLibraryStore = initialStudioLibraryStore
         presets = loadedLibrary?.presets ?? []
         changeDeliveryMode = initialChangeDeliveryPreferences.load()
         let savedRadioLoadWasInvalid: Bool
+        let initialSavedRadios: [SavedRadio]
         switch initialSavedRadioStore.load() {
         case .none:
-            savedRadios = []
+            initialSavedRadios = []
             savedRadioLoadWasInvalid = false
         case .records(let radios):
-            savedRadios = radios
+            initialSavedRadios = radios
             savedRadioLoadWasInvalid = false
         case .invalid:
-            savedRadios = []
+            initialSavedRadios = []
             savedRadioLoadWasInvalid = true
+        }
+        savedRadios = initialSavedRadios
+        let savedRadioIDs = Set(initialSavedRadios.map(\.deviceID))
+        let loadedConnectionPreferences = resolvedRadioConnectionPreferences.load()
+        let initialLastConnectedRadioID = loadedConnectionPreferences.lastConnectedRadioID.flatMap {
+            savedRadioIDs.contains($0) ? $0 : nil
+        }
+        let initialAutomaticConnectionRadioID = loadedConnectionPreferences.automaticConnectionRadioID.flatMap {
+            savedRadioIDs.contains($0) ? $0 : nil
+        }
+        lastConnectedRadioID = initialLastConnectedRadioID
+        automaticConnectionRadioID = initialAutomaticConnectionRadioID
+        pendingSavedRadioConnectionID = nil
+        let normalizedConnectionPreferences = RadioConnectionPreferenceState(
+            lastConnectedRadioID: initialLastConnectedRadioID,
+            automaticConnectionRadioID: initialAutomaticConnectionRadioID
+        )
+        if !savedRadioLoadWasInvalid,
+           normalizedConnectionPreferences != loadedConnectionPreferences {
+            _ = resolvedRadioConnectionPreferences.save(normalizedConnectionPreferences)
         }
 
         let hiddenBaseline = ManualGroupSnapshot(
@@ -461,6 +565,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
         initialGlobalSnapshot.multiHertz = initialMultiFlashSettings.hertzByte
         initialGlobalSnapshot.multiPowerByte = initialMultiFlashSettings.powerByte
         globalRadioSnapshot = initialGlobalSnapshot
+        isGlobalModelingLightEnabled = initialGlobalModeling
         hasStoredWorkspaceConfiguration = restoredWorkspace != nil
         hasCompletedOnboarding = restoredWorkspace?.onboardingCompleted ?? false
         super.init()
@@ -538,6 +643,43 @@ final class GodoxSessionController: NSObject, ObservableObject {
         savedRadios.first { $0.deviceID == deviceID }
     }
 
+    var lastConnectedSavedRadio: SavedRadio? {
+        guard let lastConnectedRadioID else { return nil }
+        return savedRadio(for: lastConnectedRadioID)
+    }
+
+    var automaticConnectionSavedRadio: SavedRadio? {
+        guard let automaticConnectionRadioID else { return nil }
+        return savedRadio(for: automaticConnectionRadioID)
+    }
+
+    func isAutomaticConnectionEnabled(for deviceID: UUID) -> Bool {
+        automaticConnectionRadioID == deviceID
+    }
+
+    func setAutomaticConnectionEnabled(_ enabled: Bool, for deviceID: UUID) {
+        guard savedRadio(for: deviceID) != nil else { return }
+        let nextAutomaticID = enabled ? deviceID : (
+            automaticConnectionRadioID == deviceID ? nil : automaticConnectionRadioID
+        )
+        guard nextAutomaticID != automaticConnectionRadioID else { return }
+        let nextState = RadioConnectionPreferenceState(
+            lastConnectedRadioID: lastConnectedRadioID,
+            automaticConnectionRadioID: nextAutomaticID
+        )
+        guard radioConnectionPreferences.save(nextState) else {
+            addActivity(.warning, "No se pudo guardar la conexión automática")
+            return
+        }
+        automaticConnectionRadioID = nextAutomaticID
+        addActivity(
+            .info,
+            enabled
+                ? "Conexión automática activada para este radio"
+                : "Conexión automática desactivada"
+        )
+    }
+
     var isRadioCodeValid: Bool {
         SavedRadio.isValidRadioCode(radioCode)
     }
@@ -554,8 +696,35 @@ final class GodoxSessionController: NSObject, ObservableObject {
         String(device.id.uuidString.replacingOccurrences(of: "-", with: "").suffix(6))
     }
 
+    static func redactedDeviceIdentifier(_ identifier: UUID) -> String {
+        "CB-REDACTED-\(identifier.uuidString.suffix(4))"
+    }
+
     var isSessionReady: Bool { phase == .ready }
     var isSimulation: Bool { client.isSimulation }
+
+    var canConfirmInitialValueSynchronization: Bool {
+        isSceneActive &&
+            requiresExplicitInitialValueSynchronizationConfirmation &&
+            isInitialValueSynchronizationAwaitingConfirmation &&
+            phase == .synchronizing &&
+            hasCompletedOnboarding &&
+            restorationPoints.isEmpty &&
+            workingConfigurationIssue == nil &&
+            sessionID != nil &&
+            controlIntents.isEmpty &&
+            awaitingRadioResponses.isEmpty &&
+            activeGroupChange == nil &&
+            queuedGroupChanges.isEmpty &&
+            pendingHeartbeatIntentID == nil
+    }
+
+    var initialValueSynchronizationPreview: [String] {
+        workingGroups.map { group in
+            let snapshot = groupDraft(group).draft
+            return "\(group.label) · \(snapshot.operatingMode.label) · \(snapshot.power.label)"
+        }
+    }
 
     var isSceneActive: Bool {
         if case .inactive = foregroundSessionState { return false }
@@ -584,7 +753,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
             return "La sesión se interrumpió; vuelve a conectar el radio y completa Sync."
         case .inactive(requirement: .some(.recover(let deviceID))),
              .actionRequired(.recover(let deviceID)):
-            return "La entrega quedó incierta; reconecta el mismo radio (\(deviceID.uuidString)) y completa la recuperación."
+            return "La entrega quedó incierta; reconecta el mismo radio (\(Self.redactedDeviceIdentifier(deviceID))) y completa la recuperación."
         }
     }
 
@@ -593,6 +762,45 @@ final class GodoxSessionController: NSObject, ObservableObject {
     /// transport callback may resume delivery after this point.
     func suspendForInactiveScene() {
         guard isSceneActive else { return }
+        isDirectGlobalActionPending = false
+
+        let interruptedDeviceID = sessionDeviceID
+            ?? pendingSavedRadioConnectionID
+            ?? foregroundReconnectDeviceID
+        let automaticApplyWasScheduled = isAutomaticApplyScheduled
+
+        let canRetainReadyConnection = phase == .ready &&
+            sessionDeviceID != nil &&
+            pendingDisconnectResolution == nil &&
+            controlIntents.isEmpty &&
+            awaitingRadioResponses.isEmpty &&
+            activeGroupChange == nil &&
+            queuedGroupChanges.isEmpty &&
+            !isGlobalControlPending &&
+            !isSynchronizingValues
+
+        if canRetainReadyConnection {
+            let recoveryRequirement = restorationPoints.values.first.map {
+                ForegroundSessionRequirement.recover(deviceID: $0.deviceID)
+            }
+            foregroundSessionState = .inactive(requirement: recoveryRequirement)
+            retainedConnectionWasLostWhileInactive = false
+            foregroundReconnectWasAttempted = false
+            pendingForegroundReconnectCredential = nil
+            shouldResumeAutomaticApplyAfterForeground =
+                automaticApplyWasScheduled && pendingCount > 0
+            cancelAutomaticApply()
+            cancelInteractiveEdits()
+            clearTestDeliveryState()
+            heartbeatTimeout?.cancel()
+            heartbeatTimeout = nil
+            acceptsTransportEvents = true
+            addActivity(
+                .info,
+                "Conexión conservada; los controles quedan en pausa fuera de Estrobo"
+            )
+            return
+        }
 
         let wasScanning = phase == .scanning
         let hadSessionOrAttempt: Bool
@@ -612,7 +820,17 @@ final class GodoxSessionController: NSObject, ObservableObject {
             ?? (hadSessionOrAttempt ? .reconnectAndSynchronize : nil)
 
         foregroundSessionState = .inactive(requirement: requirement)
+        retainedConnectionWasLostWhileInactive = false
+        if case .reconnectAndSynchronize = requirement {
+            foregroundReconnectDeviceID = interruptedDeviceID
+        } else if case .recover(let deviceID) = requirement {
+            foregroundReconnectDeviceID = deviceID
+        }
+        foregroundReconnectWasAttempted = false
+        pendingForegroundReconnectCredential = nil
+        shouldResumeAutomaticApplyAfterForeground = false
         acceptsTransportEvents = false
+        pendingSavedRadioConnectionID = nil
 
         if wasScanning {
             client.stopScanning()
@@ -645,12 +863,31 @@ final class GodoxSessionController: NSObject, ObservableObject {
         }
     }
 
-    /// Reactivation only exposes the next explicit action. It never resumes a
-    /// scan, Test, debounce, Multi sequence or write.
+    /// Reactivation restores a retained Ready session and may rearm one pending
+    /// automatic debounce. Interrupted links become action-required here; the
+    /// coordinator may then start one exact-identifier scan. Test, Multi and
+    /// in-flight writes are never resumed.
     func resumeActiveScene() {
         guard case .inactive(let requirement) = foregroundSessionState else { return }
+        if retainedConnectionWasLostWhileInactive {
+            let interruptedDeviceID = sessionDeviceID ?? foregroundReconnectDeviceID
+            retainedConnectionWasLostWhileInactive = false
+            resetTransientSessionState()
+            connectedDeviceName = nil
+            phase = .idle
+            acceptsTransportEvents = true
+            foregroundReconnectDeviceID = interruptedDeviceID
+            foregroundReconnectWasAttempted = false
+            shouldResumeAutomaticApplyAfterForeground = false
+            foregroundSessionState = .actionRequired(
+                requirement ?? .reconnectAndSynchronize
+            )
+            addActivity(.warning, "El radio se desconectó mientras Estrobo estaba en pausa")
+            return
+        }
         if let requirement {
             foregroundSessionState = .actionRequired(requirement)
+            foregroundReconnectWasAttempted = false
             addActivity(
                 requirement.isRecovery
                     ? .error
@@ -660,6 +897,78 @@ final class GodoxSessionController: NSObject, ObservableObject {
             )
         } else {
             foregroundSessionState = .active
+            acceptsTransportEvents = true
+            let shouldResumeAutomaticApply = shouldResumeAutomaticApplyAfterForeground
+            shouldResumeAutomaticApplyAfterForeground = false
+            if shouldResumeAutomaticApply {
+                scheduleAutomaticApplyIfNeeded()
+            }
+        }
+    }
+
+    /// Attempts one foreground-only reconnection to the exact interrupted
+    /// CoreBluetooth identifier. A new scene activation may permit one new
+    /// attempt, but repeated calls during the same activation are idempotent.
+    /// The current transport port uses an exact-ID scan; direct peripheral
+    /// retrieval can remain a future adapter optimization, never a name fallback.
+    @discardableResult
+    func reconnectInterruptedSessionIfPossible() -> Bool {
+        guard isSceneActive,
+              case .actionRequired(let requirement) = foregroundSessionState,
+              !foregroundReconnectWasAttempted else {
+            return false
+        }
+
+        let requiredDeviceID: UUID?
+        switch requirement {
+        case .reconnectAndSynchronize:
+            requiredDeviceID = foregroundReconnectDeviceID
+        case .recover(let deviceID):
+            requiredDeviceID = deviceID
+        }
+        guard let requiredDeviceID,
+              let credential = reconnectCredential(for: requiredDeviceID) else {
+            return false
+        }
+
+        foregroundReconnectWasAttempted = true
+        return beginScanning(
+            savedRadioID: requiredDeviceID,
+            foregroundCredential: credential
+        )
+    }
+
+    private func reconnectCredential(
+        for deviceID: UUID
+    ) -> SessionReconnectCredential? {
+        if let credential = sessionReconnectCredential,
+           credential.deviceID == deviceID {
+            return credential
+        }
+        guard let savedRadio = savedRadio(for: deviceID) else { return nil }
+        return SessionReconnectCredential(
+            deviceID: deviceID,
+            radioCode: savedRadio.unsafeRadioCodePlaintext
+        )
+    }
+
+    private var requiredForegroundConnectionDeviceID: UUID? {
+        let requirement: ForegroundSessionRequirement?
+        switch foregroundSessionState {
+        case .active:
+            requirement = nil
+        case .inactive(let pendingRequirement):
+            requirement = pendingRequirement
+        case .actionRequired(let pendingRequirement):
+            requirement = pendingRequirement
+        }
+        switch requirement {
+        case .reconnectAndSynchronize:
+            return foregroundReconnectDeviceID
+        case .recover(let deviceID):
+            return deviceID
+        case nil:
+            return nil
         }
     }
 
@@ -683,6 +992,10 @@ final class GodoxSessionController: NSObject, ObservableObject {
         foregroundSessionState = .active
         foregroundRequirementSessionID = nil
         foregroundTransportSyncSessionID = nil
+        foregroundReconnectDeviceID = nil
+        foregroundReconnectWasAttempted = false
+        pendingForegroundReconnectCredential = nil
+        shouldResumeAutomaticApplyAfterForeground = false
         addActivity(.success, "Sesión foreground restablecida de forma segura")
     }
 
@@ -845,7 +1158,18 @@ final class GodoxSessionController: NSObject, ObservableObject {
         guard interactiveEditTokens.remove(token) != nil else { return }
         activeInteractiveEditCount = interactiveEditTokens.count
         guard interactiveEditTokens.isEmpty else { return }
+        persistDeferredInteractiveEditIfNeeded()
         scheduleAutomaticApplyIfNeeded()
+    }
+
+    /// Releases one continuous edit without arming automatic delivery. The
+    /// draft remains visible and pending so disappearing UI can fail closed.
+    func cancelInteractiveEdit(_ token: InteractiveEditToken) {
+        guard interactiveEditTokens.remove(token) != nil else { return }
+        activeInteractiveEditCount = interactiveEditTokens.count
+        guard interactiveEditTokens.isEmpty else { return }
+        persistDeferredInteractiveEditIfNeeded()
+        cancelAutomaticApply()
     }
 
     private var groupsEligibleForApply: [GodoxGroup] {
@@ -1001,6 +1325,11 @@ final class GodoxSessionController: NSObject, ObservableObject {
             }
     }
 
+    var canToggleGlobalModelingLight: Bool {
+        canToggleGlobalStandby && !isGlobalStandbyEnabled && pendingCount == 0 &&
+            (isGlobalModelingLightEnabled || hasConfiguredModelingLight)
+    }
+
     var canEditMultiFlashSettings: Bool {
         isSceneActive && recoveryBlockReason == nil && phase == .ready && !isReconfiguringWorkspace &&
             !isGlobalStandbyEnabled && !isTestPending &&
@@ -1013,7 +1342,8 @@ final class GodoxSessionController: NSObject, ObservableObject {
     /// encenderlo debe existir al menos un grupo activo compatible; al apagarlo
     /// toda la escena de trabajo debe poder quedar en Manual de forma válida.
     func canSetGlobalMultiFlashEnabled(_ enabled: Bool) -> Bool {
-        guard canEditMultiFlashSettings,
+        guard !isInteractiveEditActive,
+              canEditMultiFlashSettings,
               enabled != !multiFlashGroups.isEmpty else {
             return false
         }
@@ -1073,8 +1403,17 @@ final class GodoxSessionController: NSObject, ObservableObject {
     }
 
     var hasUnverifiedMultiFlashCountLimit: Bool {
-        multiFlashGroups.contains {
-            resolvedCapability(for: $0).hasUnverifiedMultiLimits
+        multiFlashGroups.contains { group in
+            let capability = resolvedCapability(for: group)
+            // A known model is still unverified when its published profile has
+            // no cell for the current power/frequency combination.
+            return capability.hasUnverifiedMultiLimits ||
+                capability.multiLimitProfiles.contains { profile in
+                    profile.maximumFlashCount(
+                        power: multiFlashDraft.power,
+                        hertz: multiFlashDraft.hertz
+                    ) == nil
+                }
         }
     }
 
@@ -1168,6 +1507,18 @@ final class GodoxSessionController: NSObject, ObservableObject {
         return groupDraft(group).draft.operatingMode == .manual
     }
 
+    func canAdjustPower(_ group: GodoxGroup, direction: Int) -> Bool {
+        guard canEdit(group), direction == -1 || direction == 1,
+              let state = groups[group] else {
+            return false
+        }
+        return adjustedPower(
+            from: state.draft.power,
+            allowed: allowedPowers(for: group),
+            direction: direction
+        ) != nil
+    }
+
     func availableOperatingModes(for group: GodoxGroup) -> [GroupOperatingMode] {
         var modes: [GroupOperatingMode] = [.manual, .autoTTL]
         if supportsMultiFlash(group) { modes.append(.multi) }
@@ -1213,6 +1564,12 @@ final class GodoxSessionController: NSObject, ObservableObject {
 
     func allowedModeling(for group: GodoxGroup) -> [ModelingLight] {
         allowedModelingLights(for: group)
+    }
+
+    private var hasConfiguredModelingLight: Bool {
+        workingGroups.contains { group in
+            groups[group]?.draft.modeling != .off
+        }
     }
 
     func canEditBeep(_ group: GodoxGroup) -> Bool {
@@ -1418,6 +1775,14 @@ final class GodoxSessionController: NSObject, ObservableObject {
         let normalizedPower = normalizeDraftPowerToCommonRange(&state, for: group)
         state.draft.modeling = modeling
         groups[group] = state
+        if modeling != .off {
+            // A deliberate local edit means the person expects the configured
+            // light to be available. Keep every A1 choice intact while making
+            // the independent A0 master consistent with that intent.
+            isGlobalModelingLightEnabled = true
+        } else if !hasConfiguredModelingLight {
+            isGlobalModelingLightEnabled = false
+        }
         noteCommonRangeNormalization(normalizedPower, for: group)
         draftDidChange()
     }
@@ -1431,6 +1796,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
 
     func setGlobalBeep(_ enabled: Bool) {
         guard canToggleGlobalBeep, globalBeepEnabled != enabled else { return }
+        isDirectGlobalActionPending = true
         cancelAutomaticApply()
         automaticApplySuppressedForLocalPreset = false
 
@@ -1458,12 +1824,35 @@ final class GodoxSessionController: NSObject, ObservableObject {
             restorationGlobalSnapshot: globalRadioSnapshot
         )
         if !submitGlobalControl(snapshot, purpose: .beep, followup: followup) {
+            isDirectGlobalActionPending = false
             addActivity(.error, "No se pudo preparar el cambio global de beep")
+        }
+    }
+
+    /// A0-only master for modeling lights. Per-group Off/Proportional/Manual
+    /// selections and manual intensities remain untouched so they return when
+    /// the master is turned on again.
+    func setGlobalModelingLightEnabled(_ enabled: Bool) {
+        guard canToggleGlobalModelingLight,
+              isGlobalModelingLightEnabled != enabled else { return }
+        isDirectGlobalActionPending = true
+        cancelAutomaticApply()
+        automaticApplySuppressedForLocalPreset = false
+
+        let previousValue = isGlobalModelingLightEnabled
+        var snapshot = globalRadioSnapshot
+        snapshot.modelingLightEnabled = enabled
+        isGlobalModelingLightEnabled = enabled
+        if !submitGlobalControl(snapshot, purpose: .modeling, followup: nil) {
+            isDirectGlobalActionPending = false
+            isGlobalModelingLightEnabled = previousValue
+            addActivity(.error, "No se pudo preparar el cambio global de modelado")
         }
     }
 
     func setGlobalStandby(_ enabled: Bool) {
         guard canToggleGlobalStandby, isGlobalStandbyEnabled != enabled else { return }
+        isDirectGlobalActionPending = true
         cancelAutomaticApply()
         automaticApplySuppressedForLocalPreset = false
 
@@ -1473,6 +1862,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
         snapshot.standbyEnabled = enabled
         isGlobalStandbyEnabled = enabled
         if !submitGlobalControl(snapshot, purpose: .standby, followup: nil) {
+            isDirectGlobalActionPending = false
             isGlobalStandbyEnabled.toggle()
             addActivity(.error, "No se pudo preparar el standby general")
         }
@@ -1563,19 +1953,26 @@ final class GodoxSessionController: NSObject, ObservableObject {
         let mode = groupDraft(group).draft.operatingMode
         if enabled {
             if mode == .off {
+                pendingGlobalMultiFlashTransition = nil
                 setDraftRadioEnabled(group, enabled: true)
             }
         } else if mode == .multi {
+            pendingGlobalMultiFlashTransition = nil
             setDraftRadioEnabled(group, enabled: false)
         }
     }
 
     func setGlobalMultiFlashEnabled(_ enabled: Bool) {
         guard canSetGlobalMultiFlashEnabled(enabled) else { return }
-        if enabled {
-            _ = beginMultiFlashScene()
-        } else {
-            _ = endMultiFlashSceneInManual()
+        let transition: PendingGlobalMultiFlashTransition = enabled
+            ? .enabling
+            : .disabling
+        pendingGlobalMultiFlashTransition = transition
+        let didChange = enabled
+            ? beginMultiFlashScene()
+            : endMultiFlashSceneInManual()
+        if !didChange || pendingCount == 0 {
+            pendingGlobalMultiFlashTransition = nil
         }
     }
 
@@ -1738,6 +2135,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
     }
 
     private func updateMultiFlashDraft(_ candidate: MultiFlashSettings) {
+        pendingGlobalMultiFlashTransition = nil
         multiFlashDraft = candidate
         draftDidChange()
     }
@@ -2061,11 +2459,18 @@ final class GodoxSessionController: NSObject, ObservableObject {
             } else {
                 var safeSnapshot = state.draft
                 safeSnapshot.operatingMode = .off
-                if !capability.powerScale.contains(safeSnapshot.power) {
+                if stagesNewWorkingGroupsAtSafeMinimum {
                     safeSnapshot.power = safeMinimum
-                }
-                if safeSnapshot.beepEnabled && !capability.supportsBeepDraft {
+                    safeSnapshot.modelingState = ModelingState(.off)
                     safeSnapshot.beepEnabled = false
+                    safeSnapshot.compensationByte = 0
+                } else {
+                    if !capability.powerScale.contains(safeSnapshot.power) {
+                        safeSnapshot.power = safeMinimum
+                    }
+                    if safeSnapshot.beepEnabled && !capability.supportsBeepDraft {
+                        safeSnapshot.beepEnabled = false
+                    }
                 }
                 state = GroupDraft(baseline: safeSnapshot, draft: safeSnapshot)
                 configuration.isEnabledOnRadio = false
@@ -2327,10 +2732,14 @@ final class GodoxSessionController: NSObject, ObservableObject {
         let previousActivePresetID = activePresetID
         let previousAutomaticSuppression = automaticApplySuppressedForLocalPreset
         let previousGlobalBeepEnabled = globalBeepEnabled
+        let previousGlobalModelingLightEnabled = isGlobalModelingLightEnabled
         let previousMultiFlashBaseline = multiFlashBaseline
         let previousMultiFlashDraft = multiFlashDraft
         let presetGlobalBeep = preset.groups.contains {
             preset.states[$0]?.beepEnabled == true
+        }
+        let presetGlobalModelingLight = preset.groups.contains {
+            preset.states[$0]?.modeling != .off
         }
         for group in preset.groups {
             guard var snapshot = preset.states[group], var state = groups[group] else { continue }
@@ -2353,6 +2762,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
             groupConfigurations[group]?.isEnabledOnRadio = snapshot.isEnabledOnRadio
         }
         globalBeepEnabled = presetGlobalBeep
+        isGlobalModelingLightEnabled = presetGlobalModelingLight
         multiFlashDraft = preset.multiFlashSettings
         if phase == .idle {
             multiFlashBaseline = preset.multiFlashSettings
@@ -2361,6 +2771,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
         guard persistStudioLibrary() else {
             groups = previousGroups
             globalBeepEnabled = previousGlobalBeepEnabled
+            isGlobalModelingLightEnabled = previousGlobalModelingLightEnabled
             multiFlashBaseline = previousMultiFlashBaseline
             multiFlashDraft = previousMultiFlashDraft
             activePresetID = previousActivePresetID
@@ -2490,6 +2901,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
                powerByte: globalSnapshot.multiPowerByte
            ) {
             globalBeepEnabled = globalSnapshot.beepEnabled
+            isGlobalModelingLightEnabled = globalSnapshot.modelingLightEnabled
             multiFlashDraft = settings
             isGlobalStandbyEnabled = globalSnapshot.standbyEnabled
         }
@@ -2508,13 +2920,25 @@ final class GodoxSessionController: NSObject, ObservableObject {
             if let testBlockReason { addActivity(.warning, testBlockReason) }
             return
         }
+        clearTestDeliveryState()
+        let attemptID = UUID()
+        pendingTestAttemptID = attemptID
         isTestPending = true
-        testDeliveryDeadline?.cancel()
         testDeliveryDeadline = deadlineScheduler.schedule(.testDelivery) { [weak self] in
-            guard let self, self.isTestPending else { return }
-            self.testDeliveryDeadline = nil
-            self.isTestPending = false
+            guard let self,
+                  let result = self.completePendingTestDelivery(
+                      outcome: .failed,
+                      expectedAttemptID: attemptID
+                  ) else {
+                return
+            }
             self.invalidateSession("La orden Test no fue entregada a CoreBluetooth en 3 segundos")
+            // Invalidating cancels every in-flight task and clears presentation
+            // state. Publish the timeout only while that reset is still pending;
+            // a synchronous transport reset must leave no stale outcome behind.
+            if self.pendingDisconnectResolution != nil {
+                self.testDeliveryResult = result
+            }
         }
         addActivity(
             .warning,
@@ -2525,31 +2949,89 @@ final class GodoxSessionController: NSObject, ObservableObject {
         client.sendTest(SafeGodoxProtocol.testPayload(now: Date()))
     }
 
+    private func clearTestDeliveryState() {
+        testDeliveryDeadline?.cancel()
+        testDeliveryDeadline = nil
+        pendingTestAttemptID = nil
+        isTestPending = false
+        testDeliveryResult = nil
+    }
+
+    private func completePendingTestDelivery(
+        outcome: TestDeliveryOutcome,
+        expectedAttemptID: UUID? = nil
+    ) -> TestDeliveryResult? {
+        guard isTestPending,
+              let attemptID = pendingTestAttemptID,
+              expectedAttemptID == nil || expectedAttemptID == attemptID else {
+            return nil
+        }
+        testDeliveryDeadline?.cancel()
+        testDeliveryDeadline = nil
+        pendingTestAttemptID = nil
+        isTestPending = false
+        return TestDeliveryResult(attemptID: attemptID, outcome: outcome)
+    }
+
     func startScanning() {
-        guard isSceneActive else { return }
+        _ = beginScanning(savedRadioID: nil)
+    }
+
+    /// Scans for one remembered CoreBluetooth identifier and connects once it
+    /// is discovered. Names are deliberately not used as a fallback.
+    @discardableResult
+    func connectSavedRadioWhenDiscovered(_ deviceID: UUID) -> Bool {
+        guard savedRadio(for: deviceID) != nil else {
+            failLocally("El último radio ya no está guardado en este dispositivo")
+            return false
+        }
+        return beginScanning(savedRadioID: deviceID)
+    }
+
+    @discardableResult
+    private func beginScanning(
+        savedRadioID: UUID?,
+        foregroundCredential: SessionReconnectCredential? = nil
+    ) -> Bool {
+        guard isSceneActive else { return false }
         if let recoveryBlockReason {
             addActivity(.error, recoveryBlockReason)
-            return
+            return false
         }
         guard pendingDisconnectResolution == nil else {
             addActivity(.warning, "Espera a que termine la recuperación del enlace")
-            return
+            return false
         }
         acceptsTransportEvents = true
         resetTransientSessionState()
+        pendingSavedRadioConnectionID = savedRadioID
+        pendingForegroundReconnectCredential = foregroundCredential
         devices.removeAll()
         selectDeviceAutomatically(nil)
         phase = .scanning
+        armScanDeadlineIfNeeded()
+        if savedRadioID != nil {
+            addActivity(.info, "Buscando el radio guardado")
+        }
+        // The target is armed before calling the transport because the port
+        // contract permits synchronous discovery callbacks.
+        client.startScanning()
+        return true
+    }
+
+    private func armScanDeadlineIfNeeded() {
+        guard scanDeadline == nil else { return }
         scanDeadline = deadlineScheduler.schedule(.scan) { [weak self] in
             guard let self, self.phase == .scanning else { return }
             self.scanDeadline = nil
+            self.pendingSavedRadioConnectionID = nil
+            self.pendingForegroundReconnectCredential = nil
             self.client.stopScanning()
             if self.phase == .scanning {
                 self.phase = .idle
             }
             self.addActivity(.info, "Búsqueda finalizada; puedes volver a intentar")
         }
-        client.startScanning()
     }
 
     func connectSelectedDevice() {
@@ -2566,12 +3048,23 @@ final class GodoxSessionController: NSObject, ObservableObject {
             failLocally("El código local del radio debe tener seis dígitos")
             return
         }
+        if let requiredDeviceID = requiredForegroundConnectionDeviceID,
+           requiredDeviceID != selectedDevice.id {
+            failLocally("La sesión interrumpida pertenece a otro radio; reconecta el transmisor original")
+            return
+        }
         if !physicalSafetyState.permitsConnection(to: selectedDevice.id) {
             failLocally("La restauración pendiente pertenece a otro radio; selecciona el transmisor original")
             return
         }
+        let reconnectCredential = SessionReconnectCredential(
+            deviceID: selectedDevice.id,
+            radioCode: radioCode
+        )
         acceptsTransportEvents = true
         resetTransientSessionState()
+        sessionReconnectCredential = reconnectCredential
+        pendingForegroundReconnectCredential = nil
         lastValueSynchronizationAt = nil
         shouldSaveRadioAfterAuthentication = rememberSelectedRadio
         sessionDeviceID = selectedDevice.id
@@ -2602,12 +3095,15 @@ final class GodoxSessionController: NSObject, ObservableObject {
             addActivity(.warning, "Espera a que termine la operación pendiente")
             return
         }
+        clearReconnectCredentialForExplicitStop()
         beginDisconnectRecovery(.idle)
     }
 
     func cancelConnectionAttempt() {
         guard canCancelConnectionAttempt else { return }
+        clearReconnectCredentialForExplicitStop()
         if phase == .scanning {
+            pendingSavedRadioConnectionID = nil
             scanDeadline?.cancel()
             scanDeadline = nil
             client.stopScanning()
@@ -2637,8 +3133,10 @@ final class GodoxSessionController: NSObject, ObservableObject {
         selectedDeviceWasChosenExplicitly = explicitly
         if let deviceID, let savedRadio = savedRadio(for: deviceID) {
             radioCode = savedRadio.unsafeRadioCodePlaintext
+            rememberSelectedRadio = true
         } else {
             radioCode = ""
+            rememberSelectedRadio = false
         }
     }
 
@@ -2650,11 +3148,52 @@ final class GodoxSessionController: NSObject, ObservableObject {
             return
         }
         savedRadios.removeAll { $0.deviceID == deviceID }
+        if lastConnectedRadioID == deviceID || automaticConnectionRadioID == deviceID {
+            lastConnectedRadioID = lastConnectedRadioID == deviceID
+                ? nil
+                : lastConnectedRadioID
+            automaticConnectionRadioID = automaticConnectionRadioID == deviceID
+                ? nil
+                : automaticConnectionRadioID
+            let state = RadioConnectionPreferenceState(
+                lastConnectedRadioID: lastConnectedRadioID,
+                automaticConnectionRadioID: automaticConnectionRadioID
+            )
+            if !radioConnectionPreferences.save(state) {
+                addActivity(
+                    .warning,
+                    "El radio se eliminó, pero sus preferencias se limpiarán al reiniciar"
+                )
+            }
+        }
         if selectedDeviceID == deviceID {
             rememberSelectedRadio = false
             radioCode = ""
         }
-        addActivity(.info, "Radio guardado eliminado de este Mac")
+        if sessionReconnectCredential?.deviceID == deviceID {
+            sessionReconnectCredential = nil
+        }
+        if pendingForegroundReconnectCredential?.deviceID == deviceID {
+            pendingForegroundReconnectCredential = nil
+        }
+        addActivity(.info, "Radio guardado eliminado de este dispositivo")
+    }
+
+    private func clearReconnectCredentialForExplicitStop() {
+        sessionReconnectCredential = nil
+        pendingForegroundReconnectCredential = nil
+        pendingSavedRadioConnectionID = nil
+        foregroundReconnectWasAttempted = false
+        shouldResumeAutomaticApplyAfterForeground = false
+        if let recoveryDeviceID = restorationPoints.values.first?.deviceID {
+            foregroundReconnectDeviceID = recoveryDeviceID
+            foregroundSessionState = .actionRequired(
+                .recover(deviceID: recoveryDeviceID)
+            )
+        } else {
+            foregroundReconnectDeviceID = nil
+            foregroundSessionState = .active
+        }
     }
 
     func noteTerminationBlockedForRestoration() {
@@ -2698,6 +3237,20 @@ final class GodoxSessionController: NSObject, ObservableObject {
             "Potencia global \(step) · \(anchor.keys.sorted { $0.rawValue < $1.rawValue }.map(\.label).joined(separator: ", "))"
         )
         return outcome
+    }
+
+    /// Confirma un único ajuste global relativo una vez que el control visual
+    /// terminó. El dominio captura el estado actual, limita el delta a la
+    /// ventana de ±3 EV y al recorrido físico común, y muta el lote una sola
+    /// vez; por eso persistencia y entrega automática también se planifican
+    /// una sola vez, incluso para offsets de varios pasos.
+    @discardableResult
+    func adjustGlobalPower(offsetSteps: Int) -> GlobalPowerAdjustmentOutcome {
+        attemptGlobalPowerAdjustment(
+            offsetSteps: offsetSteps,
+            from: makeGlobalPowerAnchor(),
+            limitedTo: 9
+        )
     }
 
     /// Aplica un offset discreto de 1/3 EV desde una instantánea estable.
@@ -2909,10 +3462,21 @@ final class GodoxSessionController: NSObject, ObservableObject {
     private func draftDidChange() {
         activePresetID = nil
         automaticApplySuppressedForLocalPreset = false
-        if hasCompletedOnboarding, !persistStudioLibrary() {
-            addActivity(.warning, "El valor cambió, pero no pudo guardarse para la próxima sesión")
+        if hasCompletedOnboarding {
+            if isInteractiveEditActive {
+                interactiveEditNeedsPersistence = true
+            } else if !persistStudioLibrary() {
+                addActivity(.warning, "El valor cambió, pero no pudo guardarse para la próxima sesión")
+            }
         }
         scheduleAutomaticApplyIfNeeded()
+    }
+
+    private func persistDeferredInteractiveEditIfNeeded() {
+        guard interactiveEditNeedsPersistence else { return }
+        interactiveEditNeedsPersistence = false
+        guard hasCompletedOnboarding, !persistStudioLibrary() else { return }
+        addActivity(.warning, "El valor cambió, pero no pudo guardarse para la próxima sesión")
     }
 
     private func scheduleAutomaticApplyIfNeeded() {
@@ -2995,7 +3559,11 @@ final class GodoxSessionController: NSObject, ObservableObject {
         applySequencePurpose = .pendingChanges
         applySequenceJournalKind = .none
         isSynchronizingValues = false
+        isDirectGlobalActionPending = false
         phase = .ready
+        if pendingCount == 0 {
+            pendingGlobalMultiFlashTransition = nil
+        }
         if completedPurpose.synchronizesValues {
             lastValueSynchronizationAt = Date()
             addActivity(
@@ -3006,10 +3574,12 @@ final class GodoxSessionController: NSObject, ObservableObject {
         resolveForegroundRequirementIfSafe(
             valueSynchronizationCompleted: completedPurpose.synchronizesValues
         )
+        submitDeferredHeartbeatIfPossible()
         scheduleAutomaticApplyIfNeeded()
     }
 
     private func cancelApplySequence() {
+        isDirectGlobalActionPending = false
         queuedGroupChanges.removeAll()
         activeGroupChange = nil
         applySequenceCompletedCount = 0
@@ -3049,6 +3619,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
         }
         cancelAutomaticApply()
         automaticApplySuppressedForLocalPreset = false
+        pendingGlobalMultiFlashTransition = nil
         for group in transmitterProfile.supportedGroups {
             guard var state = groups[group] else { continue }
             state.discard()
@@ -3066,6 +3637,9 @@ final class GodoxSessionController: NSObject, ObservableObject {
         }
         globalBeepEnabled = workingGroups.contains {
             groups[$0]?.draft.beepEnabled == true
+        }
+        if !hasConfiguredModelingLight {
+            isGlobalModelingLightEnabled = false
         }
         activePresetID = nil
         if hasCompletedOnboarding, !persistStudioLibrary() {
@@ -3165,6 +3739,34 @@ final class GodoxSessionController: NSObject, ObservableObject {
         startValueSynchronization(purpose: .manualSynchronization)
     }
 
+    func confirmInitialValueSynchronization() {
+        guard canConfirmInitialValueSynchronization else { return }
+        isInitialValueSynchronizationAwaitingConfirmation = false
+        addActivity(
+            .info,
+            "Sincronización inicial confirmada · preparando A0 y los grupos de trabajo"
+        )
+        scheduleInitialValueSynchronization()
+    }
+
+    private func scheduleInitialValueSynchronization() {
+        guard phase == .synchronizing, let expectedSessionID = sessionID else {
+            invalidateSession("No se pudo preparar la sincronización inicial")
+            return
+        }
+        isSynchronizingValues = true
+        valueSynchronizationSettleDeadline?.cancel()
+        valueSynchronizationSettleDeadline = deadlineScheduler.schedule(
+            .valueSynchronizationSettle
+        ) { [weak self] in
+            guard let self,
+                  self.phase == .synchronizing,
+                  self.sessionID == expectedSessionID else { return }
+            self.valueSynchronizationSettleDeadline = nil
+            self.startValueSynchronization(purpose: .connectionSynchronization)
+        }
+    }
+
     private func startValueSynchronization(purpose: ApplySequencePurpose) {
         automaticApplySuppressedForLocalPreset = false
         guard isSceneActive,
@@ -3205,9 +3807,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
     private func desiredGlobalSnapshot() -> GlobalRadioSnapshot {
         var snapshot = globalRadioSnapshot
         snapshot.beepEnabled = globalBeepEnabled
-        snapshot.modelingLightEnabled = workingGroups.contains { group in
-            groups[group]?.draft.modeling != .off
-        }
+        snapshot.modelingLightEnabled = isGlobalModelingLightEnabled
         snapshot.multiEnabled = !multiFlashGroups.isEmpty
         snapshot.multiCount = multiFlashDraft.countByte
         snapshot.multiHertz = multiFlashDraft.hertzByte
@@ -3275,6 +3875,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
             let intentID = UUID()
             globalRadioSnapshot = snapshot
             globalBeepEnabled = snapshot.beepEnabled
+            isGlobalModelingLightEnabled = snapshot.modelingLightEnabled
             isGlobalStandbyEnabled = snapshot.standbyEnabled
             isGlobalControlPending = true
             phase = purpose.keepsConnectionFlowVisible ? .synchronizing : .applying
@@ -3295,6 +3896,13 @@ final class GodoxSessionController: NSObject, ObservableObject {
                 addActivity(.info, "Actualizando el estado global y Multi antes de los grupos")
             case .beep:
                 addActivity(.info, "Enviando beep global \(snapshot.beepEnabled ? "on" : "off")")
+            case .modeling:
+                addActivity(
+                    .info,
+                    snapshot.modelingLightEnabled
+                        ? "Encendiendo las luces de modelado"
+                        : "Apagando las luces de modelado"
+                )
             case .standby:
                 addActivity(.info, snapshot.standbyEnabled
                     ? "Activando standby general"
@@ -3634,7 +4242,11 @@ final class GodoxSessionController: NSObject, ObservableObject {
     }
 
     private func handleTransportEvent(_ event: TransportEvent) {
-        guard isSceneActive, acceptsTransportEvents else { return }
+        guard acceptsTransportEvents else { return }
+        guard isSceneActive else {
+            captureTransportEventWhileInactive(event)
+            return
+        }
         switch event {
         case .stateChanged(let clientState):
             handleClientState(clientState)
@@ -3657,6 +4269,23 @@ final class GodoxSessionController: NSObject, ObservableObject {
                 devices.append(device)
             }
             devices.sort { $0.rssi > $1.rssi }
+            let foregroundCredential = pendingForegroundReconnectCredential
+            let hasExactReconnectCredential =
+                foregroundCredential?.deviceID == device.id
+            if pendingSavedRadioConnectionID == device.id,
+               savedRadio(for: device.id) != nil || hasExactReconnectCredential {
+                pendingSavedRadioConnectionID = nil
+                pendingForegroundReconnectCredential = nil
+                selectDeviceAutomatically(device.id)
+                if let foregroundCredential, hasExactReconnectCredential {
+                    radioCode = foregroundCredential.radioCode
+                    rememberSelectedRadio = savedRadio(for: device.id) != nil
+                } else {
+                    rememberSelectedRadio = true
+                }
+                connectSelectedDevice()
+                return
+            }
             if let preferredSavedRadio = savedRadios.first(where: { saved in
                 devices.contains { $0.id == saved.deviceID }
             }), !selectedDeviceWasChosenExplicitly {
@@ -3708,6 +4337,11 @@ final class GodoxSessionController: NSObject, ObservableObject {
             handleCommandFailure(kind, message: error.localizedDescription)
 
         case .failed(let error):
+            if consumeTransportFailureEchoIfRecovering(error) {
+                return
+            }
+            let readyConnectionWasLost = phase == .ready && sessionDeviceID != nil
+            let interruptedDeviceID = sessionDeviceID
             authenticationAttempt = nil
             cancelSessionTasks()
             cancelApplySequence()
@@ -3716,6 +4350,24 @@ final class GodoxSessionController: NSObject, ObservableObject {
             pendingDisconnectResolution = nil
             phase = .failed(error.localizedDescription)
             addActivity(.error, error.localizedDescription)
+            if readyConnectionWasLost {
+                requireReconnectAfterUnexpectedReadyLoss(
+                    deviceID: interruptedDeviceID
+                )
+            }
+        }
+    }
+
+    private func captureTransportEventWhileInactive(_ event: TransportEvent) {
+        switch event {
+        case .stateChanged(.idle),
+             .stateChanged(.bluetoothUnavailable),
+             .stateChanged(.failed),
+             .failed,
+             .commandFailed:
+            retainedConnectionWasLostWhileInactive = true
+        default:
+            break
         }
     }
 
@@ -3726,6 +4378,8 @@ final class GodoxSessionController: NSObject, ObservableObject {
                 completeDisconnectRecovery()
                 return
             }
+            let readyConnectionWasLost = phase == .ready && sessionDeviceID != nil
+            let interruptedDeviceID = sessionDeviceID
             let scanWasActive = phase == .scanning
             resetTransientSessionState()
             if !scanWasActive {
@@ -3733,16 +4387,31 @@ final class GodoxSessionController: NSObject, ObservableObject {
                 phase = .idle
                 connectedDeviceName = nil
             }
+            if readyConnectionWasLost {
+                requireReconnectAfterUnexpectedReadyLoss(
+                    deviceID: interruptedDeviceID
+                )
+            }
         case .waitingForBluetooth:
+            scanDeadline?.cancel()
+            scanDeadline = nil
             phase = .scanning
         case .bluetoothUnavailable(let reason):
+            let readyConnectionWasLost = phase == .ready && sessionDeviceID != nil
+            let interruptedDeviceID = sessionDeviceID
             pendingDisconnectResolution = nil
             resetTransientSessionState()
             radioCode = ""
             phase = .unavailable(reason)
             connectedDeviceName = nil
+            if readyConnectionWasLost {
+                requireReconnectAfterUnexpectedReadyLoss(
+                    deviceID: interruptedDeviceID
+                )
+            }
         case .scanning:
             phase = .scanning
+            armScanDeadlineIfNeeded()
         case .connecting(let device):
             sessionIsInvalidating = false
             sessionDeviceID = device.id
@@ -3759,10 +4428,73 @@ final class GodoxSessionController: NSObject, ObservableObject {
         case .disconnecting:
             phase = .disconnecting
         case .failed(let message):
+            let readyConnectionWasLost = phase == .ready && sessionDeviceID != nil
+            let interruptedDeviceID = sessionDeviceID
             cancelSessionTasks()
             cancelApplySequence()
+            pendingSavedRadioConnectionID = nil
             phase = .failed(message)
+            if readyConnectionWasLost {
+                requireReconnectAfterUnexpectedReadyLoss(
+                    deviceID: interruptedDeviceID
+                )
+                armTransportFailureEcho(message)
+            }
         }
+    }
+
+    private func armTransportFailureEcho(_ message: String) {
+        let token = UUID()
+        pendingTransportFailureEcho = (token, message)
+        Task { @MainActor [weak self] in
+            guard self?.pendingTransportFailureEcho?.token == token else { return }
+            self?.pendingTransportFailureEcho = nil
+        }
+    }
+
+    private func consumeTransportFailureEchoIfRecovering(
+        _ error: RadioTransportError
+    ) -> Bool {
+        guard let pendingTransportFailureEcho else { return false }
+        self.pendingTransportFailureEcho = nil
+        let reconnectPhaseOwnsTransport: Bool
+        switch phase {
+        case .scanning, .connecting, .discovering, .authenticating, .synchronizing:
+            reconnectPhaseOwnsTransport = true
+        case .idle, .ready, .applying, .disconnecting, .unavailable, .failed:
+            reconnectPhaseOwnsTransport = false
+        }
+        let requiredDeviceID = requiredForegroundConnectionDeviceID
+        let exactTargetIsInFlight = requiredDeviceID != nil && (
+            pendingSavedRadioConnectionID == requiredDeviceID ||
+                sessionDeviceID == requiredDeviceID
+        )
+        guard pendingTransportFailureEcho.message == error.localizedDescription,
+              reconnectPhaseOwnsTransport,
+              foregroundReconnectWasAttempted,
+              exactTargetIsInFlight,
+              case .actionRequired = foregroundSessionState else {
+            return false
+        }
+        addActivity(
+            .info,
+            "Notificación de fallo Bluetooth duplicada ignorada durante la reconexión"
+        )
+        return true
+    }
+
+    private func requireReconnectAfterUnexpectedReadyLoss(deviceID: UUID?) {
+        let requirement = foregroundSessionRequirement ?? .reconnectAndSynchronize
+        switch requirement {
+        case .reconnectAndSynchronize:
+            foregroundReconnectDeviceID = deviceID ?? foregroundReconnectDeviceID
+        case .recover(let recoveryDeviceID):
+            foregroundReconnectDeviceID = recoveryDeviceID
+        }
+        foregroundReconnectWasAttempted = false
+        foregroundSessionState = .actionRequired(requirement)
+        addActivity(.warning, "El enlace con el radio se perdió; vuelve a conectar y completa Sync")
+        _ = reconnectInterruptedSessionIfPossible()
     }
 
     private func beginAuthentication() {
@@ -3861,21 +4593,18 @@ final class GodoxSessionController: NSObject, ObservableObject {
                     )
                     return
                 }
-                isSynchronizingValues = true
-                addActivity(
-                    .info,
-                    "Sesión preparada · enviando después los valores de Estrobo al radio"
-                )
-                let expectedSessionID = sessionID
-                valueSynchronizationSettleDeadline?.cancel()
-                valueSynchronizationSettleDeadline = deadlineScheduler.schedule(
-                    .valueSynchronizationSettle
-                ) { [weak self] in
-                    guard let self,
-                          self.phase == .synchronizing,
-                          self.sessionID == expectedSessionID else { return }
-                    self.valueSynchronizationSettleDeadline = nil
-                    self.startValueSynchronization(purpose: .connectionSynchronization)
+                if requiresExplicitInitialValueSynchronizationConfirmation {
+                    isInitialValueSynchronizationAwaitingConfirmation = true
+                    addActivity(
+                        .warning,
+                        "PWOK y Sync completos · A0/A1 esperan confirmación explícita"
+                    )
+                } else {
+                    addActivity(
+                        .info,
+                        "Sesión preparada · enviando después los valores de Estrobo al radio"
+                    )
+                    scheduleInitialValueSynchronization()
                 }
             } else {
                 phase = .ready
@@ -3885,14 +4614,19 @@ final class GodoxSessionController: NSObject, ObservableObject {
                         ? "Radio autenticado y sincronizado"
                         : "Radio autenticado · recupera el valor seguro antes de sincronizar"
                 )
+                submitDeferredHeartbeatIfPossible()
                 scheduleAutomaticApplyIfNeeded()
             }
             resolveForegroundRequirementIfSafe(valueSynchronizationCompleted: false)
         case .test:
-            guard !sessionIsInvalidating, isTestPending else { return }
-            testDeliveryDeadline?.cancel()
-            testDeliveryDeadline = nil
-            isTestPending = false
+            let outcome: TestDeliveryOutcome = client.isSimulation
+                ? .simulated
+                : .delivered
+            guard !sessionIsInvalidating,
+                  let result = completePendingTestDelivery(outcome: outcome) else {
+                return
+            }
+            testDeliveryResult = result
             addActivity(
                 .success,
                 client.isSimulation
@@ -3921,25 +4655,17 @@ final class GodoxSessionController: NSObject, ObservableObject {
         }
 
         if let response = SafeGodoxProtocol.heartbeatResponse(for: data) {
-            guard let sessionDeviceID, let sessionID else {
-                addActivity(.warning, "Heartbeat ignorado fuera de una sesión identificada")
+            switch phase {
+            case .connecting, .discovering, .authenticating, .synchronizing:
+                // Initial connection synchronization owns the control channel.
+                // Keep at most one response and release it only after A0/A1
+                // reach Ready, regardless of whether a presentation gate exists.
+                deferredHeartbeatResponse = response
                 return
+            default:
+                break
             }
-            guard pendingHeartbeatIntentID == nil else {
-                // FEC8 can repeat the same heartbeat while its response is queued.
-                // One pending reply is sufficient and keeps the serialized control
-                // queue and its deadline bounded for the active session.
-                return
-            }
-            let intentID = UUID()
-            pendingHeartbeatIntentID = intentID
-            controlIntents.append(.heartbeat(
-                deviceID: sessionDeviceID,
-                sessionID: sessionID,
-                intentID: intentID
-            ))
-            scheduleHeartbeatTimeout(for: intentID)
-            submitControl(response, intentID: intentID)
+            submitHeartbeatResponse(response)
             return
         }
 
@@ -4011,6 +4737,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
             hasConfirmedGlobalSnapshot = true
             globalRadioSnapshot = snapshot
             globalBeepEnabled = snapshot.beepEnabled
+            isGlobalModelingLightEnabled = snapshot.modelingLightEnabled
             isGlobalStandbyEnabled = snapshot.standbyEnabled
             if let confirmedMulti = MultiFlashSettings(
                 countByte: snapshot.multiCount,
@@ -4026,6 +4753,13 @@ final class GodoxSessionController: NSObject, ObservableObject {
                 addActivity(.success, "Estado global actualizado")
             case .beep:
                 addActivity(.success, "Beep global \(snapshot.beepEnabled ? "activo" : "apagado")")
+            case .modeling:
+                addActivity(
+                    .success,
+                    snapshot.modelingLightEnabled
+                        ? "Luces de modelado encendidas"
+                        : "Luces de modelado apagadas"
+                )
             case .standby:
                 addActivity(
                     .success,
@@ -4123,16 +4857,15 @@ final class GodoxSessionController: NSObject, ObservableObject {
         case .authentication, .sync:
             invalidateSession(message)
         case .test:
-            guard isTestPending else { return }
-            testDeliveryDeadline?.cancel()
-            testDeliveryDeadline = nil
-            isTestPending = false
+            guard let result = completePendingTestDelivery(outcome: .failed) else { return }
+            testDeliveryResult = result
             if !sessionIsInvalidating {
                 addActivity(.error, "Test no enviado: \(message)")
             }
         case .control:
             if sessionIsInvalidating { return }
             guard !controlIntents.isEmpty else {
+                isDirectGlobalActionPending = false
                 phase = .failed(message)
                 addActivity(.error, message)
                 return
@@ -4211,14 +4944,44 @@ final class GodoxSessionController: NSObject, ObservableObject {
         }
     }
 
+    private func submitDeferredHeartbeatIfPossible() {
+        guard phase == .ready, let response = deferredHeartbeatResponse else { return }
+        deferredHeartbeatResponse = nil
+        submitHeartbeatResponse(response)
+    }
+
+    private func submitHeartbeatResponse(_ response: Data) {
+        guard let sessionDeviceID, let sessionID else {
+            addActivity(.warning, "Heartbeat ignorado fuera de una sesión identificada")
+            return
+        }
+        guard pendingHeartbeatIntentID == nil else {
+            // FEC8 can repeat the same heartbeat while its response is queued.
+            // One pending reply is sufficient and keeps the serialized control
+            // queue and its deadline bounded for the active session.
+            return
+        }
+        let intentID = UUID()
+        pendingHeartbeatIntentID = intentID
+        controlIntents.append(.heartbeat(
+            deviceID: sessionDeviceID,
+            sessionID: sessionID,
+            intentID: intentID
+        ))
+        scheduleHeartbeatTimeout(for: intentID)
+        submitControl(response, intentID: intentID)
+    }
+
     private func completePendingHeartbeat(intentID: UUID) {
         guard pendingHeartbeatIntentID == intentID else { return }
         heartbeatTimeout?.cancel()
         heartbeatTimeout = nil
         pendingHeartbeatIntentID = nil
+        deferredHeartbeatResponse = nil
     }
 
     private func markFailed(_ group: GodoxGroup, message: String) {
+        isDirectGlobalActionPending = false
         if var state = groups[group] {
             state.confirmation = .failed(message)
             groups[group] = state
@@ -4239,12 +5002,14 @@ final class GodoxSessionController: NSObject, ObservableObject {
         if case .standby = purpose {
             globalRadioSnapshot = previousSnapshot
             globalBeepEnabled = previousSnapshot.beepEnabled
+            isGlobalModelingLightEnabled = previousSnapshot.modelingLightEnabled
             isGlobalStandbyEnabled = previousSnapshot.standbyEnabled
         } else {
             // Beep y modelado son estado deseado local: se conservan para que la
             // siguiente sincronización completa vuelva a intentar A0 antes de A1.
             globalRadioSnapshot = snapshot
             globalBeepEnabled = snapshot.beepEnabled
+            isGlobalModelingLightEnabled = snapshot.modelingLightEnabled
             isGlobalStandbyEnabled = false
         }
         invalidateSession(
@@ -4332,25 +5097,49 @@ final class GodoxSessionController: NSObject, ObservableObject {
     }
 
     private func saveAuthenticatedRadioIfRequested() {
-        guard shouldSaveRadioAfterAuthentication,
-              let deviceID = sessionDeviceID,
-              let name = connectedDeviceName,
-              let radio = SavedRadio(
-                  deviceID: deviceID,
-                  name: name,
-                  radioCode: radioCode
-              ) else {
-            return
-        }
-        if savedRadioStore.upsert(radio) {
-            if let index = savedRadios.firstIndex(where: { $0.deviceID == radio.deviceID }) {
-                savedRadios[index] = radio
-            } else {
-                savedRadios.append(radio)
+        guard let deviceID = sessionDeviceID else { return }
+
+        let wasAlreadySaved = savedRadio(for: deviceID) != nil
+        if shouldSaveRadioAfterAuthentication || wasAlreadySaved {
+            guard let name = connectedDeviceName,
+                  let radio = SavedRadio(
+                      deviceID: deviceID,
+                      name: name,
+                      radioCode: radioCode
+                  ) else {
+                return
             }
-            addActivity(.success, "Radio y código guardados localmente en este Mac")
+            if savedRadioStore.upsert(radio) {
+                if let index = savedRadios.firstIndex(where: {
+                    $0.deviceID == radio.deviceID
+                }) {
+                    savedRadios[index] = radio
+                } else {
+                    savedRadios.append(radio)
+                }
+                if !wasAlreadySaved {
+                    addActivity(.success, "Radio y código guardados localmente")
+                }
+            } else {
+                addActivity(
+                    .warning,
+                    "El radio conectó, pero no se pudo guardar para la próxima vez"
+                )
+            }
+        }
+
+        guard savedRadio(for: deviceID) != nil else { return }
+        let nextState = RadioConnectionPreferenceState(
+            lastConnectedRadioID: deviceID,
+            automaticConnectionRadioID: automaticConnectionRadioID
+        )
+        if radioConnectionPreferences.save(nextState) {
+            lastConnectedRadioID = deviceID
         } else {
-            addActivity(.warning, "El radio conectó, pero no se pudo guardar para la próxima vez")
+            addActivity(
+                .warning,
+                "El radio conectó, pero no se pudo recordar como el último usado"
+            )
         }
     }
 
@@ -4397,11 +5186,10 @@ final class GodoxSessionController: NSObject, ObservableObject {
     }
 
     private func cancelSessionTasks() {
+        isDirectGlobalActionPending = false
         cancelAutomaticApply()
         cancelInteractiveEdits()
-        testDeliveryDeadline?.cancel()
-        testDeliveryDeadline = nil
-        isTestPending = false
+        clearTestDeliveryState()
         scanDeadline?.cancel()
         scanDeadline = nil
         connectionSetupDeadline?.cancel()
@@ -4414,11 +5202,13 @@ final class GodoxSessionController: NSObject, ObservableObject {
         synchronizationTimeout = nil
         valueSynchronizationSettleDeadline?.cancel()
         valueSynchronizationSettleDeadline = nil
+        isInitialValueSynchronizationAwaitingConfirmation = false
         controlTimeout?.cancel()
         controlTimeout = nil
         heartbeatTimeout?.cancel()
         heartbeatTimeout = nil
         pendingHeartbeatIntentID = nil
+        deferredHeartbeatResponse = nil
         radioResponseTimeouts.values.forEach { $0.cancel() }
         radioResponseTimeouts.removeAll()
     }
@@ -4427,11 +5217,14 @@ final class GodoxSessionController: NSObject, ObservableObject {
         guard !interactiveEditTokens.isEmpty else { return }
         interactiveEditTokens.removeAll()
         activeInteractiveEditCount = 0
+        persistDeferredInteractiveEditIfNeeded()
     }
 
     private func resetTransientSessionState() {
         cancelSessionTasks()
         cancelApplySequence()
+        isDirectGlobalActionPending = false
+        pendingGlobalMultiFlashTransition = nil
         isGlobalControlPending = false
         isGlobalStandbyEnabled = false
         globalRadioSnapshot.standbyEnabled = false

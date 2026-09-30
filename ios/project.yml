@@ -34,11 +34,13 @@ packages:
 
 targets:
   EstroboAccessorySetupSpike:
-    type: framework
+    type: application
     platform: iOS
-    deploymentTarget: "18.0"
+    deploymentTarget: "26.1"
     sources:
       - path: EstroboAccessorySetupSpike
+        excludes:
+          - Info.plist
     dependencies:
       - sdk: AccessorySetupKit.framework
       - sdk: CoreBluetooth.framework
@@ -47,9 +49,11 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: mx.loo.estrobo.accessory-setup-spike
         PRODUCT_NAME: EstroboAccessorySetupSpike
         PRODUCT_MODULE_NAME: EstroboAccessorySetupSpike
-        GENERATE_INFOPLIST_FILE: YES
-        SKIP_INSTALL: YES
-        CODE_SIGNING_ALLOWED: NO
+        INFOPLIST_FILE: EstroboAccessorySetupSpike/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 0.1.0
+        CODE_SIGN_STYLE: Automatic
 
   EstroboAdvertisementProbe:
     type: application

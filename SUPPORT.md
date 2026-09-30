@@ -2,22 +2,22 @@
 
 <p align="center"><strong>Español</strong> &nbsp;·&nbsp; <a href="SUPPORT.en.md">English</a></p>
 
-Estrobo es un beta público limitado y su canal de soporte es **GitHub Issues**. No existe un email de soporte publicado.
+Estrobo es un beta limitado y su canal de soporte es **GitHub Issues**. No existe un email de soporte publicado.
 
 ## Antes de abrir un issue
 
 1. Lee [Solución de problemas](docs/TROUBLESHOOTING.md).
-2. Confirma que usas el beta público más reciente y macOS 13 o posterior.
+2. Confirma que usas el build más reciente disponible para ti en macOS 13 o posterior, iOS 18 o posterior, o iPadOS 18 o posterior.
 3. Cierra cualquier otra app conectada al transmisor.
-4. Intenta reproducir con `--mock-radio` si el problema es de UI, interacción, presets o estado de sesión.
+4. Si el problema es de UI, interacción, presets o estado de sesión, intenta reproducirlo en modo Demo de iPhone/iPad o con `--mock-radio` en Mac.
 5. Busca un issue existente para evitar duplicados.
 
-[Abre un issue en este repositorio](../../issues/new) sólo para información no sensible.
+[Abre un issue en este repositorio](https://github.com/loomitz/estrobo/issues/new) sólo para información no sensible.
 
 ## Información útil
 
 - versión y build de Estrobo;
-- versión de macOS y arquitectura Intel/Apple Silicon;
+- plataforma, versión del sistema operativo y modelo de iPhone/iPad o arquitectura de Mac;
 - fase visible de la sesión y mensaje exacto;
 - pasos esperados y observados;
 - si ocurre también en modo simulado;
@@ -41,7 +41,7 @@ Para vulnerabilidades usa [GitHub Private Vulnerability Reporting](SECURITY.md).
 
 La compatibilidad se amplía sólo con evidencia física reversible por modelo/firmware. Un nombre BLE, RSSI, UUID o acuse `FEC8` no basta para declarar soporte. Puede pedirse una reproducción en modo simulado o un gate físico coordinado; no se prometerá una fecha ni un SLA.
 
-El handshake `Psub`/`PWOK` es obligatorio; el Código del radio es el PIN local del transmisor, no una credencial fuerte. La beta oficial usa Developer ID y notarización: si Gatekeeper no la identifica como `Notarized Developer ID`, verifica el checksum y vuelve a descargar antes de abrir un issue.
+El handshake `Psub`/`PWOK` es obligatorio; el Código del radio es el PIN local del transmisor, no una credencial fuerte. En macOS, la beta oficial usa Developer ID y notarización: si Gatekeeper no la identifica como `Notarized Developer ID`, verifica el checksum y vuelve a descargar antes de abrir un issue. En iOS y iPadOS usa únicamente el build de TestFlight o App Store publicado por Estrobo cuando exista; Estrobo nunca requiere un perfil de configuración ni un instalador de terceros.
 
 ## Proyecto independiente
 

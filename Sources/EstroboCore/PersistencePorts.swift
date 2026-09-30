@@ -26,6 +26,19 @@ public struct TransmitterProfilePreferenceState: Equatable, Sendable {
     }
 }
 
+public struct RadioConnectionPreferenceState: Equatable, Sendable {
+    public let lastConnectedRadioID: UUID?
+    public let automaticConnectionRadioID: UUID?
+
+    public init(
+        lastConnectedRadioID: UUID?,
+        automaticConnectionRadioID: UUID?
+    ) {
+        self.lastConnectedRadioID = lastConnectedRadioID
+        self.automaticConnectionRadioID = automaticConnectionRadioID
+    }
+}
+
 public enum SavedRadioLoadResult: Equatable, Sendable {
     case none
     case records([SavedRadio])
@@ -91,6 +104,12 @@ public protocol GroupVisibilityPreferencesStore {
 public protocol ChangeDeliveryPreferencesStore {
     func load() -> ChangeDeliveryMode
     func save(_ mode: ChangeDeliveryMode)
+}
+
+@MainActor
+public protocol RadioConnectionPreferencesStore {
+    func load() -> RadioConnectionPreferenceState
+    @discardableResult func save(_ state: RadioConnectionPreferenceState) -> Bool
 }
 
 @MainActor

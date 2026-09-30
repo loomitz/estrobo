@@ -2,49 +2,52 @@ import AccessorySetupKit
 import CoreBluetooth
 import Foundation
 
-/// Advertisement evidence that is strong enough to anchor AccessorySetupKit discovery.
+/// Advertisement evidence that is strong enough to anchor the diagnostic picker.
 ///
-/// Callers must obtain these values from repeated physical advertisement samples. A
-/// Bluetooth name is optional refinement only and can never create an identity by itself.
-@available(iOS 18.0, *)
-public struct VerifiedAdvertisementIdentity: Sendable {
+/// Every value must come from repeated physical advertisement samples. The exact
+/// Bluetooth name refines a service or company anchor; it never creates an identity alone.
+@available(iOS 26.1, *)
+struct VerifiedAdvertisementIdentity: Sendable {
     public let advertisedServiceUUIDString: String?
     public let bluetoothCompanyIdentifier: UInt16?
-    public let nameSubstring: String?
+    public let exactBluetoothName: String
 
-    public init?(
+    init?(
         verifiedAdvertisedServiceUUID: CBUUID? = nil,
         verifiedBluetoothCompanyIdentifier: UInt16? = nil,
-        nameSubstring: String? = nil
+        verifiedExactBluetoothName: String
     ) {
         guard verifiedAdvertisedServiceUUID != nil ||
                 verifiedBluetoothCompanyIdentifier != nil else {
             return nil
         }
 
-        let normalizedName = nameSubstring?
+        let normalizedName = verifiedExactBluetoothName
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedName.isEmpty else { return nil }
 
         advertisedServiceUUIDString = verifiedAdvertisedServiceUUID?.uuidString
         bluetoothCompanyIdentifier = verifiedBluetoothCompanyIdentifier
-        self.nameSubstring = normalizedName?.isEmpty == false ? normalizedName : nil
+        exactBluetoothName = normalizedName
     }
 }
 
 /// The only construction surface for the spike's AccessorySetupKit descriptor.
-@available(iOS 18.0, *)
-public enum AccessorySetupDescriptorFactory {
-    public static func makeDescriptor(
+@available(iOS 26.1, *)
+enum AccessorySetupDescriptorFactory {
+    static func makeDescriptor(
         from identity: VerifiedAdvertisementIdentity
     ) -> ASDiscoveryDescriptor {
         let descriptor = ASDiscoveryDescriptor()
+        descriptor.supportedOptions = []
         descriptor.bluetoothServiceUUID = identity.advertisedServiceUUIDString.map(CBUUID.init(string:))
         if let companyIdentifier = identity.bluetoothCompanyIdentifier {
             descriptor.bluetoothCompanyIdentifier = ASBluetoothCompanyIdentifier(
                 rawValue: companyIdentifier
             )
         }
-        descriptor.bluetoothNameSubstring = identity.nameSubstring
+        descriptor.bluetoothNameSubstring = identity.exactBluetoothName
+        descriptor.bluetoothNameSubstringCompareOptions = [.literal]
         return descriptor
     }
 }

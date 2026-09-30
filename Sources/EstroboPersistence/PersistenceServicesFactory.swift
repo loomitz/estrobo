@@ -15,6 +15,7 @@ public struct PersistenceServices {
     public let studioLibrary: any StudioLibraryRepository
     public let groupVisibility: any GroupVisibilityPreferencesStore
     public let changeDelivery: any ChangeDeliveryPreferencesStore
+    public let radioConnectionPreferences: any RadioConnectionPreferencesStore
     public let transmitterProfiles: any TransmitterProfilePreferencesStore
 
     init(
@@ -23,6 +24,7 @@ public struct PersistenceServices {
         studioLibrary: any StudioLibraryRepository,
         groupVisibility: any GroupVisibilityPreferencesStore,
         changeDelivery: any ChangeDeliveryPreferencesStore,
+        radioConnectionPreferences: any RadioConnectionPreferencesStore,
         transmitterProfiles: any TransmitterProfilePreferencesStore
     ) {
         self.savedRadios = savedRadios
@@ -30,6 +32,7 @@ public struct PersistenceServices {
         self.studioLibrary = studioLibrary
         self.groupVisibility = groupVisibility
         self.changeDelivery = changeDelivery
+        self.radioConnectionPreferences = radioConnectionPreferences
         self.transmitterProfiles = transmitterProfiles
     }
 }
@@ -45,6 +48,7 @@ public enum PersistenceServicesFactory {
             studioLibrary: StudioLibraryStore(),
             groupVisibility: LocalGroupPreferences(),
             changeDelivery: ChangeDeliveryPreferences(),
+            radioConnectionPreferences: RadioConnectionPreferences(),
             transmitterProfiles: TransmitterProfilePreferences()
         )
     }
@@ -79,6 +83,11 @@ public enum PersistenceServicesFactory {
                 storageKey: ChangeDeliveryPreferences.defaultStorageKey,
                 readString: storage.readString,
                 writeString: storage.writeString
+            ),
+            radioConnectionPreferences: RadioConnectionPreferences(
+                storageKey: RadioConnectionPreferences.defaultStorageKey,
+                readObject: storage.read,
+                writeData: storage.write
             ),
             transmitterProfiles: TransmitterProfilePreferences(
                 storageKey: TransmitterProfilePreferences.defaultStorageKey,

@@ -1,88 +1,43 @@
 import SwiftUI
 import EstroboCore
 
-struct GlobalControlView: View {
+enum MultiHertzScale {
+    static let values =
+        Array(1...20)
+        + Array(stride(from: 25, through: 50, by: 5))
+        + Array(stride(from: 60, through: 190, by: 10))
+        + [199]
+}
+
+private enum GlobalActionKind {
+    case beep
+    case modeling
+    case standby
+}
+
+/// Content-only global controls that can be placed directly inside an existing
+/// `List`. Screen-level recovery, navigation, toolbars, and apply affordances
+/// remain the responsibility of the host screen.
+struct GlobalControlSections: View {
     @ObservedObject var coordinator: AppSessionCoordinator
     @ObservedObject var controller: GodoxSessionController
+    let onOpenGroupDetails: (GodoxGroup) -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    @State private var activeConfirmation: GlobalConfirmation?
-    @State private var testWasStarted = false
-    @State private var testResult: TestPresentationResult?
-    @State private var globalPowerFeedback: String?
+    @State private var globalPowerOffsetSteps = 0
+    @State private var globalPowerAnchor: [GodoxGroup: ManualPower] = [:]
+    @State private var globalPowerInteractiveEditToken:
+        GodoxSessionController.InteractiveEditToken?
+    @State private var pendingDirectAction: GlobalActionKind?
 
     var body: some View {
-        List {
-            RecoveryGateView(coordinator: coordinator, controller: controller)
-            globalPowerSection
-            globalSwitchesSection
-            testSection
-            multiSection
-        }
-        .estroboScreenBackground()
-        .navigationTitle(coordinator.text("tab.global"))
-        .sessionToolbar(coordinator: coordinator, controller: controller)
-        .safeAreaInset(edge: .bottom) {
-            ApplyTracerBar(coordinator: coordinator, controller: controller)
-        }
-        .sheet(item: $activeConfirmation) { confirmation in
-            switch confirmation {
-            case .test(let isMulti):
-                TestConfirmationView(
-                    coordinator: coordinator,
-                    isMulti: isMulti,
-                    onCancel: { activeConfirmation = nil },
-                    onConfirm: {
-                        testResult = nil
-                        testWasStarted = true
-                        controller.sendTestFlash()
-                        activeConfirmation = nil
-                    }
-                )
-            case .multi(let enabled):
-                MultiConfirmationView(
-                    coordinator: coordinator,
-                    enabled: enabled,
-                    enteringOrRemainingMultiGroups: multiGroupsEnteringOrRemaining,
-                    movingToOffGroups: multiGroupsMovingToOff,
-                    restoringToManualGroups: controller.workingGroups,
-                    onCancel: { activeConfirmation = nil },
-                    onConfirm: {
-                        controller.setGlobalMultiFlashEnabled(enabled)
-                        activeConfirmation = nil
-                    }
-                )
-            case .standby(let enabled):
-                StandbyConfirmationView(
-                    coordinator: coordinator,
-                    enabled: enabled,
-                    onCancel: { activeConfirmation = nil },
-                    onConfirm: {
-                        controller.setGlobalStandby(enabled)
-                        activeConfirmation = nil
-                    }
-                )
-            }
-        }
-        .onChange(of: controller.activity.count) {
-            guard testWasStarted,
-                  !controller.isTestPending,
-                  let latestActivity = controller.activity.last else { return }
-            switch latestActivity.level {
-            case .success:
-                testResult = controller.isSimulation ? .simulated : .delivered
-                testWasStarted = false
-            case .error:
-                testResult = .failed
-                testWasStarted = false
-            case .info, .warning:
-                break
-            }
-        }
+        globalControlSection
     }
 
     /// Mirrors the effects of `initialMultiScenePlan()` using only the
     /// controller's public presentation state. The controller remains the
-    /// authority and revalidates the plan when the user confirms.
+    /// authority and revalidates the plan when the direct action is requested.
     private var multiGroupsEnteringOrRemaining: [GodoxGroup] {
         controller.workingGroups.filter { group in
             switch controller.groupDraft(group).draft.operatingMode {
@@ -109,9 +64,40 @@ struct GlobalControlView: View {
         }
     }
 
-    private var globalPowerSection: some View {
+    private var globalControlSection: some View {
         Section {
-            HStack(spacing: 20) {
+            if controller.multiFlashGroups.isEmpty {
+                globalPowerRow
+            }
+            globalActionsRow
+
+            if !controller.multiFlashGroups.isEmpty {
+                participants
+                multiPowerPicker
+                multiCountScrubber
+                multiHertzScrubber
+                multiLimitSummary
+            }
+        }
+    }
+
+    private var globalPowerRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(coordinator.text("global.power.slider.title"))
+                    .font(.headline)
+                    .accessibilityIdentifier(EstroboAccessibilityID.globalScreen)
+                Spacer(minLength: 8)
+                Text(globalPowerOffsetText)
+                    .font(.headline.monospacedDigit())
+                    .foregroundStyle(
+                        globalPowerOffsetSteps == 0
+                            ? Color.secondary
+                            : EstroboTheme.interactiveAccent
+                    )
+            }
+
+            HStack(spacing: 10) {
                 Button {
                     adjustGlobalPower(direction: -1)
                 } label: {
@@ -119,27 +105,46 @@ struct GlobalControlView: View {
                         .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.bordered)
-                .disabled(!controller.canAdjustGlobalPower(direction: -1))
+                .disabled(
+                    globalPowerInteractiveEditToken != nil
+                        || !controller.canAdjustGlobalPower(direction: -1)
+                )
                 .accessibilityLabel(coordinator.text("global.power.decrease"))
                 .accessibilityIdentifier(EstroboAccessibilityID.globalPowerDecrease)
 
-                VStack(spacing: 4) {
-                    Text(coordinator.text("global.power.relative"))
-                        .font(.headline)
-                    Text(globalPowerGroupsText)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    if let globalPowerFeedback {
-                        Text(globalPowerFeedback)
-                            .font(.caption.bold())
-                            .foregroundStyle(.secondary)
-                            .accessibilityIdentifier(
-                                EstroboAccessibilityID.globalPowerStatus
-                            )
+                VStack(spacing: 2) {
+                    ZStack {
+                        SliderRulerTicks(tickCount: 19, majorTickEvery: 3)
+                            .offset(y: 8)
+                        DeterministicSlider(
+                            value: globalPowerSliderBinding,
+                            range: -9...9,
+                            step: 1,
+                            isEnabled: canUseGlobalPowerSlider,
+                            accessibilityLabel: coordinator.text(
+                                "global.power.slider.accessibility"
+                            ),
+                            accessibilityValue: globalPowerOffsetText,
+                            accessibilityIdentifier: EstroboAccessibilityID.globalPowerSlider,
+                            onInteractionBegan: beginGlobalPowerInteraction,
+                            onInteractionEnded: finishGlobalPowerInteraction,
+                            onInteractionCancelled: cancelGlobalPowerInteraction
+                        )
+                        .tint(EstroboTheme.interactiveAccent)
                     }
+                    .frame(minHeight: 44)
+
+                    HStack {
+                        Text("−3")
+                        Spacer()
+                        Text("0")
+                        Spacer()
+                        Text("+3")
+                    }
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
                 }
-                .frame(maxWidth: .infinity)
-                .multilineTextAlignment(.center)
 
                 Button {
                     adjustGlobalPower(direction: 1)
@@ -148,190 +153,258 @@ struct GlobalControlView: View {
                         .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.bordered)
-                .disabled(!controller.canAdjustGlobalPower(direction: 1))
+                .disabled(
+                    globalPowerInteractiveEditToken != nil
+                        || !controller.canAdjustGlobalPower(direction: 1)
+                )
                 .accessibilityLabel(coordinator.text("global.power.increase"))
                 .accessibilityIdentifier(EstroboAccessibilityID.globalPowerIncrease)
             }
-        } header: {
-            Text(coordinator.text("global.power.title"))
-                .accessibilityIdentifier(EstroboAccessibilityID.globalScreen)
-        } footer: {
-            Text(coordinator.text("global.power.detail"))
+
+            Text(coordinator.text("global.power.slider.reset"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
+        .onChange(of: controller.isSceneActive) { _, isActive in
+            if !isActive { cancelGlobalPowerInteraction() }
+        }
+        .onDisappear(perform: cancelGlobalPowerInteraction)
+    }
+
+    private var globalActionsRow: some View {
+        LazyVGrid(columns: globalActionColumns, spacing: 8) {
+            globalBeepAction
+            globalModelingAction
+            globalStandbyAction
+            globalMultiAction
+        }
+        .padding(.vertical, 4)
+        .onChange(of: controller.isDirectGlobalActionPending) { _, isPending in
+            if !isPending {
+                pendingDirectAction = nil
+            }
         }
     }
 
-    private var globalSwitchesSection: some View {
-        Section {
-            Toggle(
+    private var globalActionColumns: [GridItem] {
+        let count = dynamicTypeSize.isAccessibilitySize ? 1 : 2
+        return Array(
+            repeating: GridItem(.flexible(minimum: 0), spacing: 8),
+            count: count
+        )
+    }
+
+    private var globalBeepAction: some View {
+        Button {
+            performDirectAction(.beep) {
+                controller.setGlobalBeep(!controller.globalBeepEnabled)
+            }
+        } label: {
+            compactActionLabel(
                 coordinator.text("global.beep"),
-                isOn: Binding(
-                    get: { controller.globalBeepEnabled },
-                    set: { controller.setGlobalBeep($0) }
-                )
+                value: onOffText(controller.globalBeepEnabled),
+                systemImage: controller.globalBeepEnabled
+                    ? "speaker.wave.2.fill"
+                    : "speaker.slash",
+                isActive: controller.globalBeepEnabled,
+                isPending: pendingDirectAction == .beep
             )
-            .disabled(!controller.canToggleGlobalBeep)
-            .accessibilityIdentifier(EstroboAccessibilityID.globalBeep)
-
-            Button {
-                activeConfirmation = .standby(
-                    enabled: !controller.isGlobalStandbyEnabled
-                )
-            } label: {
-                HStack {
-                    Label(
-                        coordinator.text("global.standby"),
-                        systemImage: "power"
-                    )
-                    Spacer()
-                    Text(
-                        controller.isGlobalStandbyEnabled
-                            ? coordinator.text("value.on")
-                            : coordinator.text("value.off")
-                    )
-                    .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(!controller.canToggleGlobalStandby)
-            .accessibilityIdentifier(EstroboAccessibilityID.globalStandby)
-        } header: {
-            Text(coordinator.text("global.status"))
-        } footer: {
-            if controller.isGlobalStandbyEnabled {
-                Text(coordinator.text("global.standby.active-detail"))
-            }
         }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .disabled(!controller.canToggleGlobalBeep)
+        .accessibilityLabel(coordinator.text("global.beep"))
+        .accessibilityValue(onOffText(controller.globalBeepEnabled))
+        .accessibilityAddTraits(controller.globalBeepEnabled ? .isSelected : [])
+        .accessibilityIdentifier(EstroboAccessibilityID.globalBeep)
+        .sensoryFeedback(.selection, trigger: controller.globalBeepEnabled)
     }
 
-    private var testSection: some View {
-        Section {
-            Button {
-                activeConfirmation = .test(
-                    isMulti: !controller.multiFlashGroups.isEmpty
+    private var globalModelingAction: some View {
+        Button {
+            performDirectAction(.modeling) {
+                controller.setGlobalModelingLightEnabled(
+                    !controller.isGlobalModelingLightEnabled
                 )
-            } label: {
-                Label(
-                    controller.isTestPending
-                        ? coordinator.text("test.pending")
-                        : coordinator.text("test.action"),
-                    systemImage: controller.isTestPending
-                        ? "hourglass"
-                        : "bolt.fill"
-                )
-                .frame(maxWidth: .infinity, minHeight: 44)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(EstroboTheme.amber)
-            .foregroundStyle(EstroboTheme.navy)
-            .disabled(!controller.canSendTest)
-            .accessibilityIdentifier(EstroboAccessibilityID.testOpenConfirmation)
-
-            if controller.isTestPending {
-                Label(
-                    coordinator.text("test.pending.detail"),
-                    systemImage: "arrow.up.circle"
-                )
-                .accessibilityIdentifier(EstroboAccessibilityID.testPending)
-            } else if let testResult {
-                Label(
-                    coordinator.text(testResult.localizationKey),
-                    systemImage: testResult.systemImage
-                )
-                .accessibilityIdentifier(testResult.accessibilityIdentifier)
-            }
-        } header: {
-            Text(coordinator.text("test.title"))
-        } footer: {
-            Text(testFooter)
+        } label: {
+            compactActionLabel(
+                coordinator.text("global.modeling"),
+                value: onOffText(controller.isGlobalModelingLightEnabled),
+                systemImage: controller.isGlobalModelingLightEnabled
+                    ? "lightbulb.fill"
+                    : "lightbulb.slash",
+                isActive: controller.isGlobalModelingLightEnabled,
+                isPending: pendingDirectAction == .modeling
+            )
         }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .disabled(!controller.canToggleGlobalModelingLight)
+        .accessibilityLabel(coordinator.text("global.modeling"))
+        .accessibilityValue(onOffText(controller.isGlobalModelingLightEnabled))
+        .accessibilityHint(coordinator.text("global.modeling.hint"))
+        .accessibilityAddTraits(
+            controller.isGlobalModelingLightEnabled ? .isSelected : []
+        )
+        .accessibilityIdentifier(EstroboAccessibilityID.globalModeling)
+        .sensoryFeedback(
+            .selection,
+            trigger: controller.isGlobalModelingLightEnabled
+        )
     }
 
-    private var testFooter: String {
-        if controller.canSendTest {
-            return coordinator.text("test.safety.short")
+    private var globalStandbyAction: some View {
+        Button {
+            performDirectAction(.standby) {
+                controller.setGlobalStandby(!controller.isGlobalStandbyEnabled)
+            }
+        } label: {
+            compactActionLabel(
+                coordinator.text("global.standby"),
+                value: onOffText(controller.isGlobalStandbyEnabled),
+                systemImage: "power",
+                isActive: controller.isGlobalStandbyEnabled,
+                isPending: pendingDirectAction == .standby
+            )
         }
-        if !controller.isSceneActive {
-            return coordinator.text("test.block.foreground")
-        }
-        if controller.isInteractiveEditActive {
-            return coordinator.text("test.block.gesture")
-        }
-        if controller.isTestPending {
-            return coordinator.text("test.block.pending")
-        }
-        if controller.recoveryBlockReason != nil
-            || !controller.restorationPoints.isEmpty {
-            return coordinator.text("test.block.recovery")
-        }
-        if controller.phase != .ready {
-            return coordinator.text("test.block.connection")
-        }
-        if controller.isGlobalStandbyEnabled {
-            return coordinator.text("test.block.standby")
-        }
-        if controller.pendingCount > 0 {
-            return coordinator.text("test.block.changes")
-        }
-        return coordinator.text("test.block.operation")
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .disabled(!controller.canToggleGlobalStandby)
+        .accessibilityLabel(coordinator.text("global.standby"))
+        .accessibilityValue(onOffText(controller.isGlobalStandbyEnabled))
+        .accessibilityHint(coordinator.text("standby.direct.hint"))
+        .accessibilityAddTraits(
+            controller.isGlobalStandbyEnabled ? .isSelected : []
+        )
+        .accessibilityIdentifier(EstroboAccessibilityID.globalStandby)
+        .sensoryFeedback(.selection, trigger: controller.isGlobalStandbyEnabled)
     }
 
-    private var multiSection: some View {
-        Section {
-            Button {
-                activeConfirmation = .multi(
-                    enabled: controller.multiFlashGroups.isEmpty
+    private var globalMultiAction: some View {
+        Button {
+            controller.setGlobalMultiFlashEnabled(
+                controller.multiFlashGroups.isEmpty
+            )
+        } label: {
+            compactActionLabel(
+                "Multi",
+                value: multiStateText,
+                systemImage: "waveform.path",
+                isActive: !controller.multiFlashGroups.isEmpty,
+                isPending: false
+            )
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .disabled(
+            !controller.canSetGlobalMultiFlashEnabled(
+                controller.multiFlashGroups.isEmpty
+            )
+        )
+        .accessibilityLabel(
+            controller.multiFlashGroups.isEmpty
+                ? coordinator.text("multi.activate")
+                : coordinator.text("multi.deactivate")
+        )
+        .accessibilityValue(multiStateText)
+        .accessibilityHint(multiDirectEffectSummary)
+        .accessibilityAddTraits(
+            controller.multiFlashGroups.isEmpty ? [] : .isSelected
+        )
+        .accessibilityIdentifier(EstroboAccessibilityID.multiToggle)
+        .sensoryFeedback(
+            .selection,
+            trigger: !controller.multiFlashGroups.isEmpty
+        )
+    }
+
+    private func compactActionLabel(
+        _ title: String,
+        value: String,
+        systemImage: String,
+        isActive: Bool,
+        isPending: Bool
+    ) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.headline.weight(.semibold))
+                .frame(width: 20)
+                .foregroundStyle(
+                    isActive ? EstroboTheme.interactiveAccent : Color.secondary
                 )
-            } label: {
-                HStack {
-                    Label(
-                        controller.multiFlashGroups.isEmpty
-                            ? coordinator.text("multi.activate")
-                            : coordinator.text("multi.deactivate"),
-                        systemImage: "waveform.path"
-                    )
-                    Spacer()
-                    Text(
-                        controller.multiFlashGroups.isEmpty
-                            ? coordinator.text("multi.inactive")
-                            : coordinator.text("multi.active")
-                    )
+                .contentTransition(.symbolEffect(.replace))
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
                     .font(.subheadline.bold())
-                }
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .disabled(
-                !controller.canSetGlobalMultiFlashEnabled(
-                    controller.multiFlashGroups.isEmpty
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .allowsTightening(true)
+                Text(
+                    isPending
+                        ? coordinator.text("global.action.pending")
+                        : value
                 )
-            )
-            .accessibilityIdentifier(EstroboAccessibilityID.multiOpenConfirmation)
-
-            Label(
-                controller.hasPendingMultiFlashChange
-                    ? coordinator.text("multi.pending")
-                    : coordinator.text("multi.applied"),
-                systemImage: controller.hasPendingMultiFlashChange
-                    ? "clock"
-                    : "checkmark.circle"
-            )
-            .foregroundStyle(.secondary)
-            .accessibilityIdentifier(EstroboAccessibilityID.multiEnabled)
-
-            if !controller.multiFlashGroups.isEmpty {
-                participants
-                multiPowerPicker
-                multiCountStepper
-                multiHertzStepper
-                multiLimitSummary
+                .font(.caption.weight(isActive || isPending ? .semibold : .regular))
+                .lineLimit(1)
+                .foregroundStyle(
+                    isActive || isPending
+                        ? EstroboTheme.interactiveAccent
+                        : Color.secondary
+                )
             }
-        } header: {
-            Text("Multi")
-        } footer: {
-            Text(coordinator.text("multi.safety"))
+            .layoutPriority(1)
+
+            Spacer(minLength: 0)
+
+            if isPending {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(EstroboTheme.interactiveAccent)
+                    .accessibilityHidden(true)
+            } else if isActive {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(EstroboTheme.interactiveAccent)
+                    .accessibilityHidden(true)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
+        .background(
+            isActive
+                ? EstroboTheme.interactiveAccent.opacity(0.14)
+                : Color.secondary.opacity(0.08),
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(
+                    isActive
+                        ? EstroboTheme.interactiveAccent
+                        : Color.secondary.opacity(0.24),
+                    lineWidth: isActive ? 2 : 1
+                )
+        }
+        .animation(
+            reduceMotion ? nil : .easeOut(duration: 0.16),
+            value: isActive
+        )
+        .contentShape(Rectangle())
+    }
+
+    private func performDirectAction(
+        _ action: GlobalActionKind,
+        operation: () -> Void
+    ) {
+        pendingDirectAction = action
+        operation()
+        if !controller.isDirectGlobalActionPending {
+            pendingDirectAction = nil
         }
     }
 
@@ -340,89 +413,123 @@ struct GlobalControlView: View {
             Text(coordinator.text("multi.participants"))
                 .font(.subheadline.bold())
             ForEach(controller.workingGroups) { group in
-                Toggle(
-                    isOn: Binding(
-                        get: { controller.multiFlashGroups.contains(group) },
-                        set: {
-                            controller.setMultiFlashParticipation(
-                                group,
-                                enabled: $0
+                ZStack {
+                    HStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            GroupBadge(
+                                group: group,
+                                accessibilityName: coordinator.text(
+                                    "group.accessibility",
+                                    group.label
+                                )
                             )
+                            Text("\(coordinator.text("group.title")) \(group.label)")
+                            Spacer(minLength: 8)
                         }
-                    )
-                ) {
-                    HStack {
-                        GroupBadge(
-                            group: group,
-                            accessibilityName: coordinator.text(
-                                "group.accessibility",
-                                group.label
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                        .groupDetailLongPressFeedback {
+                            onOpenGroupDetails(group)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(
+                            coordinator.text("group.accessibility", group.label)
+                        )
+                        .accessibilityValue(
+                            controller.isGlobalStandbyEnabled
+                                ? coordinator.text("standby.overlay.title")
+                                : ""
+                        )
+                        .accessibilityHint(
+                            coordinator.text("group.detail.long-press.hint")
+                        )
+                        .accessibilityAction(
+                            named: Text(coordinator.text("group.detail.open"))
+                        ) {
+                            onOpenGroupDetails(group)
+                        }
+                        .accessibilityIdentifier(
+                            EstroboAccessibilityID.groupRow(group.label)
+                        )
+
+                        Toggle(
+                            isOn: Binding(
+                                get: { controller.multiFlashGroups.contains(group) },
+                                set: {
+                                    controller.setMultiFlashParticipation(
+                                        group,
+                                        enabled: $0
+                                    )
+                                }
+                            )
+                        ) { EmptyView() }
+                        .labelsHidden()
+                        .disabled(
+                            !controller.canSetMultiFlashParticipation(
+                                group,
+                                enabled: !controller.multiFlashGroups.contains(group)
                             )
                         )
-                        Text("\(coordinator.text("group.title")) \(group.label)")
+                        .accessibilityIdentifier(
+                            EstroboAccessibilityID.multiParticipant(group.label)
+                        )
+                        .accessibilityLabel(
+                            coordinator.text("group.accessibility", group.label)
+                        )
+                    }
+                    .opacity(controller.isGlobalStandbyEnabled ? 0.22 : 1)
+
+                    if controller.isGlobalStandbyEnabled {
+                        StandbyGroupOverlay(
+                            group: group,
+                            coordinator: coordinator
+                        )
                     }
                 }
-                .disabled(
-                    !controller.canSetMultiFlashParticipation(
-                        group,
-                        enabled: !controller.multiFlashGroups.contains(group)
-                    )
-                )
-                .accessibilityIdentifier(
-                    EstroboAccessibilityID.multiParticipant(group.label)
-                )
+                .frame(minHeight: 60)
             }
         }
     }
 
     private var multiPowerPicker: some View {
-        Picker(
-            coordinator.text("multi.power"),
-            selection: Binding(
-                get: { controller.multiFlashDraft.power },
-                set: { controller.setMultiFlashPower($0) }
-            )
-        ) {
-            ForEach(controller.allowedMultiFlashPowers) { power in
-                Text(power.label).tag(power)
-            }
-        }
-        .disabled(!controller.canEditMultiFlashSettings)
-        .accessibilityIdentifier(EstroboAccessibilityID.multiPower)
+        MultiPowerScrubber(
+            coordinator: coordinator,
+            controller: controller
+        )
     }
 
-    private var multiCountStepper: some View {
-        Stepper(
-            value: Binding(
-                get: { controller.multiFlashDraft.count },
-                set: { controller.setMultiFlashCount($0) }
-            ),
-            in: controller.multiFlashCountRange
-        ) {
-            LabeledContent(
-                coordinator.text("multi.count"),
-                value: "\(controller.multiFlashDraft.count)"
-            )
-        }
-        .disabled(!controller.canEditMultiFlashSettings)
-        .accessibilityIdentifier(EstroboAccessibilityID.multiCount)
+    private var multiCountScrubber: some View {
+        MultiNumericScrubber(
+            title: coordinator.text("multi.count"),
+            value: controller.multiFlashDraft.count,
+            values: Array(controller.multiFlashCountRange),
+            displayValue: { "\($0)×" },
+            accessibilityValue: {
+                coordinator.text("multi.count.value", $0)
+            },
+            accessibilityHint: coordinator.text("multi.scrubber.hint"),
+            accessibilityIdentifier: EstroboAccessibilityID.multiCount,
+            isEnabled: controller.canEditMultiFlashSettings,
+            controller: controller,
+            setValue: controller.setMultiFlashCount
+        )
     }
 
-    private var multiHertzStepper: some View {
-        Stepper(
-            value: Binding(
-                get: { controller.multiFlashDraft.hertz },
-                set: { controller.setMultiFlashHertz($0) }
-            ),
-            in: MultiFlashSettings.hertzRange
-        ) {
-            LabeledContent(
-                coordinator.text("multi.hertz"),
-                value: "\(controller.multiFlashDraft.hertz) Hz"
-            )
-        }
-        .disabled(!controller.canEditMultiFlashSettings)
-        .accessibilityIdentifier(EstroboAccessibilityID.multiHertz)
+    private var multiHertzScrubber: some View {
+        MultiNumericScrubber(
+            title: coordinator.text("multi.hertz"),
+            value: controller.multiFlashDraft.hertz,
+            values: MultiHertzScale.values,
+            displayValue: { "\($0) Hz" },
+            accessibilityValue: {
+                coordinator.text("multi.hertz.value", $0)
+            },
+            accessibilityHint: coordinator.text("multi.scrubber.hint"),
+            accessibilityIdentifier: EstroboAccessibilityID.multiHertz,
+            isEnabled: controller.canEditMultiFlashSettings,
+            controller: controller,
+            setValue: controller.setMultiFlashHertz
+        )
     }
 
     private var multiLimitSummary: some View {
@@ -443,11 +550,33 @@ struct GlobalControlView: View {
         .accessibilityIdentifier(EstroboAccessibilityID.multiLimit)
     }
 
-    private var globalPowerGroupsText: String {
-        let labels = controller.globalPowerGroups.map(\.label).joined(separator: ", ")
-        return labels.isEmpty
-            ? coordinator.text("global.power.none")
-            : formatted("global.power.groups", labels)
+    private var multiStateText: String {
+        controller.multiFlashGroups.isEmpty
+            ? coordinator.text("multi.inactive")
+            : coordinator.text("multi.active")
+    }
+
+    private var multiDirectEffectSummary: String {
+        if controller.multiFlashGroups.isEmpty {
+            return formatted(
+                "multi.direct.activate.summary",
+                groupList(multiGroupsEnteringOrRemaining),
+                groupList(multiGroupsMovingToOff)
+            )
+        }
+        return formatted(
+            "multi.direct.deactivate.summary",
+            groupList(controller.workingGroups)
+        )
+    }
+
+    private func groupList(_ groups: [GodoxGroup]) -> String {
+        guard !groups.isEmpty else { return coordinator.text("multi.none") }
+        return groups.map(\.label).joined(separator: ", ")
+    }
+
+    private func onOffText(_ enabled: Bool) -> String {
+        enabled ? coordinator.text("value.on") : coordinator.text("value.off")
     }
 
     private var minimumExposureText: String {
@@ -478,26 +607,73 @@ struct GlobalControlView: View {
     }
 
     private func adjustGlobalPower(direction: Int) {
-        let outcome = controller.adjustGlobalPower(direction: direction)
-        switch outcome {
-        case .applied(let steps):
-            globalPowerFeedback = formatted("global.power.applied", steps)
-        case .limited(let steps, let cause):
-            let boundary: String
-            switch cause {
-            case .visualWindow:
-                boundary = coordinator.text("global.power.limit.window")
-            case .groups(let groups):
-                boundary = groups.map(\.label).joined(separator: ", ")
+        _ = controller.adjustGlobalPower(direction: direction)
+    }
+
+    private var canUseGlobalPowerSlider: Bool {
+        !controller.makeGlobalPowerAnchor().isEmpty
+    }
+
+    private var globalPowerSliderBinding: Binding<Double> {
+        Binding(
+            get: { Double(globalPowerOffsetSteps) },
+            set: { proposedValue in
+                globalPowerOffsetSteps = min(
+                    9,
+                    max(-9, Int(proposedValue.rounded()))
+                )
             }
-            globalPowerFeedback = formatted(
-                "global.power.limited",
-                steps,
-                boundary
-            )
-        case .unavailable:
-            globalPowerFeedback = coordinator.text("global.power.unavailable")
+        )
+    }
+
+    private var globalPowerOffsetText: String {
+        guard globalPowerOffsetSteps != 0 else { return "0.0 EV" }
+        return String(
+            format: "%+.1f EV",
+            locale: Locale(identifier: "en_US_POSIX"),
+            Double(globalPowerOffsetSteps) / 3
+        )
+    }
+
+    private func beginGlobalPowerInteraction() {
+        let anchor = controller.makeGlobalPowerAnchor()
+        guard globalPowerInteractiveEditToken == nil, !anchor.isEmpty else {
+            return
         }
+        globalPowerOffsetSteps = 0
+        globalPowerAnchor = anchor
+        globalPowerInteractiveEditToken = controller.beginInteractiveEdit()
+    }
+
+    private func finishGlobalPowerInteraction() {
+        let offsetSteps = globalPowerOffsetSteps
+        let anchor = globalPowerAnchor
+        withAnimation(.snappy(duration: 0.2)) {
+            globalPowerOffsetSteps = 0
+        }
+        globalPowerAnchor = [:]
+        guard let globalPowerInteractiveEditToken else { return }
+        self.globalPowerInteractiveEditToken = nil
+        guard controller.isSceneActive, !anchor.isEmpty else {
+            controller.cancelInteractiveEdit(globalPowerInteractiveEditToken)
+            return
+        }
+        if offsetSteps != 0 {
+            _ = controller.adjustGlobalPower(
+                offsetSteps: offsetSteps,
+                from: anchor
+            )
+        }
+        controller.endInteractiveEdit(globalPowerInteractiveEditToken)
+    }
+
+    private func cancelGlobalPowerInteraction() {
+        if let globalPowerInteractiveEditToken {
+            self.globalPowerInteractiveEditToken = nil
+            controller.cancelInteractiveEdit(globalPowerInteractiveEditToken)
+        }
+        globalPowerOffsetSteps = 0
+        globalPowerAnchor = [:]
     }
 
     private func formatted(_ key: String, _ arguments: CVarArg...) -> String {
@@ -509,197 +685,378 @@ struct GlobalControlView: View {
     }
 }
 
-private enum GlobalConfirmation: Identifiable {
-    case test(isMulti: Bool)
-    case multi(enabled: Bool)
-    case standby(enabled: Bool)
+struct GroupDetailLongPressFeedbackModifier: ViewModifier {
+    let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isPressing = false
+    @State private var feedbackTrigger = false
 
-    var id: String {
-        switch self {
-        case .test: "test"
-        case .multi: "multi"
-        case .standby: "standby"
-        }
-    }
-}
-
-private enum TestPresentationResult {
-    case simulated
-    case delivered
-    case failed
-
-    var localizationKey: String {
-        switch self {
-        case .simulated: "test.result.simulated"
-        case .delivered: "test.result.delivered"
-        case .failed: "test.result.failed"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .simulated, .delivered: "checkmark.circle"
-        case .failed: "xmark.octagon"
-        }
-    }
-
-    var accessibilityIdentifier: String {
-        switch self {
-        case .simulated, .delivered: EstroboAccessibilityID.testSent
-        case .failed: EstroboAccessibilityID.testFailed
-        }
-    }
-}
-
-private struct TestConfirmationView: View {
-    @ObservedObject var coordinator: AppSessionCoordinator
-    let isMulti: Bool
-    let onCancel: () -> Void
-    let onConfirm: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Label(
-                        isMulti
-                            ? coordinator.text("test.confirm.multi")
-                            : coordinator.text("test.confirm.single"),
-                        systemImage: "eye.trianglebadge.exclamationmark"
-                    )
-                    .accessibilityIdentifier(EstroboAccessibilityID.testConfirmation)
-                    Text(coordinator.text("test.confirm.detail"))
-                        .foregroundStyle(.secondary)
-                }
-                Section {
-                    Button(coordinator.text("action.cancel"), action: onCancel)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .accessibilityIdentifier(EstroboAccessibilityID.testCancel)
-                    Button(coordinator.text("test.confirm.action"), action: onConfirm)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .buttonStyle(.borderedProminent)
-                        .tint(EstroboTheme.amber)
-                        .foregroundStyle(EstroboTheme.navy)
-                        .accessibilityIdentifier(EstroboAccessibilityID.testConfirm)
+    func body(content: Content) -> some View {
+        content
+            .background(
+                isPressing
+                    ? EstroboTheme.interactiveAccent.opacity(0.14)
+                    : Color.clear,
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+            )
+            .overlay {
+                if isPressing {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(EstroboTheme.interactiveAccent, lineWidth: 1.5)
                 }
             }
-            .navigationTitle(coordinator.text("test.confirm.title"))
-        }
-        .presentationDetents([.large])
+            .scaleEffect(isPressing && !reduceMotion ? 0.985 : 1)
+            .animation(
+                reduceMotion ? nil : .easeOut(duration: 0.14),
+                value: isPressing
+            )
+            .onLongPressGesture(
+                minimumDuration: 0.55,
+                maximumDistance: 18,
+                perform: {
+                    isPressing = false
+                    feedbackTrigger.toggle()
+                    action()
+                },
+                onPressingChanged: { pressing in
+                    isPressing = pressing
+                }
+            )
+            .sensoryFeedback(
+                .impact(weight: .medium),
+                trigger: feedbackTrigger
+            )
     }
 }
 
-private struct MultiConfirmationView: View {
-    @ObservedObject var coordinator: AppSessionCoordinator
-    let enabled: Bool
-    let enteringOrRemainingMultiGroups: [GodoxGroup]
-    let movingToOffGroups: [GodoxGroup]
-    let restoringToManualGroups: [GodoxGroup]
-    let onCancel: () -> Void
-    let onConfirm: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Label(
-                        enabled
-                            ? coordinator.text("multi.confirm.activate")
-                            : coordinator.text("multi.confirm.deactivate"),
-                        systemImage: "waveform.path"
-                    )
-                    .accessibilityIdentifier(EstroboAccessibilityID.multiConfirmation)
-                    Text(
-                        enabled
-                            ? coordinator.text("multi.confirm.activate.detail")
-                            : coordinator.text("multi.confirm.deactivate.detail")
-                    )
-                    .foregroundStyle(.secondary)
-                    if enabled {
-                        LabeledContent(
-                            coordinator.text("multi.confirm.enter-or-remain"),
-                            value: groupList(enteringOrRemainingMultiGroups)
-                        )
-                        LabeledContent(
-                            coordinator.text("multi.confirm.move-off"),
-                            value: groupList(movingToOffGroups)
-                        )
-                    } else {
-                        LabeledContent(
-                            coordinator.text("multi.confirm.restore-manual"),
-                            value: groupList(restoringToManualGroups)
-                        )
-                    }
-                }
-                Section {
-                    Button(coordinator.text("action.cancel"), action: onCancel)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .accessibilityIdentifier(EstroboAccessibilityID.multiCancel)
-                    Button(
-                        enabled
-                            ? coordinator.text("multi.activate")
-                            : coordinator.text("multi.deactivate"),
-                        action: onConfirm
-                    )
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityIdentifier(EstroboAccessibilityID.multiConfirm)
-                }
-            }
-            .navigationTitle("Multi")
-        }
-        .presentationDetents([.large])
-    }
-
-    private func groupList(_ groups: [GodoxGroup]) -> String {
-        guard !groups.isEmpty else { return coordinator.text("multi.confirm.none") }
-        return groups.map(\.label).joined(separator: ", ")
+extension View {
+    func groupDetailLongPressFeedback(
+        action: @escaping () -> Void
+    ) -> some View {
+        modifier(GroupDetailLongPressFeedbackModifier(action: action))
     }
 }
 
-private struct StandbyConfirmationView: View {
+struct StandbyGroupOverlay: View {
+    let group: GodoxGroup
     @ObservedObject var coordinator: AppSessionCoordinator
-    let enabled: Bool
-    let onCancel: () -> Void
-    let onConfirm: () -> Void
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Label(
-                        enabled
-                            ? coordinator.text("standby.confirm.activate")
-                            : coordinator.text("standby.confirm.deactivate"),
-                        systemImage: "power"
-                    )
-                    .accessibilityIdentifier(
-                        EstroboAccessibilityID.globalStandbyConfirmation
-                    )
-                    Text(coordinator.text("standby.confirm.detail"))
-                        .foregroundStyle(.secondary)
-                }
-                Section {
-                    Button(coordinator.text("action.cancel"), action: onCancel)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .accessibilityIdentifier(
-                            EstroboAccessibilityID.globalStandbyCancel
-                        )
-                    Button(
-                        enabled
-                            ? coordinator.text("standby.activate")
-                            : coordinator.text("standby.deactivate"),
-                        action: onConfirm
-                    )
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityIdentifier(
-                        EstroboAccessibilityID.globalStandbyConfirm
-                    )
-                }
+        HStack(spacing: 12) {
+            GroupBadge(
+                group: group,
+                accessibilityName: coordinator.text(
+                    "group.accessibility",
+                    group.label
+                )
+            )
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(coordinator.text("group.title")) \(group.label)")
+                    .font(.subheadline.bold())
+                Label(
+                    coordinator.text("standby.overlay.title"),
+                    systemImage: "power"
+                )
+                .font(.caption.bold())
+                .foregroundStyle(EstroboTheme.interactiveAccent)
             }
-            .navigationTitle(coordinator.text("global.standby"))
+            Spacer(minLength: 0)
         }
-        .presentationDetents([.large])
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .background(
+            .regularMaterial,
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(EstroboTheme.interactiveAccent.opacity(0.72), lineWidth: 1.5)
+        }
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            coordinator.text("standby.overlay.accessibility", group.label)
+        )
+        .accessibilityIdentifier(
+            EstroboAccessibilityID.groupStandbyOverlay(group.label)
+        )
+        .transition(.opacity)
+    }
+}
+
+/// Multi power uses the same final-value-only interaction contract as the
+/// numeric scrubbers, while exposing the radio's real discrete power scale.
+private struct MultiPowerScrubber: View {
+    @ObservedObject var coordinator: AppSessionCoordinator
+    @ObservedObject var controller: GodoxSessionController
+
+    @State private var interactiveEditToken:
+        GodoxSessionController.InteractiveEditToken?
+    @State private var livePowerIndex: Int?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(coordinator.text("multi.power"))
+                    .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 12)
+                Text(displayedPower.label)
+                    .font(.title3.weight(.semibold))
+                    .monospacedDigit()
+            }
+            .accessibilityHidden(true)
+
+            ZStack {
+                SliderRulerTicks(tickCount: 17, majorTickEvery: 4)
+                    .offset(y: 8)
+                DeterministicSlider(
+                    value: powerIndexBinding,
+                    range: 0...maximumSliderIndex,
+                    step: 1,
+                    isEnabled: canInteract,
+                    accessibilityLabel: coordinator.text("multi.power"),
+                    accessibilityValue: displayedPower.label,
+                    accessibilityIdentifier: EstroboAccessibilityID.multiPower,
+                    onInteractionBegan: beginInteractiveEdit,
+                    onInteractionEnded: finishInteractiveEdit,
+                    onInteractionCancelled: cancelInteractiveEdit
+                )
+                .tint(EstroboTheme.interactiveAccent)
+            }
+            .frame(minHeight: 44)
+
+            HStack {
+                Text(allowedPowers.first?.label ?? "—")
+                Spacer()
+                Text(middlePowerLabel)
+                Spacer()
+                Text(allowedPowers.last?.label ?? "—")
+            }
+            .font(.caption2.monospacedDigit())
+            .foregroundStyle(.tertiary)
+            .accessibilityHidden(true)
+        }
+        .padding(.vertical, 2)
+        .onChange(of: controller.canEditMultiFlashSettings) { _, enabled in
+            if !enabled { cancelInteractiveEdit() }
+        }
+        .onDisappear(perform: cancelInteractiveEdit)
+    }
+
+    private var allowedPowers: [ManualPower] {
+        controller.allowedMultiFlashPowers
+    }
+
+    private var middlePowerLabel: String {
+        guard !allowedPowers.isEmpty else { return "—" }
+        return allowedPowers[allowedPowers.count / 2].label
+    }
+
+    private var canInteract: Bool {
+        controller.canEditMultiFlashSettings && allowedPowers.count >= 2
+    }
+
+    private var displayedPowerIndex: Int {
+        let persisted = allowedPowers.firstIndex(of: controller.multiFlashDraft.power) ?? 0
+        return min(max(livePowerIndex ?? persisted, 0), max(0, allowedPowers.count - 1))
+    }
+
+    private var displayedPower: ManualPower {
+        guard allowedPowers.indices.contains(displayedPowerIndex) else {
+            return controller.multiFlashDraft.power
+        }
+        return allowedPowers[displayedPowerIndex]
+    }
+
+    private var maximumSliderIndex: Double {
+        Double(max(1, allowedPowers.count - 1))
+    }
+
+    private var powerIndexBinding: Binding<Double> {
+        Binding(
+            get: { Double(displayedPowerIndex) },
+            set: { proposedIndex in
+                let nextIndex = min(
+                    max(Int(proposedIndex.rounded()), 0),
+                    max(0, allowedPowers.count - 1)
+                )
+                guard allowedPowers.indices.contains(nextIndex) else { return }
+                livePowerIndex = nextIndex
+            }
+        )
+    }
+
+    private func beginInteractiveEdit() {
+        guard interactiveEditToken == nil, canInteract else { return }
+        livePowerIndex = displayedPowerIndex
+        interactiveEditToken = controller.beginInteractiveEdit()
+    }
+
+    private func finishInteractiveEdit() {
+        guard let interactiveEditToken else { return }
+        self.interactiveEditToken = nil
+        guard controller.isSceneActive,
+              controller.canEditMultiFlashSettings,
+              allowedPowers.indices.contains(displayedPowerIndex) else {
+            controller.cancelInteractiveEdit(interactiveEditToken)
+            livePowerIndex = nil
+            return
+        }
+        controller.setMultiFlashPower(allowedPowers[displayedPowerIndex])
+        controller.endInteractiveEdit(interactiveEditToken)
+        livePowerIndex = nil
+    }
+
+    private func cancelInteractiveEdit() {
+        if let interactiveEditToken {
+            self.interactiveEditToken = nil
+            controller.cancelInteractiveEdit(interactiveEditToken)
+        }
+        livePowerIndex = nil
+    }
+}
+
+/// A fast integer scrubber for Multi. The controller's interactive-edit token
+/// keeps every intermediate tick local: persistence and automatic delivery are
+/// armed only when the drag ends, while cancellation remains fail-closed.
+private struct MultiNumericScrubber: View {
+    let title: String
+    let value: Int
+    let values: [Int]
+    let displayValue: (Int) -> String
+    let accessibilityValue: (Int) -> String
+    let accessibilityHint: String
+    let accessibilityIdentifier: String
+    let isEnabled: Bool
+    @ObservedObject var controller: GodoxSessionController
+    let setValue: (Int) -> Void
+
+    @State private var interactiveEditToken:
+        GodoxSessionController.InteractiveEditToken?
+    @State private var liveIndex: Int?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Spacer(minLength: 12)
+                Text(displayValue(displayedValue))
+                    .font(.title3.weight(.semibold))
+                    .monospacedDigit()
+            }
+            .accessibilityHidden(true)
+
+            ZStack {
+                SliderRulerTicks(tickCount: 17, majorTickEvery: 4)
+                    .offset(y: 8)
+                DeterministicSlider(
+                    value: valueBinding,
+                    range: 0...maximumIndex,
+                    step: 1,
+                    isEnabled: canInteract,
+                    accessibilityLabel: title,
+                    accessibilityValue: accessibilityValue(displayedValue),
+                    accessibilityIdentifier: accessibilityIdentifier,
+                    onInteractionBegan: beginInteractiveEdit,
+                    onInteractionEnded: finishInteractiveEdit,
+                    onInteractionCancelled: cancelInteractiveEdit
+                )
+                .tint(EstroboTheme.interactiveAccent)
+                .disabled(!canInteract)
+                .accessibilityHint(accessibilityHint)
+            }
+            .frame(minHeight: 44)
+
+            HStack {
+                Text("\(values.first ?? value)")
+                Spacer()
+                Text("\(values.last ?? value)")
+            }
+            .font(.caption2)
+            .monospacedDigit()
+            .foregroundStyle(.tertiary)
+            .accessibilityHidden(true)
+        }
+        .padding(.vertical, 2)
+        .onChange(of: isEnabled) { _, enabled in
+            if !enabled { cancelInteractiveEdit() }
+        }
+        .onDisappear(perform: cancelInteractiveEdit)
+    }
+
+    private var canInteract: Bool {
+        isEnabled && values.count >= 2
+    }
+
+    private var displayedValue: Int {
+        guard let liveIndex else {
+            // Persisted workspaces created by older clients may contain a
+            // value outside this editor's discrete choices. Keep showing the
+            // real draft until the user deliberately edits this control.
+            return value
+        }
+        guard values.indices.contains(liveIndex) else { return value }
+        return values[liveIndex]
+    }
+
+    private var displayedIndex: Int {
+        if let liveIndex {
+            return boundedIndex(liveIndex)
+        }
+        return values.firstIndex(of: value) ?? nearestIndex(to: value)
+    }
+
+    private var maximumIndex: Double {
+        Double(max(1, values.count - 1))
+    }
+
+    private var valueBinding: Binding<Double> {
+        Binding(
+            get: { Double(displayedIndex) },
+            set: { proposedValue in
+                liveIndex = boundedIndex(Int(proposedValue.rounded()))
+            }
+        )
+    }
+
+    private func boundedIndex(_ proposedIndex: Int) -> Int {
+        min(max(proposedIndex, 0), max(0, values.count - 1))
+    }
+
+    private func nearestIndex(to proposedValue: Int) -> Int {
+        values.enumerated().min { lhs, rhs in
+            let lhsDistance = abs(lhs.element - proposedValue)
+            let rhsDistance = abs(rhs.element - proposedValue)
+            if lhsDistance == rhsDistance {
+                return lhs.element < rhs.element
+            }
+            return lhsDistance < rhsDistance
+        }?.offset ?? 0
+    }
+
+    private func beginInteractiveEdit() {
+        guard interactiveEditToken == nil, canInteract else { return }
+        liveIndex = displayedIndex
+        interactiveEditToken = controller.beginInteractiveEdit()
+    }
+
+    private func finishInteractiveEdit() {
+        guard let interactiveEditToken else { return }
+        if liveIndex != nil {
+            setValue(displayedValue)
+        }
+        self.interactiveEditToken = nil
+        controller.endInteractiveEdit(interactiveEditToken)
+        liveIndex = nil
+    }
+
+    private func cancelInteractiveEdit() {
+        if let interactiveEditToken {
+            self.interactiveEditToken = nil
+            controller.cancelInteractiveEdit(interactiveEditToken)
+        }
+        liveIndex = nil
     }
 }

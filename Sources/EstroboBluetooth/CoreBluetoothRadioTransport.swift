@@ -31,6 +31,12 @@ final class CoreBluetoothRadioTransport: NSObject, RadioTransport {
         case ready
     }
 
+    enum ScanStartDisposition: Equatable {
+        case ready
+        case waiting
+        case unavailable(reason: String, resumesIfPoweredOn: Bool)
+    }
+
     private struct WriteContext {
         let peripheral: CBPeripheral
         let characteristic: CBCharacteristic
@@ -79,14 +85,19 @@ final class CoreBluetoothRadioTransport: NSObject, RadioTransport {
             return
         }
 
-        scanRequested = true
-        guard centralManager.state == .poweredOn else {
-            updateState(.waitingForBluetooth)
+        switch Self.scanStartDisposition(for: centralManager.state) {
+        case .ready:
+            scanRequested = true
+            beginScanning()
+        case .waiting:
+            scanRequested = true
+            updateState(.waitingForBluetooth, forceEvent: true)
             emit(.log(.info, "Waiting for Bluetooth to become available."))
-            return
+        case .unavailable(let reason, let resumesIfPoweredOn):
+            scanRequested = resumesIfPoweredOn
+            updateState(.bluetoothUnavailable(reason), forceEvent: true)
+            emit(.log(.warning, "Bluetooth is unavailable (\(reason))."))
         }
-
-        beginScanning()
     }
 
     func stopScanning() {
@@ -136,12 +147,7 @@ final class CoreBluetoothRadioTransport: NSObject, RadioTransport {
                 updateState(.disconnecting(currentDevice))
             }
             emit(.log(.info, "Disconnecting before switching Godox devices."))
-            if currentPeripheral.state == .disconnected {
-                finishDisconnection(of: currentPeripheral, error: nil)
-            } else {
-                scheduleDisconnectionWatchdog(for: currentPeripheral)
-                centralManager.cancelPeripheralConnection(currentPeripheral)
-            }
+            beginPeripheralDisconnection(currentPeripheral)
             return
         }
 
@@ -167,13 +173,7 @@ final class CoreBluetoothRadioTransport: NSObject, RadioTransport {
             updateState(.disconnecting(currentDevice))
         }
         emit(.log(.info, "Disconnecting from the Godox device."))
-
-        if peripheral.state == .disconnected {
-            finishDisconnection(of: peripheral, error: nil)
-        } else {
-            scheduleDisconnectionWatchdog(for: peripheral)
-            centralManager.cancelPeripheralConnection(peripheral)
-        }
+        beginPeripheralDisconnection(peripheral)
     }
 
     /// Last-resort local cleanup when CoreBluetooth never delivers its
@@ -476,12 +476,21 @@ final class CoreBluetoothRadioTransport: NSObject, RadioTransport {
             publishFailure(error)
             return
         }
+        if peripheral.state != .disconnected, let currentDevice {
+            updateState(.disconnecting(currentDevice))
+        }
+        beginPeripheralDisconnection(peripheral)
+    }
+
+    /// Every path that tears down a peripheral must invalidate queued control
+    /// writes before CoreBluetooth begins its asynchronous disconnect. This
+    /// prevents a delayed A0/A1 or heartbeat from starting while the link is
+    /// still closing.
+    private func beginPeripheralDisconnection(_ peripheral: CBPeripheral) {
+        cancelPendingWrites()
         if peripheral.state == .disconnected {
             finishDisconnection(of: peripheral, error: nil)
         } else {
-            if let currentDevice {
-                updateState(.disconnecting(currentDevice))
-            }
             scheduleDisconnectionWatchdog(for: peripheral)
             centralManager.cancelPeripheralConnection(peripheral)
         }
@@ -573,8 +582,7 @@ final class CoreBluetoothRadioTransport: NSObject, RadioTransport {
     private func resetGATTState() {
         subscriptionTask?.cancel()
         subscriptionTask = nil
-        controlWriteTask?.cancel()
-        controlWriteTask = nil
+        cancelPendingWrites()
 
         controlService = nil
         authenticationService = nil
@@ -585,11 +593,22 @@ final class CoreBluetoothRadioTransport: NSObject, RadioTransport {
         discoveredControlCharacteristics = false
         discoveredAuthenticationCharacteristics = false
         subscriptionStep = .idle
+    }
+
+    private func cancelPendingWrites() {
+        controlWriteTask?.cancel()
+        controlWriteTask = nil
         writeCoordinator.reset()
     }
 
-    private func updateState(_ newState: RadioTransportState) {
-        guard state != newState else { return }
+    private func updateState(
+        _ newState: RadioTransportState,
+        forceEvent: Bool = false
+    ) {
+        if state == newState {
+            if forceEvent { emit(.stateChanged(newState)) }
+            return
+        }
         state = newState
         emit(.stateChanged(newState))
     }
@@ -614,6 +633,32 @@ final class CoreBluetoothRadioTransport: NSObject, RadioTransport {
             return "powered on"
         @unknown default:
             return "unrecognized state"
+        }
+    }
+
+    static func scanStartDisposition(
+        for state: CBManagerState
+    ) -> ScanStartDisposition {
+        switch state {
+        case .poweredOn:
+            return .ready
+        case .unknown, .resetting, .poweredOff:
+            return .waiting
+        case .unauthorized:
+            return .unavailable(
+                reason: description(for: state),
+                resumesIfPoweredOn: true
+            )
+        case .unsupported:
+            return .unavailable(
+                reason: description(for: state),
+                resumesIfPoweredOn: false
+            )
+        @unknown default:
+            return .unavailable(
+                reason: description(for: state),
+                resumesIfPoweredOn: false
+            )
         }
     }
 }

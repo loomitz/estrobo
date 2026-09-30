@@ -3,6 +3,11 @@ import SwiftUI
 import EstroboBluetooth
 import EstroboCore
 
+struct LaunchConnectionOffer: Identifiable, Equatable {
+    let id: UUID
+    let name: String
+}
+
 @MainActor
 final class AppSessionCoordinator: ObservableObject {
     @Published private(set) var runtime: AppRuntime?
@@ -16,20 +21,32 @@ final class AppSessionCoordinator: ObservableObject {
     @Published var bluetoothEducationPresented = false
     @Published var bluetoothEducationAcknowledged = false
     @Published var workspaceConfigurationError: String?
+    @Published var launchConnectionOffer: LaunchConnectionOffer? = nil
+    @Published var compatibilitySummaryPresented = false
     @Published private(set) var sceneSafetyStatus = "scene.integration.required"
 
     let uiTestConfiguration: UITestConfiguration
     private var scenePhaseBridge = ScenePhaseBridge.pendingControllerHooks()
     private var autoConnectionTask: Task<Void, Never>?
     private var pendingAutomaticDemoConnection: Bool?
+    private var didHandleInitialRememberedConnection = false
 
-    init(uiTestConfiguration: UITestConfiguration = .current()) {
+    init(
+        uiTestConfiguration: UITestConfiguration = .current(),
+        restoreRememberedLiveRuntime: Bool = false
+    ) {
         self.uiTestConfiguration = uiTestConfiguration
         language = uiTestConfiguration.language ?? .es
         appearance = uiTestConfiguration.appearance ?? .system
 
-        guard uiTestConfiguration.isEnabled,
-              uiTestConfiguration.fixture != .onboarding else {
+        guard uiTestConfiguration.isEnabled else {
+            if restoreRememberedLiveRuntime,
+               let restored = AppRuntimeFactory.makeLiveRestoringRememberedRadio() {
+                installRuntime(restored)
+            }
+            return
+        }
+        guard uiTestConfiguration.fixture != .onboarding else {
             return
         }
 
@@ -95,8 +112,6 @@ final class AppSessionCoordinator: ObservableObject {
         switch section {
         case .groups:
             tabletDestination = .groups
-        case .global:
-            tabletDestination = .global
         case .presets:
             tabletDestination = .presets
         case .settings:
@@ -118,7 +133,7 @@ final class AppSessionCoordinator: ObservableObject {
         )
         if completed {
             workspaceConfigurationError = nil
-            selectedGroup = controller.visibleGroups.first
+            selectedGroup = nil
             tabletDestination = .groups
             connectionPresented = true
         } else {
@@ -147,6 +162,25 @@ final class AppSessionCoordinator: ObservableObject {
             pendingAutomaticDemoConnection = nil
             scheduleAutomaticDemoConnection(remember: remember)
         }
+        if phase == .active {
+            if controller?.foregroundSessionRequirement != nil {
+                _ = controller?.reconnectInterruptedSessionIfPossible()
+            } else {
+                handleInitialRememberedConnectionIfNeeded()
+            }
+        }
+    }
+
+    func connectLaunchOffer(_ presentedOffer: LaunchConnectionOffer? = nil) {
+        guard let offer = presentedOffer ?? launchConnectionOffer,
+              let controller else { return }
+        launchConnectionOffer = nil
+        connectionPresented = true
+        controller.connectSavedRadioWhenDiscovered(offer.id)
+    }
+
+    func dismissLaunchConnectionOffer() {
+        launchConnectionOffer = nil
     }
 
     func exitDemo() {
@@ -161,6 +195,7 @@ final class AppSessionCoordinator: ObservableObject {
         tabletDestination = .groups
         connectionPresented = false
         demoLabPresented = false
+        compatibilitySummaryPresented = false
     }
 
     private func installDemo(
@@ -176,6 +211,8 @@ final class AppSessionCoordinator: ObservableObject {
         autoConnectionTask?.cancel()
         autoConnectionTask = nil
         pendingAutomaticDemoConnection = nil
+        launchConnectionOffer = nil
+        didHandleInitialRememberedConnection = false
         runtime?.controller.suspendForInactiveScene()
         scenePhaseBridge = .pendingControllerHooks()
         runtime = nil
@@ -185,14 +222,49 @@ final class AppSessionCoordinator: ObservableObject {
     /// completes before the replacement factory is invoked.
     func replaceRuntime(using makeRuntime: () -> AppRuntime) {
         releaseCurrentRuntime()
+        installRuntime(makeRuntime())
+    }
 
-        let newRuntime = makeRuntime()
+    private func installRuntime(_ newRuntime: AppRuntime) {
         scenePhaseBridge = .controller(newRuntime.controller)
         runtime = newRuntime
-        selectedGroup = newRuntime.controller.visibleGroups.first
+        selectedGroup = nil
         tabletDestination = .groups
         phoneSection = .groups
         workspaceConfigurationError = nil
+        compatibilitySummaryPresented = false
+    }
+
+    private func handleInitialRememberedConnectionIfNeeded() {
+        guard !didHandleInitialRememberedConnection, let controller else { return }
+        guard controller.hasCompletedOnboarding,
+              controller.restorationPoints.isEmpty else {
+            didHandleInitialRememberedConnection = true
+            return
+        }
+
+        if let automatic = controller.automaticConnectionSavedRadio {
+            switch controller.phase {
+            case .idle, .unavailable:
+                guard controller.connectSavedRadioWhenDiscovered(
+                    automatic.deviceID
+                ) else { return }
+                didHandleInitialRememberedConnection = true
+                connectionPresented = true
+            default:
+                // A pre-existing connection operation owns the transport.
+                // Retry only on a later foreground activation.
+                return
+            }
+        } else if let last = controller.lastConnectedSavedRadio {
+            didHandleInitialRememberedConnection = true
+            launchConnectionOffer = LaunchConnectionOffer(
+                id: last.deviceID,
+                name: last.name
+            )
+        } else {
+            didHandleInitialRememberedConnection = true
+        }
     }
 
     private func scheduleAutomaticDemoConnection(remember: Bool) {

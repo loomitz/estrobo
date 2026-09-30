@@ -162,21 +162,39 @@ enum SafeGodoxProtocolFrameCheck {
             MultiFlashSettings.supportedPowers.map(\.decimalValue) ==
                 [10, 20, 30, 40, 50, 60, 70, 80]
         )
+        expect(MultiFlashSettings.hertzRange == 1...100)
+        expect(MultiFlashSettings.acceptedHertzRange == 1...199)
 
         guard let minimum = MultiFlashSettings(power: power(10), count: 1, hertz: 1),
-              let maximum = MultiFlashSettings(power: power(80), count: 100, hertz: 100),
+              let editorMaximum = MultiFlashSettings(
+                  power: power(80),
+                  count: 100,
+                  hertz: 100
+              ),
+              let legacyGap = MultiFlashSettings(
+                  power: power(50),
+                  count: 10,
+                  hertz: 55
+              ),
+              let acceptedMaximum = MultiFlashSettings(
+                  power: power(80),
+                  count: 100,
+                  hertz: 199
+              ),
               let decoded = MultiFlashSettings(
-                  countByte: maximum.countByte,
-                  hertzByte: maximum.hertzByte,
-                  powerByte: maximum.powerByte
+                  countByte: acceptedMaximum.countByte,
+                  hertzByte: acceptedMaximum.hertzByte,
+                  powerByte: acceptedMaximum.powerByte
               ) else {
             preconditionFailure("Los límites Multi válidos deben poder construirse")
         }
         expect(minimum.powerByte == 0x5A)
-        expect(maximum.powerByte == 0x14)
-        expect(decoded == maximum)
-        expect(Set([decoded, maximum]).count == 1)
-        expect(maximum.estimatedDurationSeconds == 1)
+        expect(editorMaximum.powerByte == 0x14)
+        expect(editorMaximum.estimatedDurationSeconds == 1)
+        expect(legacyGap.hertzByte == 55)
+        expect(acceptedMaximum.hertzByte == 0xC7)
+        expect(decoded == acceptedMaximum)
+        expect(Set([decoded, acceptedMaximum]).count == 1)
         let repeatingDuration = MultiFlashSettings(power: power(50), count: 1, hertz: 3)
         expect(repeatingDuration?.minimumExposureSeconds == 0.334)
         expect((repeatingDuration?.minimumExposureSeconds ?? 0) >= (1.0 / 3.0))
@@ -184,11 +202,11 @@ enum SafeGodoxProtocolFrameCheck {
         expect(MultiFlashSettings(power: power(50), count: 0, hertz: 10) == nil)
         expect(MultiFlashSettings(power: power(50), count: 101, hertz: 10) == nil)
         expect(MultiFlashSettings(power: power(50), count: 10, hertz: 0) == nil)
-        expect(MultiFlashSettings(power: power(50), count: 10, hertz: 101) == nil)
+        expect(MultiFlashSettings(power: power(50), count: 10, hertz: 200) == nil)
         expect(MultiFlashSettings(power: power(13), count: 10, hertz: 10) == nil)
         expect(MultiFlashSettings(power: power(90), count: 10, hertz: 10) == nil)
         expect(MultiFlashSettings(countByte: 0, hertzByte: 10, powerByte: 0x32) == nil)
-        expect(MultiFlashSettings(countByte: 10, hertzByte: 101, powerByte: 0x32) == nil)
+        expect(MultiFlashSettings(countByte: 10, hertzByte: 200, powerByte: 0x32) == nil)
         expect(MultiFlashSettings(countByte: 10, hertzByte: 10, powerByte: 0x57) == nil)
         expect(MultiFlashSettings(countByte: 10, hertzByte: 10, powerByte: 0x00) == nil)
     }
@@ -228,7 +246,9 @@ enum SafeGodoxProtocolFrameCheck {
         expect(!profile.hasManufacturerPublishedLimit(power: power(80), hertz: 59))
         expect(profile.maximumFlashCount(power: power(50), hertz: 0) == nil)
         expect(profile.maximumFlashCount(power: power(50), hertz: 101) == nil)
+        expect(profile.maximumFlashCount(power: power(50), hertz: 199) == nil)
         expect(!profile.hasManufacturerPublishedLimit(power: power(50), hertz: 101))
+        expect(!profile.hasManufacturerPublishedLimit(power: power(50), hertz: 199))
         expect(profile.maximumFlashCount(power: power(53), hertz: 10) == nil)
         expect(!profile.hasManufacturerPublishedLimit(power: power(53), hertz: 10))
 
@@ -556,6 +576,18 @@ enum SafeGodoxProtocolFrameCheck {
         expect(
             SafeGodoxProtocol.globalSnapshot(from: Data(completeFrame)) == completeSnapshot
         )
+
+        var acceptedHighHertzSnapshot = completeSnapshot
+        acceptedHighHertzSnapshot.multiHertz = 0xC7
+        let acceptedHighHertzFrame = try SafeGodoxProtocol.globalFrame(
+            snapshot: acceptedHighHertzSnapshot
+        )
+        expect([UInt8](acceptedHighHertzFrame)[9] == 0xC7)
+        expect(
+            SafeGodoxProtocol.globalSnapshot(from: acceptedHighHertzFrame) ==
+                acceptedHighHertzSnapshot
+        )
+
         expect(SafeGodoxProtocol.isGlobalAcknowledgement(Data([0xF0, 0xA0])))
         expect(SafeGodoxProtocol.isGlobalAcknowledgement(Data(completeFrame)))
         expect(!SafeGodoxProtocol.isGlobalAcknowledgement(Data([0xF0, 0xA1])))
