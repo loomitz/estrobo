@@ -5,9 +5,9 @@ Fecha: 2026-08-06
 ## Evidencia
 
 - Verdad visual: referencia conceptual incluida a la izquierda en la comparación versionada.
-- Build revisado: `prototype/GodoxMacControlPrototype/Build/estrobo.app --mock-radio`
-- Captura final: [`prototype/GodoxMacControlPrototype/QA/multi-global-final.jpeg`](prototype/GodoxMacControlPrototype/QA/multi-global-final.jpeg)
-- Comparación lado a lado: [`prototype/GodoxMacControlPrototype/QA/multi-global-comparison.png`](prototype/GodoxMacControlPrototype/QA/multi-global-comparison.png)
+- Build revisado: `prototype/EstroboMac/Build/estrobo.app --mock-radio`
+- Captura final: [`prototype/EstroboMac/QA/multi-global-final.jpeg`](prototype/EstroboMac/QA/multi-global-final.jpeg)
+- Comparación lado a lado: [`prototype/EstroboMac/QA/multi-global-comparison.png`](prototype/EstroboMac/QA/multi-global-comparison.png)
 - Referencia: 1487 × 1058 px.
 - Implementación: ventana nativa macOS de 967 × 768 px, captura a la densidad entregada por el sistema.
 - Normalización: ambas imágenes se ajustaron sin recorte dentro de áreas de 1080 × 720 px y se centraron sobre el mismo fondo; comparación final de 2160 × 720 px.

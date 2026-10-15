@@ -35,3 +35,9 @@ DerivedData/
 .env
 .env.*
 !.env.example
+
+# Generated Xcode project
+/ios/EstroboIOS.xcodeproj/
+
+# Local design-tool state
+/.impeccable/

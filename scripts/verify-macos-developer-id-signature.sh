@@ -72,8 +72,8 @@ if [[ -n "$source_commit" ]]; then
 fi
 "${0:A:h}/verify-macos-bundle-contents.sh" "$APP_BUNDLE"
 
-/usr/bin/lipo "$binary" -verify_arch arm64 x86_64
 for arch in arm64 x86_64; do
+  /usr/bin/lipo "$binary" -verify_arch "$arch"
   minos="$(/usr/bin/xcrun vtool -show-build -arch "$arch" "$binary" | /usr/bin/awk '$1 == "minos" { print $2; exit }')"
   [[ -n "$minos" ]] || fail "could not read the minimum macOS version for $arch"
   [[ "$minos" == "$MACOSX_DEPLOYMENT_TARGET" ]] || \

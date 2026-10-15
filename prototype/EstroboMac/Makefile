@@ -1,0 +1,709 @@
+SHELL := /bin/zsh
+
+.DEFAULT_GOAL := build
+
+APP_NAME := estrobo
+BUILD_DIR ?= Build
+DIST_DIR ?= Dist
+VERSION ?= 0.1.0
+BUILD_NUMBER ?= 4
+TAG ?= v$(VERSION)-beta.$(BUILD_NUMBER)
+SIGNING_IDENTITY ?=
+SIGNING_KEYCHAIN ?=
+DEVELOPER_ID_SIGNING_IDENTITY ?=
+DEVELOPER_ID_SIGNING_KEYCHAIN ?=
+DEVELOPER_ID_TEAM_ID ?=
+NOTARY_KEYCHAIN_PROFILE ?=
+NOTARY_API_KEY_PATH ?=
+NOTARY_API_KEY_ID ?=
+NOTARY_API_ISSUER_ID ?=
+NOTARY_SUBMISSION_ID ?=
+DMG_NOTARY_SUBMISSION_ID ?=
+NOTARY_TIMEOUT ?= 30m
+DMG_EVIDENCE_DIR ?=
+DMG_IDENTIFIER ?= mx.loo.estrobo.dmg
+DMG_VOLUME_NAME ?= Estrobo
+REPOSITORY_URL ?= https://github.com/loomitz/estrobo
+APPROVED_TAG ?=
+APPROVED_COMMIT ?=
+APPROVED_DMG_SHA256 ?=
+PHYSICAL_SMOKE_STATUS ?=
+export NOTARY_KEYCHAIN_PROFILE NOTARY_API_KEY_PATH NOTARY_API_KEY_ID NOTARY_API_ISSUER_ID
+MACOSX_DEPLOYMENT_TARGET := 13.0
+BUNDLE_IDENTIFIER := mx.loo.estrobo
+REPOSITORY_ROOT := ../..
+MODULE_DEVELOPER_DIR ?= $(if $(DEVELOPER_DIR),$(DEVELOPER_DIR),$(shell xcode-select -p))
+SIGNING_CERTIFICATE ?= $(REPOSITORY_ROOT)/release/signing/estrobo-beta-signing.cer
+SIGNING_CERTIFICATE_SHA256 ?= $(REPOSITORY_ROOT)/release/signing/estrobo-beta-signing.sha256
+DEVELOPER_ID_CERTIFICATE ?= $(REPOSITORY_ROOT)/release/signing/estrobo-developer-id-application.cer
+DEVELOPER_ID_CERTIFICATE_SHA256 ?= $(REPOSITORY_ROOT)/release/signing/estrobo-developer-id-application.sha256
+RELEASE_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-macos-release.sh
+SIGNING_CERTIFICATE_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-signing-certificate.sh
+PACKAGE_SCRIPT := $(REPOSITORY_ROOT)/scripts/package-macos-release.sh
+DEVELOPER_ID_CERTIFICATE_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-developer-id-certificate.sh
+DEVELOPER_ID_SIGNATURE_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-macos-developer-id-signature.sh
+DEVELOPER_ID_RELEASE_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-macos-developer-id-release.sh
+DEVELOPER_ID_NOTARIZE_SCRIPT := $(REPOSITORY_ROOT)/scripts/notarize-macos-developer-id.sh
+DEVELOPER_ID_PACKAGE_SCRIPT := $(REPOSITORY_ROOT)/scripts/package-macos-developer-id-candidate.sh
+DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-local-developer-id-release-source.sh
+DEVELOPER_ID_DMG_PACKAGE_SCRIPT := $(REPOSITORY_ROOT)/scripts/package-macos-developer-id-dmg.sh
+DEVELOPER_ID_DMG_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-macos-developer-id-dmg.sh
+DEVELOPER_ID_LOCAL_APPROVAL_SCRIPT := $(REPOSITORY_ROOT)/scripts/finalize-local-developer-id-release-approval.sh
+APP_BUNDLE := $(BUILD_DIR)/$(APP_NAME).app
+LEGACY_APP_BUNDLE := $(BUILD_DIR)/GodoxMacControlPrototype.app
+CONTENTS_DIR := $(APP_BUNDLE)/Contents
+MACOS_DIR := $(CONTENTS_DIR)/MacOS
+RESOURCES_DIR := $(CONTENTS_DIR)/Resources
+EXECUTABLE := $(MACOS_DIR)/$(APP_NAME)
+UNIVERSAL_DIR := $(BUILD_DIR)/Universal
+UNIVERSAL_APP_BUNDLE := $(UNIVERSAL_DIR)/$(APP_NAME).app
+UNIVERSAL_CONTENTS_DIR := $(UNIVERSAL_APP_BUNDLE)/Contents
+UNIVERSAL_MACOS_DIR := $(UNIVERSAL_CONTENTS_DIR)/MacOS
+UNIVERSAL_RESOURCES_DIR := $(UNIVERSAL_CONTENTS_DIR)/Resources
+UNIVERSAL_EXECUTABLE := $(UNIVERSAL_MACOS_DIR)/$(APP_NAME)
+SLICE_DIR := $(BUILD_DIR)/ReleaseSlices
+NOTARIZATION_DIR ?= $(BUILD_DIR)/Notarization
+NOTARIZATION_UPLOAD_ARCHIVE ?= $(NOTARIZATION_DIR)/notary-upload.zip
+NOTARIZATION_SUBMIT_RESULT ?= $(NOTARIZATION_DIR)/notary-submit.json
+NOTARIZATION_WAIT_RESULT ?= $(NOTARIZATION_DIR)/notary-wait.json
+NOTARIZATION_LOG ?= $(NOTARIZATION_DIR)/notary-log.json
+NOTARIZATION_METADATA ?= $(NOTARIZATION_DIR)/notarization-metadata.json
+PUBLIC_DMG := $(DIST_DIR)/estrobo-$(TAG)-macos-universal.dmg
+PUBLIC_DMG_MANIFEST := $(DIST_DIR)/estrobo-$(TAG)-manifest.json
+PUBLIC_DMG_CHECKSUMS := $(DIST_DIR)/SHA256SUMS
+TEST_EXECUTABLE := $(BUILD_DIR)/SafeGodoxProtocolFrameCheck
+SESSION_TEST_EXECUTABLE := $(BUILD_DIR)/EstroboSessionRecoveryCheck
+STUDIO_LIBRARY_TEST_EXECUTABLE := $(BUILD_DIR)/StudioLibraryStoreCheck
+LOCALIZATION_TEST_EXECUTABLE := $(BUILD_DIR)/AppLocalizationCheck
+MODELING_MENU_POINTER_TEST_EXECUTABLE := $(BUILD_DIR)/ModelingMenuMouseOrderingCheck
+WORKSPACE_CHROME_TEST_EXECUTABLE := $(BUILD_DIR)/WorkspaceChromeInteractionCheck
+BRAND_ASSET_TEST_EXECUTABLE := $(BUILD_DIR)/EstroboBrandAssetsCheck
+INTERACTIVE_EDITING_TEST_EXECUTABLE := $(BUILD_DIR)/InteractiveEditingCheck
+MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE := $(BUILD_DIR)/MenuBarAccessibilityCheck
+RADIO_TRANSPORT_ADAPTER_TEST_EXECUTABLE := $(BUILD_DIR)/RadioTransportAdapterCheck
+SIMULATED_TRANSPORT_TEST_EXECUTABLE := $(BUILD_DIR)/SimulatedRadioTransportCheck
+SECURE_PERSISTENCE_TEST_EXECUTABLE := $(BUILD_DIR)/SecurePersistenceCheck
+INFO_PLIST := Info.plist
+ENTITLEMENTS := EstroboMac.entitlements
+RESOURCE_SOURCE_DIR := Resources
+LOCALIZATION_RESOURCES := $(sort $(wildcard $(RESOURCE_SOURCE_DIR)/*.lproj/*.strings))
+RESOURCE_FILES := $(sort $(shell find $(RESOURCE_SOURCE_DIR) -type f))
+LOCAL_SOURCES := $(sort $(wildcard Sources/*.swift))
+CORE_SOURCES := $(sort $(wildcard ../../Sources/EstroboCore/*.swift))
+SESSION_CONTROLLER_SOURCE := ../../Sources/EstroboCore/GodoxSessionController.swift
+CORE_LIBRARY_SOURCES := $(filter-out $(SESSION_CONTROLLER_SOURCE),$(CORE_SOURCES))
+PERSISTENCE_SOURCES := $(sort $(wildcard ../../Sources/EstroboPersistence/*.swift))
+BLUETOOTH_SOURCES := $(sort $(wildcard ../../Sources/EstroboBluetooth/*.swift))
+RADIO_TRANSPORT_SOURCE := ../../Sources/EstroboCore/RadioTransport.swift
+WRITE_COORDINATOR_SOURCE := ../../Sources/EstroboBluetooth/CoreBluetoothWriteCoordinator.swift
+SIMULATED_TRANSPORT_SOURCE := ../../Sources/EstroboBluetooth/SimulatedRadioTransport.swift
+SHARED_SOURCES := $(CORE_SOURCES) $(PERSISTENCE_SOURCES) $(BLUETOOTH_SOURCES)
+SOURCES := $(LOCAL_SOURCES) $(SHARED_SOURCES)
+
+SWIFTC := $(shell xcrun --find swiftc)
+MACOS_SDK := $(shell xcrun --sdk macosx --show-sdk-path)
+TARGET_ARCH ?= $(shell uname -m)
+COMMIT ?= $(shell git -C "$(REPOSITORY_ROOT)" rev-parse HEAD 2>/dev/null || printf uncommitted)
+
+.PHONY: build check test test-protocol test-session-recovery test-studio-library test-localization test-modeling-menu-pointer test-workspace-chrome test-brand-assets test-interactive-editing test-menu-bar-accessibility test-launch-responsiveness signing-certificate-check universal release-preflight release release-verify release-verify-existing package package-existing developer-id-certificate-check developer-id-preflight developer-id-release developer-id-release-verify developer-id-local-release developer-id-verify-signed-existing developer-id-notarize-existing developer-id-local-notarize-existing developer-id-resume-notarization-existing developer-id-local-resume-notarization-existing developer-id-verify-existing developer-id-package-existing developer-id-local-source-verify developer-id-dmg-create-existing developer-id-dmg-resume-existing developer-id-dmg-verify-existing developer-id-local-approval-finalize developer-id-local-approval-verify run clean
+.PHONY: check-module-boundaries test-radio-transport-adapter test-simulated-radio-transport test-secure-persistence
+
+build: $(EXECUTABLE)
+
+check: check-module-boundaries
+	"$(SWIFTC)" \
+		-parse-as-library \
+		-warnings-as-errors \
+		-typecheck \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework CoreBluetooth \
+		-framework Security \
+		$(SOURCES)
+
+# Build each SwiftPM module independently. This proves that the session
+# controller is owned by EstroboCore and that the Bluetooth/Persistence
+# adapters consume only Core's public ports. The legacy app typecheck below
+# remains the compatibility proof for its monolithic shared-source build.
+check-module-boundaries:
+	@set -euo pipefail; \
+		export DEVELOPER_DIR="$(MODULE_DEVELOPER_DIR)"; \
+		cd "$(REPOSITORY_ROOT)"; \
+		swift build --target EstroboCore --arch "$(TARGET_ARCH)"; \
+		swift build --target EstroboBluetooth --arch "$(TARGET_ARCH)"; \
+		swift build --target EstroboPersistence --arch "$(TARGET_ARCH)"
+
+test: test-protocol test-session-recovery test-studio-library test-localization test-modeling-menu-pointer test-workspace-chrome test-brand-assets test-interactive-editing test-menu-bar-accessibility test-launch-responsiveness test-radio-transport-adapter test-simulated-radio-transport test-secure-persistence
+
+test-protocol:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework Combine \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework Security \
+		Sources/AppLocalization.swift \
+		Sources/WorkspaceViewPreferences.swift \
+		Sources/GroupVisualIdentity.swift \
+		Sources/GroupVisualColor.swift \
+		$(CORE_LIBRARY_SOURCES) \
+		$(PERSISTENCE_SOURCES) \
+		Tests/SafeGodoxProtocolFrameCheck.swift \
+		-o "$(TEST_EXECUTABLE)"
+	@"$(TEST_EXECUTABLE)"
+
+test-session-recovery:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework Combine \
+		-framework CoreBluetooth \
+		-framework Security \
+		Sources/AppLocalization.swift \
+		Sources/AppTerminationSafety.swift \
+		$(CORE_LIBRARY_SOURCES) \
+		$(PERSISTENCE_SOURCES) \
+		$(SESSION_CONTROLLER_SOURCE) \
+		Tests/EstroboSessionRecoveryCheck.swift \
+		-o "$(SESSION_TEST_EXECUTABLE)"
+	@"$(SESSION_TEST_EXECUTABLE)"
+
+test-studio-library:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		$(CORE_LIBRARY_SOURCES) \
+		../../Sources/EstroboPersistence/StudioLibraryStore.swift \
+		Tests/StudioLibraryStoreCheck.swift \
+		-o "$(STUDIO_LIBRARY_TEST_EXECUTABLE)"
+	@"$(STUDIO_LIBRARY_TEST_EXECUTABLE)"
+
+test-localization:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	@/usr/bin/plutil -lint $(LOCALIZATION_RESOURCES)
+	"$(SWIFTC)" \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework Combine \
+		Sources/AppLocalization.swift \
+		Tests/AppLocalizationCheck.swift \
+		-o "$(LOCALIZATION_TEST_EXECUTABLE)"
+	@"$(LOCALIZATION_TEST_EXECUTABLE)"
+
+test-modeling-menu-pointer:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework SwiftUI \
+		-framework AppKit \
+		Tests/ModelingMenuMouseOrderingCheck.swift \
+		-o "$(MODELING_MENU_POINTER_TEST_EXECUTABLE)"
+	@"$(MODELING_MENU_POINTER_TEST_EXECUTABLE)"
+
+test-workspace-chrome:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-parse-as-library \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework CoreBluetooth \
+		-framework Security \
+		$(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) \
+		$(SHARED_SOURCES) \
+		Tests/WorkspaceChromeInteractionCheck.swift \
+		-o "$(WORKSPACE_CHROME_TEST_EXECUTABLE)"
+	@"$(WORKSPACE_CHROME_TEST_EXECUTABLE)"
+
+test-brand-assets: $(EXECUTABLE)
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework AppKit \
+		Sources/EstroboBrandAssets.swift \
+		Tests/EstroboBrandAssetsCheck.swift \
+		-o "$(BRAND_ASSET_TEST_EXECUTABLE)"
+	@"$(BRAND_ASSET_TEST_EXECUTABLE)" "$(APP_BUNDLE)"
+
+test-interactive-editing:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-parse-as-library \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework CoreBluetooth \
+		-framework Security \
+		$(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) \
+		$(SHARED_SOURCES) \
+		Tests/InteractiveEditingCheck.swift \
+		-o "$(INTERACTIVE_EDITING_TEST_EXECUTABLE)"
+	@"$(INTERACTIVE_EDITING_TEST_EXECUTABLE)"
+
+test-menu-bar-accessibility: build
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-parse-as-library \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework CoreBluetooth \
+		-framework Security \
+		$(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) \
+		$(SHARED_SOURCES) \
+		Tests/MenuBarAccessibilityCheck.swift \
+		-o "$(MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE)"
+	@ESTROBO_TEST_APP_BUNDLE="$(APP_BUNDLE)" \
+		"$(MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE)"
+
+test-launch-responsiveness: build
+	@/bin/zsh Tests/AppLaunchResponsivenessCheck.sh "$(APP_BUNDLE)"
+
+test-radio-transport-adapter:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		$(RADIO_TRANSPORT_SOURCE) \
+		$(WRITE_COORDINATOR_SOURCE) \
+		Tests/RadioTransportAdapterCheck.swift \
+		-o "$(RADIO_TRANSPORT_ADAPTER_TEST_EXECUTABLE)"
+	@"$(RADIO_TRANSPORT_ADAPTER_TEST_EXECUTABLE)"
+
+test-simulated-radio-transport:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		$(CORE_LIBRARY_SOURCES) \
+		$(SIMULATED_TRANSPORT_SOURCE) \
+		Tests/SimulatedRadioTransportCheck.swift \
+		-o "$(SIMULATED_TRANSPORT_TEST_EXECUTABLE)"
+	@"$(SIMULATED_TRANSPORT_TEST_EXECUTABLE)"
+
+test-secure-persistence:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" \
+		-warnings-as-errors \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework Security \
+		$(CORE_LIBRARY_SOURCES) \
+		$(PERSISTENCE_SOURCES) \
+		Tests/SecurePersistenceCheck.swift \
+		-o "$(SECURE_PERSISTENCE_TEST_EXECUTABLE)"
+	@"$(SECURE_PERSISTENCE_TEST_EXECUTABLE)"
+
+signing-certificate-check:
+	@"$(SIGNING_CERTIFICATE_VERIFY_SCRIPT)" \
+		"$(SIGNING_CERTIFICATE)" \
+		"$(SIGNING_CERTIFICATE_SHA256)"
+
+$(EXECUTABLE): $(SOURCES) $(INFO_PLIST) $(ENTITLEMENTS) $(RESOURCE_FILES)
+	@/bin/rm -rf -- "$(APP_BUNDLE)"
+	@/bin/mkdir -p "$(MACOS_DIR)" "$(RESOURCES_DIR)"
+	@/bin/cp "$(INFO_PLIST)" "$(CONTENTS_DIR)/Info.plist"
+	@/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $(BUNDLE_IDENTIFIER)" "$(CONTENTS_DIR)/Info.plist"
+	@/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $(VERSION)" "$(CONTENTS_DIR)/Info.plist"
+	@/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $(BUILD_NUMBER)" "$(CONTENTS_DIR)/Info.plist"
+	@/usr/libexec/PlistBuddy -c "Set :EstroboSourceCommit $(COMMIT)" "$(CONTENTS_DIR)/Info.plist"
+	@/usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion $(MACOSX_DEPLOYMENT_TARGET)" "$(CONTENTS_DIR)/Info.plist"
+	@/usr/bin/ditto "$(RESOURCE_SOURCE_DIR)" "$(RESOURCES_DIR)"
+	"$(SWIFTC)" \
+		-parse-as-library \
+		-sdk "$(MACOS_SDK)" \
+		-target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework CoreBluetooth \
+		-framework Security \
+		-o "$(EXECUTABLE)" \
+		$(SOURCES)
+	/usr/bin/codesign --force --sign - \
+		--options runtime \
+		--entitlements "$(ENTITLEMENTS)" \
+		"$(APP_BUNDLE)"
+	@/usr/bin/codesign --verify --deep --strict "$(APP_BUNDLE)"
+	@print "Construida: $(APP_BUNDLE)"
+
+universal:
+	@set -euo pipefail; \
+	/bin/rm -rf -- "$(UNIVERSAL_DIR)" "$(SLICE_DIR)"; \
+	/bin/mkdir -p "$(UNIVERSAL_MACOS_DIR)" "$(UNIVERSAL_RESOURCES_DIR)" "$(SLICE_DIR)/arm64" "$(SLICE_DIR)/x86_64"; \
+	/bin/cp "$(INFO_PLIST)" "$(UNIVERSAL_CONTENTS_DIR)/Info.plist"; \
+	/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $(BUNDLE_IDENTIFIER)" "$(UNIVERSAL_CONTENTS_DIR)/Info.plist"; \
+	/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $(VERSION)" "$(UNIVERSAL_CONTENTS_DIR)/Info.plist"; \
+	/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $(BUILD_NUMBER)" "$(UNIVERSAL_CONTENTS_DIR)/Info.plist"; \
+	/usr/libexec/PlistBuddy -c "Set :EstroboSourceCommit $(COMMIT)" "$(UNIVERSAL_CONTENTS_DIR)/Info.plist"; \
+	/usr/libexec/PlistBuddy -c "Set :LSMinimumSystemVersion $(MACOSX_DEPLOYMENT_TARGET)" "$(UNIVERSAL_CONTENTS_DIR)/Info.plist"; \
+	/usr/bin/ditto "$(RESOURCE_SOURCE_DIR)" "$(UNIVERSAL_RESOURCES_DIR)"; \
+	for arch in arm64 x86_64; do \
+		"$(SWIFTC)" \
+			-parse-as-library \
+			-O \
+			-warnings-as-errors \
+			-sdk "$(MACOS_SDK)" \
+			-target "$${arch}-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" \
+			-framework SwiftUI \
+			-framework AppKit \
+			-framework CoreBluetooth \
+			-framework Security \
+			-o "$(SLICE_DIR)/$${arch}/$(APP_NAME)" \
+			$(SOURCES); \
+	done; \
+	/usr/bin/lipo -create \
+		"$(SLICE_DIR)/arm64/$(APP_NAME)" \
+		"$(SLICE_DIR)/x86_64/$(APP_NAME)" \
+		-output "$(UNIVERSAL_EXECUTABLE)"; \
+	/usr/bin/lipo "$(UNIVERSAL_EXECUTABLE)" -verify_arch arm64; \
+	/usr/bin/lipo "$(UNIVERSAL_EXECUTABLE)" -verify_arch x86_64; \
+	print "Construido sin firmar: $(UNIVERSAL_APP_BUNDLE)"
+
+release-preflight:
+	@set -euo pipefail; \
+	if [[ -z "$(SIGNING_IDENTITY)" || "$(SIGNING_IDENTITY)" == "-" ]]; then \
+		print -u2 "SIGNING_IDENTITY debe ser una identidad estable; la firma ad hoc no está permitida para release."; \
+		exit 2; \
+	fi; \
+	if [[ ! -r "$(SIGNING_CERTIFICATE)" || ! -r "$(SIGNING_CERTIFICATE_SHA256)" ]]; then \
+		print -u2 "Faltan el certificado público o su huella versionada en release/signing/."; \
+		exit 2; \
+	fi; \
+	"$(SIGNING_CERTIFICATE_VERIFY_SCRIPT)" \
+		"$(SIGNING_CERTIFICATE)" \
+		"$(SIGNING_CERTIFICATE_SHA256)"
+
+release: release-preflight universal
+	@set -euo pipefail; \
+	keychain_args=(); \
+	if [[ -n "$(SIGNING_KEYCHAIN)" ]]; then \
+		keychain_args=(--keychain "$(SIGNING_KEYCHAIN)"); \
+	fi; \
+	/usr/bin/codesign --force \
+		--sign "$(SIGNING_IDENTITY)" \
+		"$${keychain_args[@]}" \
+		--options runtime \
+		--timestamp=none \
+		--entitlements "$(ENTITLEMENTS)" \
+		"$(UNIVERSAL_APP_BUNDLE)"; \
+	print "Firmado para release: $(UNIVERSAL_APP_BUNDLE)"
+
+release-verify: release
+	@$(MAKE) release-verify-existing \
+		BUILD_DIR="$(BUILD_DIR)" \
+		DIST_DIR="$(DIST_DIR)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		SIGNING_CERTIFICATE="$(SIGNING_CERTIFICATE)" \
+		SIGNING_CERTIFICATE_SHA256="$(SIGNING_CERTIFICATE_SHA256)"
+
+release-verify-existing:
+	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		SIGNING_CERTIFICATE="$(SIGNING_CERTIFICATE)" \
+		SIGNING_CERTIFICATE_SHA256="$(SIGNING_CERTIFICATE_SHA256)" \
+		"$(RELEASE_VERIFY_SCRIPT)"
+
+package: release-verify
+	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
+		DIST_DIR="$(DIST_DIR)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		TAG="$(TAG)" \
+		COMMIT="$(COMMIT)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		SIGNING_CERTIFICATE="$(SIGNING_CERTIFICATE)" \
+		SIGNING_CERTIFICATE_SHA256="$(SIGNING_CERTIFICATE_SHA256)" \
+		VERIFY_SCRIPT="$(RELEASE_VERIFY_SCRIPT)" \
+		"$(PACKAGE_SCRIPT)"
+
+package-existing: release-verify-existing
+	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
+		DIST_DIR="$(DIST_DIR)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		TAG="$(TAG)" \
+		COMMIT="$(COMMIT)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		SIGNING_CERTIFICATE="$(SIGNING_CERTIFICATE)" \
+		SIGNING_CERTIFICATE_SHA256="$(SIGNING_CERTIFICATE_SHA256)" \
+		VERIFY_SCRIPT="$(RELEASE_VERIFY_SCRIPT)" \
+		"$(PACKAGE_SCRIPT)"
+
+developer-id-certificate-check:
+	@"$(DEVELOPER_ID_CERTIFICATE_VERIFY_SCRIPT)" \
+		"$(DEVELOPER_ID_CERTIFICATE)" \
+		"$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		"$(DEVELOPER_ID_TEAM_ID)"
+
+developer-id-preflight:
+	@set -euo pipefail; \
+	if [[ -z "$(DEVELOPER_ID_SIGNING_IDENTITY)" || "$(DEVELOPER_ID_SIGNING_IDENTITY)" == "-" ]]; then \
+		print -u2 "DEVELOPER_ID_SIGNING_IDENTITY debe apuntar a una identidad Developer ID Application válida."; \
+		exit 2; \
+	fi; \
+	if [[ ! "$(DEVELOPER_ID_TEAM_ID)" =~ '^[A-Z0-9]{10}$$' ]]; then \
+		print -u2 "DEVELOPER_ID_TEAM_ID debe contener exactamente 10 letras mayúsculas o dígitos."; \
+		exit 2; \
+	fi; \
+	if [[ -n "$(DEVELOPER_ID_SIGNING_KEYCHAIN)" && ! -f "$(DEVELOPER_ID_SIGNING_KEYCHAIN)" ]]; then \
+		print -u2 "No existe el keychain Developer ID indicado."; \
+		exit 2; \
+	fi; \
+	"$(DEVELOPER_ID_CERTIFICATE_VERIFY_SCRIPT)" \
+		"$(DEVELOPER_ID_CERTIFICATE)" \
+		"$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		"$(DEVELOPER_ID_TEAM_ID)"
+
+developer-id-release: developer-id-preflight universal
+	@set -euo pipefail; \
+	keychain_args=(); \
+	if [[ -n "$(DEVELOPER_ID_SIGNING_KEYCHAIN)" ]]; then \
+		keychain_args=(--keychain "$(DEVELOPER_ID_SIGNING_KEYCHAIN)"); \
+	fi; \
+	/usr/bin/codesign --force \
+		--sign "$(DEVELOPER_ID_SIGNING_IDENTITY)" \
+		"$${keychain_args[@]}" \
+		--options runtime \
+		--timestamp \
+		--entitlements "$(ENTITLEMENTS)" \
+		"$(UNIVERSAL_APP_BUNDLE)"; \
+	print "Firmado con Developer ID y sello de tiempo seguro: $(UNIVERSAL_APP_BUNDLE)"
+
+developer-id-release-verify: developer-id-release
+	@$(MAKE) developer-id-verify-signed-existing \
+		BUILD_DIR="$(BUILD_DIR)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
+		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)"
+
+developer-id-local-release:
+	@VERSION="$(VERSION)" BUILD_NUMBER="$(BUILD_NUMBER)" TAG="$(TAG)" \
+		"$(DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT)"
+	@set -euo pipefail; \
+		source_commit="$$(/usr/bin/git -C "$(REPOSITORY_ROOT)" rev-parse --verify 'HEAD^{commit}')"; \
+		$(MAKE) developer-id-release-verify COMMIT="$$source_commit"
+
+developer-id-verify-signed-existing:
+	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		SOURCE_COMMIT="$(COMMIT)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
+		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		"$(DEVELOPER_ID_SIGNATURE_VERIFY_SCRIPT)"
+
+developer-id-notarize-existing: developer-id-verify-signed-existing
+	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		NOTARY_TIMEOUT="$(NOTARY_TIMEOUT)" \
+		NOTARIZATION_UPLOAD_ARCHIVE="$(NOTARIZATION_UPLOAD_ARCHIVE)" \
+		NOTARIZATION_SUBMIT_RESULT="$(NOTARIZATION_SUBMIT_RESULT)" \
+		NOTARIZATION_WAIT_RESULT="$(NOTARIZATION_WAIT_RESULT)" \
+		NOTARIZATION_LOG="$(NOTARIZATION_LOG)" \
+		NOTARIZATION_METADATA="$(NOTARIZATION_METADATA)" \
+		"$(DEVELOPER_ID_NOTARIZE_SCRIPT)"
+
+developer-id-local-notarize-existing:
+	@VERSION="$(VERSION)" BUILD_NUMBER="$(BUILD_NUMBER)" TAG="$(TAG)" \
+		"$(DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT)"
+	@set -euo pipefail; \
+		source_commit="$$(/usr/bin/git -C "$(REPOSITORY_ROOT)" rev-parse --verify 'HEAD^{commit}')"; \
+		$(MAKE) developer-id-notarize-existing COMMIT="$$source_commit"
+
+developer-id-resume-notarization-existing: developer-id-verify-signed-existing
+	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		NOTARY_SUBMISSION_ID="$(NOTARY_SUBMISSION_ID)" \
+		NOTARY_TIMEOUT="$(NOTARY_TIMEOUT)" \
+		NOTARIZATION_UPLOAD_ARCHIVE="$(NOTARIZATION_UPLOAD_ARCHIVE)" \
+		NOTARIZATION_SUBMIT_RESULT="$(NOTARIZATION_SUBMIT_RESULT)" \
+		NOTARIZATION_WAIT_RESULT="$(NOTARIZATION_WAIT_RESULT)" \
+		NOTARIZATION_LOG="$(NOTARIZATION_LOG)" \
+		NOTARIZATION_METADATA="$(NOTARIZATION_METADATA)" \
+		"$(DEVELOPER_ID_NOTARIZE_SCRIPT)"
+
+developer-id-local-resume-notarization-existing:
+	@VERSION="$(VERSION)" BUILD_NUMBER="$(BUILD_NUMBER)" TAG="$(TAG)" \
+		"$(DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT)"
+	@set -euo pipefail; \
+		source_commit="$$(/usr/bin/git -C "$(REPOSITORY_ROOT)" rev-parse --verify 'HEAD^{commit}')"; \
+		$(MAKE) developer-id-resume-notarization-existing COMMIT="$$source_commit"
+
+developer-id-verify-existing:
+	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		SOURCE_COMMIT="$(COMMIT)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
+		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		DEVELOPER_ID_SIGNATURE_VERIFY_SCRIPT="$(DEVELOPER_ID_SIGNATURE_VERIFY_SCRIPT)" \
+		"$(DEVELOPER_ID_RELEASE_VERIFY_SCRIPT)"
+
+developer-id-package-existing: developer-id-verify-existing
+	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
+		DIST_DIR="$(DIST_DIR)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		CANDIDATE_TAG="$(TAG)" \
+		COMMIT="$(COMMIT)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
+		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		NOTARIZATION_SUBMIT_RESULT="$(NOTARIZATION_SUBMIT_RESULT)" \
+		NOTARIZATION_WAIT_RESULT="$(NOTARIZATION_WAIT_RESULT)" \
+		NOTARIZATION_LOG="$(NOTARIZATION_LOG)" \
+		NOTARIZATION_METADATA="$(NOTARIZATION_METADATA)" \
+		VERIFY_SCRIPT="$(DEVELOPER_ID_RELEASE_VERIFY_SCRIPT)" \
+		"$(DEVELOPER_ID_PACKAGE_SCRIPT)"
+
+developer-id-local-source-verify:
+	@VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		TAG="$(TAG)" \
+		"$(DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT)"
+
+developer-id-dmg-create-existing: developer-id-verify-existing
+	@VERSION="$(VERSION)" BUILD_NUMBER="$(BUILD_NUMBER)" TAG="$(TAG)" \
+		"$(DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT)"
+	@set -euo pipefail; \
+		source_commit="$$(/usr/bin/git -C "$(REPOSITORY_ROOT)" rev-parse --verify 'HEAD^{commit}')"; \
+		if [[ "$(COMMIT)" != "$$source_commit" ]]; then \
+			print -u2 "COMMIT must be the exact verified local HEAD for the DMG lane."; \
+			exit 2; \
+		fi
+	@APP_BUNDLE="$(UNIVERSAL_APP_BUNDLE)" \
+		APP_NOTARIZATION_METADATA="$(NOTARIZATION_METADATA)" \
+		DIST_DIR="$(DIST_DIR)" \
+		DMG_EVIDENCE_DIR="$(DMG_EVIDENCE_DIR)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		TAG="$(TAG)" \
+		COMMIT="$(COMMIT)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		DEVELOPER_ID_SIGNING_IDENTITY="$(DEVELOPER_ID_SIGNING_IDENTITY)" \
+		DEVELOPER_ID_SIGNING_KEYCHAIN="$(DEVELOPER_ID_SIGNING_KEYCHAIN)" \
+		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
+		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		NOTARY_TIMEOUT="$(NOTARY_TIMEOUT)" \
+		DMG_NOTARY_SUBMISSION_ID="$(DMG_NOTARY_SUBMISSION_ID)" \
+		DMG_IDENTIFIER="$(DMG_IDENTIFIER)" \
+		DMG_VOLUME_NAME="$(DMG_VOLUME_NAME)" \
+		REPOSITORY_URL="$(REPOSITORY_URL)" \
+		APP_VERIFY_SCRIPT="$(DEVELOPER_ID_RELEASE_VERIFY_SCRIPT)" \
+		DMG_VERIFY_SCRIPT="$(DEVELOPER_ID_DMG_VERIFY_SCRIPT)" \
+		"$(DEVELOPER_ID_DMG_PACKAGE_SCRIPT)"
+
+developer-id-dmg-resume-existing: developer-id-verify-existing
+	@$(MAKE) developer-id-dmg-create-existing \
+		BUILD_DIR="$(BUILD_DIR)" \
+		DIST_DIR="$(DIST_DIR)" \
+		DMG_NOTARY_SUBMISSION_ID="$(DMG_NOTARY_SUBMISSION_ID)"
+
+developer-id-dmg-verify-existing:
+	@DMG="$(PUBLIC_DMG)" \
+		MANIFEST="$(PUBLIC_DMG_MANIFEST)" \
+		CHECKSUMS="$(PUBLIC_DMG_CHECKSUMS)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		TAG="$(TAG)" \
+		COMMIT="$(COMMIT)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
+		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		APP_VERIFY_SCRIPT="$(DEVELOPER_ID_RELEASE_VERIFY_SCRIPT)" \
+		DMG_IDENTIFIER="$(DMG_IDENTIFIER)" \
+		DMG_VOLUME_NAME="$(DMG_VOLUME_NAME)" \
+		REPOSITORY_URL="$(REPOSITORY_URL)" \
+		"$(DEVELOPER_ID_DMG_VERIFY_SCRIPT)"
+
+developer-id-local-approval-finalize:
+	@DMG="$(PUBLIC_DMG)" \
+		MANIFEST="$(PUBLIC_DMG_MANIFEST)" \
+		CHECKSUMS="$(PUBLIC_DMG_CHECKSUMS)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		TAG="$(TAG)" \
+		COMMIT="$(COMMIT)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
+		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		APP_VERIFY_SCRIPT="$(DEVELOPER_ID_RELEASE_VERIFY_SCRIPT)" \
+		DMG_VERIFY_SCRIPT="$(DEVELOPER_ID_DMG_VERIFY_SCRIPT)" \
+		APPROVED_TAG="$(APPROVED_TAG)" \
+		APPROVED_COMMIT="$(APPROVED_COMMIT)" \
+		APPROVED_DMG_SHA256="$(APPROVED_DMG_SHA256)" \
+		PHYSICAL_SMOKE_STATUS="$(PHYSICAL_SMOKE_STATUS)" \
+		"$(DEVELOPER_ID_LOCAL_APPROVAL_SCRIPT)" finalize
+
+developer-id-local-approval-verify:
+	@DMG="$(PUBLIC_DMG)" \
+		MANIFEST="$(PUBLIC_DMG_MANIFEST)" \
+		CHECKSUMS="$(PUBLIC_DMG_CHECKSUMS)" \
+		VERSION="$(VERSION)" \
+		BUILD_NUMBER="$(BUILD_NUMBER)" \
+		TAG="$(TAG)" \
+		COMMIT="$(COMMIT)" \
+		MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)" \
+		BUNDLE_IDENTIFIER="$(BUNDLE_IDENTIFIER)" \
+		DEVELOPER_ID_TEAM_ID="$(DEVELOPER_ID_TEAM_ID)" \
+		DEVELOPER_ID_CERTIFICATE="$(DEVELOPER_ID_CERTIFICATE)" \
+		DEVELOPER_ID_CERTIFICATE_SHA256="$(DEVELOPER_ID_CERTIFICATE_SHA256)" \
+		APP_VERIFY_SCRIPT="$(DEVELOPER_ID_RELEASE_VERIFY_SCRIPT)" \
+		DMG_VERIFY_SCRIPT="$(DEVELOPER_ID_DMG_VERIFY_SCRIPT)" \
+		APPROVED_TAG="$(APPROVED_TAG)" \
+		APPROVED_COMMIT="$(APPROVED_COMMIT)" \
+		APPROVED_DMG_SHA256="$(APPROVED_DMG_SHA256)" \
+		PHYSICAL_SMOKE_STATUS="$(PHYSICAL_SMOKE_STATUS)" \
+		"$(DEVELOPER_ID_LOCAL_APPROVAL_SCRIPT)" verify
+
+run: build
+	@/usr/bin/open -n "$(APP_BUNDLE)"
+
+clean:
+	@/bin/rm -rf -- "$(APP_BUNDLE)" "$(LEGACY_APP_BUNDLE)" "$(UNIVERSAL_DIR)" "$(SLICE_DIR)" "$(BUILD_DIR)/Notarization" "$(TEST_EXECUTABLE)" "$(SESSION_TEST_EXECUTABLE)" "$(STUDIO_LIBRARY_TEST_EXECUTABLE)" "$(LOCALIZATION_TEST_EXECUTABLE)" "$(MODELING_MENU_POINTER_TEST_EXECUTABLE)" "$(WORKSPACE_CHROME_TEST_EXECUTABLE)" "$(BRAND_ASSET_TEST_EXECUTABLE)" "$(INTERACTIVE_EDITING_TEST_EXECUTABLE)" "$(MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE)" "$(RADIO_TRANSPORT_ADAPTER_TEST_EXECUTABLE)" "$(SIMULATED_TRANSPORT_TEST_EXECUTABLE)" "$(SECURE_PERSISTENCE_TEST_EXECUTABLE)"
+	@print "Eliminados los artefactos de $(APP_NAME)"

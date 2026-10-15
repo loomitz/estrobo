@@ -47,7 +47,7 @@ jobs:
             exit 1
           fi
 
-          plist="prototype/GodoxMacControlPrototype/Info.plist"
+          plist="prototype/EstroboMac/Info.plist"
           version="$(plutil -extract CFBundleShortVersionString raw -o - "$plist")"
           build_number="$(plutil -extract CFBundleVersion raw -o - "$plist")"
           candidate_tag="v${version}-beta.${build_number}"
@@ -113,13 +113,17 @@ jobs:
             echo "Expected $EXPECTED_ARCH runner, received $actual_arch" >&2
             exit 1
           fi
+          echo "MODULE_DEVELOPER_DIR=$(xcode-select -p)" >> "$GITHUB_ENV"
+
+      - name: Test shared Swift packages
+        run: swift test --arch "$EXPECTED_ARCH"
 
       - name: Type-check, test, and build
         run: |
           make mac-prototype-check TARGET_ARCH="$EXPECTED_ARCH"
           make mac-prototype-test TARGET_ARCH="$EXPECTED_ARCH"
           make mac-prototype-build TARGET_ARCH="$EXPECTED_ARCH"
-          lipo prototype/GodoxMacControlPrototype/Build/estrobo.app/Contents/MacOS/estrobo \
+          lipo prototype/EstroboMac/Build/estrobo.app/Contents/MacOS/estrobo \
             -verify_arch "$EXPECTED_ARCH"
 
   sign-and-notarize:
@@ -155,8 +159,8 @@ jobs:
             echo "DEVELOPER_ID_KEYCHAIN=$RUNNER_TEMP/estrobo-developer-id.keychain-db"
             echo "DEVELOPER_ID_P12=$RUNNER_TEMP/estrobo-developer-id.p12"
             echo "NOTARY_API_KEY=$RUNNER_TEMP/estrobo-notary-api-key.p8"
-            echo "NOTARIZATION_DIR=$GITHUB_WORKSPACE/prototype/GodoxMacControlPrototype/Build/Notarization"
-            echo "NOTARIZATION_UPLOAD_ARCHIVE=$GITHUB_WORKSPACE/prototype/GodoxMacControlPrototype/Build/Notarization/notary-upload.zip"
+            echo "NOTARIZATION_DIR=$GITHUB_WORKSPACE/prototype/EstroboMac/Build/Notarization"
+            echo "NOTARIZATION_UPLOAD_ARCHIVE=$GITHUB_WORKSPACE/prototype/EstroboMac/Build/Notarization/notary-upload.zip"
             echo "TRANSFER_DIR=$RUNNER_TEMP/estrobo-developer-id-transfer"
             echo "TRANSFER_ARCHIVE=$RUNNER_TEMP/estrobo-developer-id-transfer.tar.gz"
             echo "TRANSFER_ENCRYPTED=$RUNNER_TEMP/estrobo-developer-id-transfer.tar.gz.enc"
@@ -297,7 +301,7 @@ jobs:
 
           mkdir -p "$TRANSFER_DIR"
           ditto -c -k --sequesterRsrc --keepParent \
-            prototype/GodoxMacControlPrototype/Build/Universal/estrobo.app \
+            prototype/EstroboMac/Build/Universal/estrobo.app \
             "$TRANSFER_DIR/estrobo-stapled-app.zip"
           cp \
             "$NOTARIZATION_DIR/notary-submit.json" \
@@ -416,7 +420,7 @@ jobs:
             fi
           done
 
-          recovery_app="prototype/GodoxMacControlPrototype/Build/Universal/estrobo.app"
+          recovery_app="prototype/EstroboMac/Build/Universal/estrobo.app"
           if [[ ! -f "$NOTARIZATION_UPLOAD_ARCHIVE" && -d "$recovery_app" ]]; then
             ditto -c -k --sequesterRsrc --keepParent \
               "$recovery_app" \

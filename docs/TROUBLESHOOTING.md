@@ -79,6 +79,10 @@ El panel sólo muestra grupos visibles del workspace. Si aparece vacío, abre Es
 
 ## Estrobo no permite cerrar la app
 
+Cerrar la última ventana principal con el botón rojo o `⌘W` solicita salir de Estrobo, igual que `⌘Q`. Si necesitas mantener los controles de la barra de menús disponibles, minimiza la ventana con el botón amarillo. Abrir Estrobo desde el Dock o Aplicaciones vuelve a mostrar la ventana principal, aunque esté minimizada.
+
+Si una operación pendiente impide salir, la ventana principal vuelve a mostrarse con el motivo para que puedas resolverla.
+
 Beta 4 bloquea el cierre mientras Sync, Aplicar, Test, una edición interactiva, el plazo de envío automático, una restauración u otra operación física resoluble está pendiente. Termina o cancela la operación y vuelve a cerrar. Un borrador local persistido que ya no pueda aplicarse ni descartarse en la sesión actual no debe dejar la app atrapada; si ocurre, registra la fase visible y repórtalo sin incluir Códigos del radio ni UUID completos.
 
 ## `FEC8` expiró o el resultado es incierto

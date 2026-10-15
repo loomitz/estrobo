@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="prototype/GodoxMacControlPrototype/Resources/Brand/EstroboMark1024.png" width="132" alt="Estrobo app icon">
+  <img src="prototype/EstroboMac/Resources/Brand/EstroboMark1024.png" width="132" alt="Estrobo app icon">
 </p>
 
 <h1 align="center">estrobo</h1>
@@ -15,7 +15,15 @@ Estrobo brings compatible Godox flash-trigger controls into one focused Mac work
 > [!IMPORTANT]
 > Public beta `0.1.0-beta.4` is the current download. Its exact universal DMG and bundled app are signed with Apple Developer ID, notarized and stapled by Apple, and accepted by Gatekeeper.
 
-![Estrobo Channels view in simulated mode](prototype/GodoxMacControlPrototype/QA/channels-after-dark-final-en.png)
+## iPhone and iPad — in development
+
+This branch includes a native SwiftUI app for iPhone and iPad that shares Estrobo's protocol, session, persistence, and recovery core with macOS. It is development work, not a public iOS release: there is no TestFlight or App Store build yet.
+
+Simulator, Demo mode, and automated builds do not validate CoreBluetooth, AccessorySetupKit, the physical X3Pro link, or the optical result. Those claims remain blocked on the [physical test matrix](docs/IOS-PHYSICAL-TEST-MATRIX.md). See the [iOS architecture](docs/IOS-ARCHITECTURE.md) and [AccessorySetupKit spike](docs/IOS-ACCESSORY-SETUP-SPIKE.md) for the current boundaries.
+
+![Estrobo Channels view in simulated mode](prototype/EstroboMac/QA/channels-after-dark-final-en.png)
+
+[Integration status and production gates](docs/INTEGRATION-2026-09-29.md).
 
 ## Requirements
 
@@ -88,7 +96,7 @@ From a development checkout:
 
 ```sh
 make mac-prototype-build
-/usr/bin/open -n prototype/GodoxMacControlPrototype/Build/estrobo.app --args --mock-radio
+/usr/bin/open -n prototype/EstroboMac/Build/estrobo.app --args --mock-radio
 ```
 
 The app displays **Simulated radio** explicitly. It never enables this mode as a silent fallback.
@@ -110,7 +118,7 @@ The app displays **Simulated radio** explicitly. It never enables this mode as a
 <details>
 <summary><strong>See workspace configuration</strong></summary>
 
-![Group compatibility and saved-transmitter library in Settings](prototype/GodoxMacControlPrototype/QA/saved-transmitters-settings-dark-en.png)
+![Group compatibility and saved-transmitter library in Settings](prototype/EstroboMac/QA/saved-transmitters-settings-dark-en.png)
 
 </details>
 

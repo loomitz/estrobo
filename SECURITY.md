@@ -36,8 +36,7 @@ Nunca incluyas un Código del radio real, payload `Psub`/`PWOK`, token, private 
 
 Estrobo reduce su superficie al enlace local:
 
-- App Sandbox activo;
-- entitlement Bluetooth;
+- App Sandbox y entitlement Bluetooth en macOS; contenedor de aplicación y permiso Bluetooth en iOS/iPadOS;
 - sin entitlement de red, cuenta, backend, analítica o telemetría;
 - snapshots, preferencias y recuperación dentro del contenedor local;
 - Test sólo mediante acción explícita y sin reintento automático;
@@ -49,7 +48,9 @@ Estas propiedades no convierten el protocolo BLE en un canal autenticado de form
 
 ### Código del radio
 
-El Código del radio es el PIN local de compatibilidad/proximidad del transmisor. Viaja en el protocolo Godox, no es un secreto de alto valor y no protege una cuenta o servicio. Si se recuerda, se guarda localmente y sin cifrar sólo por opt-in. No debe reutilizarse un PIN personal.
+El Código del radio es el PIN local de compatibilidad/proximidad del transmisor. Viaja en el protocolo Godox, no es un secreto de alto valor y no protege una cuenta o servicio. Recordarlo es opt-in y comienza apagado. No debe reutilizarse un PIN personal.
+
+La beta pública macOS `0.1.0-beta.4` guarda el código recordado localmente y sin cifrar en preferencias. El candidato de desarrollo compartido para macOS e iOS lo guarda en `RadioCodeVault` con Keychain `WhenUnlockedThisDeviceOnly` y sincronización desactivada; los metadatos guardados no incluyen el código. La migración de un registro plaintext compatible verifica cada escritura en Keychain antes de eliminar el registro anterior y falla cerrado si queda incompleta. Ese cambio aún no constituye una nueva release pública.
 
 El handshake `Psub`/`PWOK` siempre es obligatorio y utiliza ese PIN local. Estrobo no añade criptografía casera ni pairing obligatorio; conserva compatible el protocolo BLE observado.
 
