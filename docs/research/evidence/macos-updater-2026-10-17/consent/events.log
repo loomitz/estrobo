@@ -1,0 +1,154 @@
+CASE completed-download-normal-quit
+2026-10-17 09:39:43 +0000 pid=79450 build=1 launched
+2026-10-17 09:39:43 +0000 pid=79450 build=1 command download
+2026-10-17 09:39:43 +0000 pid=79450 build=1 cache-download-started
+2026-10-17 09:39:43 +0000 pid=79450 build=1 cache-complete-without-consent
+2026-10-17 09:39:43 +0000 pid=79450 build=1 command quit
+2026-10-17 09:39:43 +0000 pid=79450 build=1 ordinary-termination-allowed
+CASE process-restart-and-last-window-close
+2026-10-17 09:39:46 +0000 pid=79512 build=1 launched
+2026-10-17 09:39:46 +0000 pid=79512 build=1 command last-window
+2026-10-17 09:39:46 +0000 pid=79512 build=1 last-window-closed
+2026-10-17 09:39:46 +0000 pid=79512 build=1 ordinary-termination-allowed
+CASE appkit-veto-invalidates-consent
+2026-10-17 09:39:48 +0000 pid=79530 build=1 launched
+2026-10-17 09:39:48 +0000 pid=79530 build=1 command block
+2026-10-17 09:39:48 +0000 pid=79530 build=1 blocked
+2026-10-17 09:39:48 +0000 pid=79530 build=1 command confirm
+2026-10-17 09:39:48 +0000 pid=79530 build=1 cache-primed bytes=1221247 lookup=YES
+2026-10-17 09:39:48 +0000 pid=79530 build=1 confirmed-specific-offer
+2026-10-17 09:39:48 +0000 pid=79530 build=1 appkit-veto-consent-invalidated
+2026-10-17 09:39:48 +0000 pid=79530 build=1 command unblock
+2026-10-17 09:39:48 +0000 pid=79530 build=1 unblocked
+2026-10-17 09:39:48 +0000 pid=79530 build=1 command quit
+2026-10-17 09:39:48 +0000 pid=79530 build=1 ordinary-termination-allowed
+CASE cancel-download-and-retry
+2026-10-17 09:39:50 +0000 pid=79545 build=1 launched
+2026-10-17 09:39:50 +0000 pid=79545 build=1 command download
+2026-10-17 09:39:50 +0000 pid=79545 build=1 cache-download-started
+2026-10-17 09:39:50 +0000 pid=79545 build=1 command cancel
+2026-10-17 09:39:50 +0000 pid=79545 build=1 consent-cancelled
+2026-10-17 09:39:50 +0000 pid=79545 build=1 cache-download-cancelled-or-failed
+2026-10-17 09:39:50 +0000 pid=79545 build=1 command download
+2026-10-17 09:39:50 +0000 pid=79545 build=1 cache-download-started
+2026-10-17 09:39:50 +0000 pid=79545 build=1 cache-complete-without-consent
+2026-10-17 09:39:50 +0000 pid=79545 build=1 command quit
+2026-10-17 09:39:50 +0000 pid=79545 build=1 ordinary-termination-allowed
+CASE cancel-prepared-authorized-attempt
+2026-10-17 09:39:53 +0000 pid=79571 build=1 launched
+2026-10-17 09:39:53 +0000 pid=79571 build=1 command confirm-cancel
+2026-10-17 09:39:53 +0000 pid=79571 build=1 cache-primed bytes=1221247 lookup=YES
+2026-10-17 09:39:53 +0000 pid=79571 build=1 confirmed-specific-offer
+2026-10-17 09:39:53 +0000 pid=79571 build=1 appkit-termination-deferred
+2026-10-17 09:39:53 +0000 pid=79571 build=1 checking
+2026-10-17 09:39:53 +0000 pid=79571 build=1 fresh-signed-offer-matches
+2026-10-17 09:39:53 +0000 pid=79571 build=1 offer-found
+2026-10-17 09:39:53 +0000 pid=79571 build=1 strict-cache-only lookup=YES
+2026-10-17 09:39:53 +0000 pid=79571 build=1 sparkle-cache-copy-started
+2026-10-17 09:39:53 +0000 pid=79571 build=1 extracting-after-consent
+2026-10-17 09:39:53 +0000 pid=79571 build=1 ready-held-after-consent
+2026-10-17 09:39:53 +0000 pid=79571 build=1 consent-cancelled
+2026-10-17 09:39:53 +0000 pid=79571 build=1 attempt-dismissed-window-restored
+2026-10-17 09:39:53 +0000 pid=79571 build=1 command quit
+2026-10-17 09:39:53 +0000 pid=79571 build=1 ordinary-termination-allowed
+CASE new-unsafe-work-invalidates-consent
+2026-10-17 09:39:56 +0000 pid=79610 build=1 launched
+2026-10-17 09:39:56 +0000 pid=79610 build=1 command confirm-block
+2026-10-17 09:39:56 +0000 pid=79610 build=1 cache-primed bytes=1221247 lookup=YES
+2026-10-17 09:39:56 +0000 pid=79610 build=1 confirmed-specific-offer
+2026-10-17 09:39:56 +0000 pid=79610 build=1 appkit-termination-deferred
+2026-10-17 09:39:56 +0000 pid=79610 build=1 checking
+2026-10-17 09:39:56 +0000 pid=79610 build=1 fresh-signed-offer-matches
+2026-10-17 09:39:56 +0000 pid=79610 build=1 offer-found
+2026-10-17 09:39:56 +0000 pid=79610 build=1 strict-cache-only lookup=YES
+2026-10-17 09:39:56 +0000 pid=79610 build=1 sparkle-cache-copy-started
+2026-10-17 09:39:56 +0000 pid=79610 build=1 extracting-after-consent
+2026-10-17 09:39:56 +0000 pid=79610 build=1 ready-held-after-consent
+2026-10-17 09:39:56 +0000 pid=79610 build=1 new-unsafe-work
+2026-10-17 09:39:56 +0000 pid=79610 build=1 consent-cancelled
+2026-10-17 09:39:56 +0000 pid=79610 build=1 attempt-dismissed-window-restored
+2026-10-17 09:39:56 +0000 pid=79610 build=1 command unblock
+2026-10-17 09:39:56 +0000 pid=79610 build=1 unblocked
+2026-10-17 09:39:56 +0000 pid=79610 build=1 command quit
+2026-10-17 09:39:56 +0000 pid=79610 build=1 ordinary-termination-allowed
+CASE ordinary-quit-cancels-prepared-attempt
+2026-10-17 09:39:59 +0000 pid=79642 build=1 launched
+2026-10-17 09:39:59 +0000 pid=79642 build=1 command confirm-quit
+2026-10-17 09:39:59 +0000 pid=79642 build=1 cache-primed bytes=1221247 lookup=YES
+2026-10-17 09:39:59 +0000 pid=79642 build=1 confirmed-specific-offer
+2026-10-17 09:39:59 +0000 pid=79642 build=1 appkit-termination-deferred
+2026-10-17 09:39:59 +0000 pid=79642 build=1 checking
+2026-10-17 09:39:59 +0000 pid=79642 build=1 fresh-signed-offer-matches
+2026-10-17 09:39:59 +0000 pid=79642 build=1 offer-found
+2026-10-17 09:39:59 +0000 pid=79642 build=1 strict-cache-only lookup=YES
+2026-10-17 09:39:59 +0000 pid=79642 build=1 sparkle-cache-copy-started
+2026-10-17 09:39:59 +0000 pid=79642 build=1 extracting-after-consent
+2026-10-17 09:39:59 +0000 pid=79642 build=1 ready-held-after-consent
+2026-10-17 09:39:59 +0000 pid=79642 build=1 ordinary-quit-requested-during-preparation
+2026-10-17 09:39:59 +0000 pid=79642 build=1 consent-cancelled
+2026-10-17 09:39:59 +0000 pid=79642 build=1 attempt-dismissed-window-restored
+CASE fresh-signed-offer-change-invalidates-consent
+2026-10-17 09:40:02 +0000 pid=79672 build=1 launched
+2026-10-17 09:40:02 +0000 pid=79672 build=1 command confirm
+2026-10-17 09:40:02 +0000 pid=79672 build=1 cache-primed bytes=1221247 lookup=YES
+2026-10-17 09:40:02 +0000 pid=79672 build=1 confirmed-specific-offer
+2026-10-17 09:40:02 +0000 pid=79672 build=1 appkit-termination-deferred
+2026-10-17 09:40:02 +0000 pid=79672 build=1 checking
+2026-10-17 09:40:02 +0000 pid=79672 build=1 fresh-offer-rejected
+2026-10-17 09:40:02 +0000 pid=79672 build=1 error Error Domain=ConsentSpike Code=1 "Confirmed signed offer changed or consent became invalid." UserInfo={NSLocalizedDescription=Confirmed signed offer changed or consent became invalid.}
+2026-10-17 09:40:02 +0000 pid=79672 build=1 attempt-dismissed-window-restored
+2026-10-17 09:40:02 +0000 pid=79672 build=1 command quit
+2026-10-17 09:40:02 +0000 pid=79672 build=1 ordinary-termination-allowed
+CASE cache-eviction-fails-closed
+2026-10-17 09:40:04 +0000 pid=79695 build=1 launched
+2026-10-17 09:40:04 +0000 pid=79695 build=1 command confirm-evict
+2026-10-17 09:40:04 +0000 pid=79695 build=1 cache-primed bytes=1221247 lookup=YES
+2026-10-17 09:40:04 +0000 pid=79695 build=1 confirmed-specific-offer
+2026-10-17 09:40:04 +0000 pid=79695 build=1 appkit-termination-deferred
+2026-10-17 09:40:04 +0000 pid=79695 build=1 checking
+2026-10-17 09:40:04 +0000 pid=79695 build=1 fresh-signed-offer-matches
+2026-10-17 09:40:04 +0000 pid=79695 build=1 offer-found
+2026-10-17 09:40:04 +0000 pid=79695 build=1 strict-cache-only lookup=NO
+2026-10-17 09:40:04 +0000 pid=79695 build=1 sparkle-cache-copy-started
+2026-10-17 09:40:04 +0000 pid=79695 build=1 error Error Domain=SUSparkleErrorDomain Code=2001 "An error occurred while downloading the update. Please try again later." UserInfo={NSErrorFailingURLKey=http://127.0.0.1:53580/update.dmg, NSLocalizedDescription=An error occurred while downloading the update. Please try again later., NSUnderlyingError=0x77118a8060 {Error Domain=NSURLErrorDomain Code=-1008 "resource unavailable" UserInfo={NSLocalizedDescription=resource unavailable, NSErrorFailingURLStringKey=http://127.0.0.1:53580/update.dmg, NSErrorFailingURLKey=http://127.0.0.1:53580/update.dmg, _NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDownloadTask <9130C453-B239-442C-8E33-0695DECA5949>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDownloadTask <9130C453-B239-442C-8E33-0695DECA5949>.<1>, NSUnderlyingError=0x7711281cb0 {Error Domain=kCFErrorDomainCFNetwork Code=-1008 "(null)"}}}}
+2026-10-17 09:40:04 +0000 pid=79695 build=1 attempt-dismissed-window-restored
+2026-10-17 09:40:04 +0000 pid=79695 build=1 command quit
+2026-10-17 09:40:04 +0000 pid=79695 build=1 ordinary-termination-allowed
+CASE tampered-cache-rejected-by-sparkle
+2026-10-17 09:40:06 +0000 pid=79709 build=1 launched
+2026-10-17 09:40:06 +0000 pid=79709 build=1 command confirm
+2026-10-17 09:40:06 +0000 pid=79709 build=1 cache-primed bytes=1221247 lookup=YES
+2026-10-17 09:40:06 +0000 pid=79709 build=1 confirmed-specific-offer
+2026-10-17 09:40:06 +0000 pid=79709 build=1 appkit-termination-deferred
+2026-10-17 09:40:06 +0000 pid=79709 build=1 checking
+2026-10-17 09:40:06 +0000 pid=79709 build=1 fresh-signed-offer-matches
+2026-10-17 09:40:06 +0000 pid=79709 build=1 offer-found
+2026-10-17 09:40:06 +0000 pid=79709 build=1 strict-cache-only lookup=YES
+2026-10-17 09:40:06 +0000 pid=79709 build=1 sparkle-cache-copy-started
+2026-10-17 09:40:06 +0000 pid=79709 build=1 extracting-after-consent
+2026-10-17 09:40:06 +0000 pid=79709 build=1 error Error Domain=SUSparkleErrorDomain Code=4005 "The update is improperly signed and could not be validated. Please try again later or contact the app developer." UserInfo={NSLocalizedDescription=The update is improperly signed and could not be validated. Please try again later or contact the app developer., NSUnderlyingError=0x793564f7b0 {Error Domain=SUSparkleErrorDomain Code=4005 "(Ed)DSA signature validation before unarchiving failed for update /Users/loomitz/Library/Caches/mx.loo.estrobo.consent-spike.5h_wgpad/org.sparkle-project.Sparkle/Installation/MbFEyc8bX/26A5B944-F528-48BF-A317-6D5083FC0C93.dmg" UserInfo={NSMultipleUnderlyingErrorsKey=(
+    "Error Domain=SUSparkleErrorDomain Code=3002 \"EdDSA signature does not match. Data of the update being checked is different than data that has been signed, or the public key and the private key are not from the same set. The downloaded update (26A5B944-F528-48BF-A317-6D5083FC0C93.dmg) is likely not signed correctly because the file has the expected content length (1221247 bytes) which matches the appcast item.\" UserInfo={NSLocalizedDescription=EdDSA signature does not match. Data of the update being checked is different than data that has been signed, or the public key and the private key are not from the same set. The downloaded update (26A5B944-F528-48BF-A317-6D5083FC0C93.dmg) is likely not signed correctly because the file has the expected content length (1221247 bytes) which matches the appcast item.}",
+    "Error Domain=SUSparkleErrorDomain Code=2 \"The download archive cannot be validated with Apple Developer ID code signing as fallback (after (Ed)DSA verification has failed). The team identifier could not be retrieved from the original app: /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T/estrobo-consent-spike-5h_wgpad/installed/ConsentSpike.app\" UserInfo={NSLocalizedDescription=The download archive cannot be validated with Apple Developer ID code signing as fallback (after (Ed)DSA verification has failed). The team identifier could not be retrieved from the original app: /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T/estrobo-consent-spike-5h_wgpad/installed/ConsentSpike.app}"
+), NSLocalizedDescription=(Ed)DSA signature validation before unarchiving failed for update /Users/loomitz/Library/Caches/mx.loo.estrobo.consent-spike.5h_wgpad/org.sparkle-project.Sparkle/Installation/MbFEyc8bX/26A5B944-F528-48BF-A317-6D5083FC0C93.dmg, NSUnderlyingError=0x793564f810 {Error Domain=SUSparkleErrorDomain Code=3002 "EdDSA signature does not match. Data of the update being checked is different than data that has been signed, or the public key and the private key are not from the same set. The downloaded update (26A5B944-F528-48BF-A317-6D5083FC0C93.dmg) is likely not signed correctly because the file has the expected content length (1221247 bytes) which matches the appcast item." UserInfo={NSLocalizedDescription=EdDSA signature does not match. Data of the update being checked is different than data that has been signed, or the public key and the private key are not from the same set. The downloaded update (26A5B944-F528-48BF-A317-6D5083FC0C93.dmg) is likely not signed correctly because the file has the expected content length (1221247 bytes) which matches the appcast item.}}}}}
+2026-10-17 09:40:06 +0000 pid=79709 build=1 attempt-dismissed-window-restored
+2026-10-17 09:40:06 +0000 pid=79709 build=1 command quit
+2026-10-17 09:40:06 +0000 pid=79709 build=1 ordinary-termination-allowed
+CASE confirm-exact-cache-install-and-relaunch
+2026-10-17 09:40:08 +0000 pid=79713 build=1 launched
+2026-10-17 09:40:09 +0000 pid=79713 build=1 command confirm
+2026-10-17 09:40:09 +0000 pid=79713 build=1 cache-primed bytes=1221247 lookup=YES
+2026-10-17 09:40:09 +0000 pid=79713 build=1 confirmed-specific-offer
+2026-10-17 09:40:09 +0000 pid=79713 build=1 appkit-termination-deferred
+2026-10-17 09:40:09 +0000 pid=79713 build=1 checking
+2026-10-17 09:40:09 +0000 pid=79713 build=1 fresh-signed-offer-matches
+2026-10-17 09:40:09 +0000 pid=79713 build=1 offer-found
+2026-10-17 09:40:09 +0000 pid=79713 build=1 strict-cache-only lookup=YES
+2026-10-17 09:40:09 +0000 pid=79713 build=1 sparkle-cache-copy-started
+2026-10-17 09:40:09 +0000 pid=79713 build=1 extracting-after-consent
+2026-10-17 09:40:09 +0000 pid=79713 build=1 ready-after-consent
+2026-10-17 09:40:09 +0000 pid=79713 build=1 installing-approved-offer
+2026-10-17 09:40:09 +0000 pid=79731 build=2 launched
+2026-10-17 09:40:09 +0000 pid=79731 build=2 command quit
+2026-10-17 09:40:09 +0000 pid=79731 build=2 ordinary-termination-allowed

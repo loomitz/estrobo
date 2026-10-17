@@ -1,0 +1,14 @@
+{
+  "sparkle_version": "2.10.0",
+  "sparkle_distribution_sha256": "c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c",
+  "bundle_identifier": "mx.loo.estrobo.consent-spike.5h_wgpad",
+  "dmg_sha256": "1103f3f3b8a0fe3bc0d7afff90b44573d8cbb05abc42e531803ac4da756e3b3b",
+  "dmg_length": 1221247,
+  "eddsa_signature": "/gqy9o0VR1rVqf0oqIPe0gXvFUKBmQ/HiPVmM4xC6VzyPksq5vMHNH2jkEHv+PppUvCBW6Cys189RaRYDtvlDw==",
+  "official_signature_verification": {
+    "exit": 0,
+    "output": ""
+  },
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434",
+  "toolchain": "Apple clang version 21.0.0 (clang-2100.3.27.1)\nTarget: arm64-apple-darwin27.0.0\nThread model: posix\nInstalledDir: /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin"
+}
