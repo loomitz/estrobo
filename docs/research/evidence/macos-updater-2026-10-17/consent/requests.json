@@ -1,0 +1,42 @@
+[
+  {
+    "host": "127.0.0.1:53580",
+    "message": "\"GET /update.dmg HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:53580",
+    "message": "\"GET /update.dmg HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:53580",
+    "message": "\"GET /update.dmg HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:53580",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:53580",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:53580",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:53580",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:53580",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:53580",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:53580",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  }
+]

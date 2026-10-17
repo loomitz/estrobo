@@ -1,0 +1,26 @@
+{
+  "default-protocol": {
+    "output": "result body=ORIGIN error=0\n",
+    "exit": 0
+  },
+  "shared-protocol": {
+    "output": "protocol-task\nprotocol-start\nresult body= error=-1002\n",
+    "exit": 0
+  },
+  "explicit-protocol": {
+    "output": "protocol-task\nprotocol-start\nresult body= error=-1002\n",
+    "exit": 0
+  },
+  "default-cache": {
+    "output": "result body=ORIGIN error=0\n",
+    "exit": 0
+  },
+  "cache-only": {
+    "output": "cache-task policy=3\nresult body=CACHE_INJECTION error=0\n",
+    "exit": 0
+  },
+  "origin_requests": [
+    "/default-protocol",
+    "/default-cache"
+  ]
+}

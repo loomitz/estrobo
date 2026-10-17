@@ -1,0 +1,65 @@
+{
+  "passed": true,
+  "failure": null,
+  "cases": [
+    {
+      "case": "completed-download-normal-quit",
+      "passed": true,
+      "installed_build": "1",
+      "cache_sha256": "1103f3f3b8a0fe3bc0d7afff90b44573d8cbb05abc42e531803ac4da756e3b3b"
+    },
+    {
+      "case": "process-restart-and-last-window-close",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "appkit-veto-invalidates-consent",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "cancel-download-and-retry",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "cancel-prepared-authorized-attempt",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "new-unsafe-work-invalidates-consent",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "ordinary-quit-cancels-prepared-attempt",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "fresh-signed-offer-change-invalidates-consent",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "cache-eviction-fails-closed",
+      "passed": true,
+      "installed_build": "1",
+      "additional_archive_requests": 0
+    },
+    {
+      "case": "tampered-cache-rejected-by-sparkle",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "confirm-exact-cache-install-and-relaunch",
+      "passed": true,
+      "installed_build": "2",
+      "additional_archive_requests": 0,
+      "archive_sha256": "1103f3f3b8a0fe3bc0d7afff90b44573d8cbb05abc42e531803ac4da756e3b3b"
+    }
+  ]
+}
