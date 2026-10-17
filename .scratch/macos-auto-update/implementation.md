@@ -1,7 +1,7 @@
 # Implementación de actualizaciones macOS
 
 Tracker: Local Markdown
-Status: active
+Status: blocked
 Integration branch: codex/macos-auto-update
 Base: origin/main 68ea6fc (mismo árbol que spec baseline 91eeeb9)
 Spec: spec.md
@@ -16,3 +16,9 @@ Los tickets 01-09 del checkout original son historial del mapa superseded. Ticke
 - [Menú y Ajustes localizados y accesibles](issues/13-ui.md)
 - [Empaquetado, firma y catálogo aprobado](issues/14-packaging.md)
 - [Documentación, validación y revisión final](issues/15-acceptance.md)
+
+## Disposición de implementación
+
+2026-10-17: integración del producto detenida por incompatibilidad del contrato de red (spec, decisión 15) con las APIs públicas de Sparkle 2.10.0 evaluadas. La descarga desde cache y el consentimiento tienen evidencia real parcial favorable; no se confunden con cumplimiento del actualizador completo. Sparkle sigue redirecciones del catálogo hacia orígenes excluidos y no expone la sesión/delegado necesarios para vetarlas. Los controles independientes de Foundation confirman que registerClass afecta la sesión compartida, pero no la sesión privada de Sparkle; la carga del feed ignora la cache local.
+
+Se conserva el mecanismo y sus requisitos, sin introducir fork/APIs privadas, servidor HTTP local, raíces TLS, permisos extra ni un enlace al navegador como sustituto. No se implementan coordinador/UI/empaquetado de un producto que no podría cumplir la política obligatoria. Tickets 11-15 permanecen abiertos y bloqueados; no se declara la especificación implementada ni lista para distribución. El prototipo, evidencia y revisión final quedan en esta rama de integración.
