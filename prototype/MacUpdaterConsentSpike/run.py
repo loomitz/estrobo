@@ -30,6 +30,119 @@ def run(*args):
     return result.stdout
 
 
+class FixtureRun:
+    """Own an isolated run and publish failure evidence even when cleanup fails."""
+
+    def __init__(self, output):
+        self.output = pathlib.Path(output)
+        self.root = None
+        self.secrets = None
+        self.process = None
+        self.requests = []
+        self.results = []
+        self.cleanup_errors = []
+        self._servers = []
+
+    def __enter__(self):
+        try:
+            self.root = pathlib.Path(tempfile.mkdtemp(prefix='estrobo-consent-spike-'))
+            print(f'Artifacts: {self.root}', flush=True)
+            (self.root / 'events.log').touch()
+            (self.root / 'stdout.log').touch()
+            self.secrets = pathlib.Path(tempfile.mkdtemp(prefix='estrobo-consent-fixture-secrets-'))
+            return self
+        except BaseException as error:
+            self._finish(error)
+            raise
+
+    def __exit__(self, error_type, error, traceback):
+        self._finish(error)
+        if error is None and self.cleanup_errors:
+            raise RuntimeError('Fixture cleanup failed: ' + '; '.join(self.cleanup_errors))
+        return False
+
+    def start_server(self, handler):
+        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler)
+        entry = {'server': server, 'thread': None}
+        self._servers.append(entry)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        entry['thread'] = thread
+        thread.start()
+        return server
+
+    def _attempt(self, label, action):
+        try:
+            action()
+            return True
+        except ProcessLookupError:
+            return True  # The fixture exited between checking it and signaling it.
+        except BaseException as error:
+            self.cleanup_errors.append(f'{label}: {type(error).__name__}: {error}')
+            return False
+
+    def _stop_process(self):
+        if self.process is None or self.process.poll() is not None:
+            return
+        terminated = self._attempt('terminate fixture process', self.process.terminate)
+        if terminated and self._attempt('wait for fixture termination', lambda: self.process.wait(timeout=3)):
+            return
+        # Failure to terminate or a timeout must not block secret/evidence cleanup.
+        if self.process.poll() is None:
+            self._attempt('kill fixture process', self.process.kill)
+            self._attempt('wait for killed fixture process', lambda: self.process.wait(timeout=3))
+
+    def _stop_recorded_processes(self):
+        if self.root is None or not (self.root / 'events.log').exists():
+            return
+        for pid in set(re.findall(r'pid=(\d+)', (self.root / 'events.log').read_text())):
+            live = subprocess.run(['ps', '-p', pid, '-o', 'command='], capture_output=True, text=True, timeout=2)
+            expected = str(self.root / 'installed' / 'ConsentSpike.app' / 'Contents' / 'MacOS' / 'ConsentSpike')
+            if live.stdout.strip().startswith(expected):
+                try:
+                    os.kill(int(pid), signal.SIGTERM)
+                except ProcessLookupError:
+                    pass  # A fixture that exited after the identity check needs no signal.
+
+    def _finish(self, error):
+        # Each operation is independent: one process/server failure cannot skip
+        # the other resources, private-key deletion, or the failure report.
+        self._attempt('stop fixture process', self._stop_process)
+        self._attempt('stop recorded fixture processes', self._stop_recorded_processes)
+        for entry in self._servers:
+            server, thread = entry['server'], entry['thread']
+            if thread is not None:
+                self._attempt('shutdown fixture server', lambda: server.shutdown() if thread.is_alive() else None)
+            self._attempt('close fixture server socket', server.server_close)
+        if self.secrets is not None:
+            # Delete the known private file independently even if removing the
+            # enclosing directory encounters an unrelated filesystem failure.
+            self._attempt('delete fixture private key', lambda: (self.secrets / 'fixture-private-key').unlink(missing_ok=True))
+            self._attempt('remove fixture secrets directory', lambda: shutil.rmtree(self.secrets))
+
+        if self.root is not None:
+            self._attempt('write request evidence', lambda: (self.root / 'requests.json').write_text(json.dumps(self.requests, indent=2)))
+        output_ready = self._attempt('create evidence output', lambda: self.output.mkdir(parents=True, exist_ok=True))
+        if output_ready and self.root is not None:
+            for name in ('events.log', 'requests.json', 'stdout.log', 'artifact.json'):
+                if (self.root / name).exists():
+                    self._attempt('copy ' + name, lambda name=name: shutil.copy2(self.root / name, self.output / name))
+
+        def result():
+            failure = f'{type(error).__name__}: {error}' if error is not None else None
+            if failure is None and self.cleanup_errors:
+                failure = 'Fixture cleanup failed: ' + '; '.join(self.cleanup_errors)
+            return json.dumps({'passed': error is None and not self.cleanup_errors, 'failure': failure, 'cleanup_errors': self.cleanup_errors, 'cases': self.results}, indent=2)
+
+        if self.root is not None:
+            self._attempt('write artifact results', lambda: (self.root / 'results.json').write_text(result()))
+        if output_ready:
+            self._attempt('write output results', lambda: (self.output / 'results.json').write_text(result()))
+        # If publishing failed, the artifact copy must also record that failure.
+        if self.cleanup_errors and self.root is not None:
+            self._attempt('record final cleanup failure', lambda: (self.root / 'results.json').write_text(result()))
+        print(f'Evidence: {self.output}', flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sparkle', type=pathlib.Path, help='Already extracted official Sparkle distribution; default downloads pinned hash')
@@ -38,102 +151,97 @@ def main():
     parser.add_argument('--redirect-diagnostic', action='store_true', help='Prove public global URLProtocol cannot guard Sparkle feed redirects')
     args = parser.parse_args()
     assert not (args.negative_control and args.redirect_diagnostic)
-    root = pathlib.Path(tempfile.mkdtemp(prefix='estrobo-consent-spike-'))
-    secrets = pathlib.Path(tempfile.mkdtemp(prefix='estrobo-consent-fixture-secrets-'))
-    print(f'Artifacts: {root}', flush=True)
-    (root / 'events.log').touch()
-    (root / 'stdout.log').touch()
-    (root / 'mode').write_text('baseline' if args.negative_control else 'redirect' if args.redirect_diagnostic else 'cache')
-    requests = []
-    results = []
-    slow_download = False
-    process = None
-    failure = None
+    with FixtureRun(args.output) as fixture:
+        root = fixture.root
+        secrets = fixture.secrets
+        (root / 'mode').write_text('baseline' if args.negative_control else 'redirect' if args.redirect_diagnostic else 'cache')
+        requests = fixture.requests
+        results = fixture.results
+        slow_download = False
+        process = None
 
-    class Handler(http.server.SimpleHTTPRequestHandler):
-        def log_message(self, fmt, *values):
-            requests.append({'host': self.headers.get('Host'), 'message': fmt % values})
+        class Handler(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, fmt, *values):
+                requests.append({'host': self.headers.get('Host'), 'message': fmt % values})
 
-        def do_GET(self):
-            if args.redirect_diagnostic and self.path == '/appcast.xml':
-                self.send_response(302)
-                self.send_header('Location', forbidden_base + '/redirected.xml')
-                self.end_headers()
-                return
-            return super().do_GET()
+            def do_GET(self):
+                if args.redirect_diagnostic and self.path == '/appcast.xml':
+                    self.send_response(302)
+                    self.send_header('Location', forbidden_base + '/redirected.xml')
+                    self.end_headers()
+                    return
+                return super().do_GET()
 
-        def copyfile(self, source, outputfile):
-            if not slow_download or not self.path.startswith('/update.dmg'):
-                return super().copyfile(source, outputfile)
-            try:
-                while chunk := source.read(8192):
-                    outputfile.write(chunk)
-                    outputfile.flush()
-                    time.sleep(.02)
-            except (BrokenPipeError, ConnectionResetError):
-                pass
+            def copyfile(self, source, outputfile):
+                if not slow_download or not self.path.startswith('/update.dmg'):
+                    return super().copyfile(source, outputfile)
+                try:
+                    while chunk := source.read(8192):
+                        outputfile.write(chunk)
+                        outputfile.flush()
+                        time.sleep(.02)
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
 
-    server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(Handler, directory=str(root)))
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-    base = f'http://127.0.0.1:{server.server_port}'
-    class ForbiddenOriginHandler(http.server.SimpleHTTPRequestHandler):
-        def log_message(self, fmt, *values):
-            requests.append({'host': self.headers.get('Host'), 'forbidden_origin': True, 'message': fmt % values})
-    forbidden_server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), functools.partial(ForbiddenOriginHandler, directory=str(root)))
-    forbidden_base = f'http://localhost:{forbidden_server.server_port}'
-    threading.Thread(target=forbidden_server.serve_forever, daemon=True).start()
-    command_id = 0
-    start_offset = 0
+        server = fixture.start_server(functools.partial(Handler, directory=str(root)))
+        base = f'http://127.0.0.1:{server.server_port}'
+        class ForbiddenOriginHandler(http.server.SimpleHTTPRequestHandler):
+            def log_message(self, fmt, *values):
+                requests.append({'host': self.headers.get('Host'), 'forbidden_origin': True, 'message': fmt % values})
+        forbidden_server = fixture.start_server(functools.partial(ForbiddenOriginHandler, directory=str(root)))
+        forbidden_base = f'http://localhost:{forbidden_server.server_port}'
+        command_id = 0
+        start_offset = 0
 
-    def command(action):
-        nonlocal command_id
-        command_id += 1
-        temporary = root / 'command.tmp'
-        temporary.write_text(f'{command_id} {action}')
-        temporary.replace(root / 'command')
+        def command(action):
+            nonlocal command_id
+            command_id += 1
+            temporary = root / 'command.tmp'
+            temporary.write_text(f'{command_id} {action}')
+            temporary.replace(root / 'command')
 
-    def events():
-        return (root / 'events.log').read_text()[start_offset:]
+        def events():
+            return (root / 'events.log').read_text()[start_offset:]
 
-    def wait_for(event, timeout=20):
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            if event in events():
-                return
-            time.sleep(.05)
-        raise AssertionError(f'Timed out waiting for {event}\n{events()}')
+        def wait_for(event, timeout=20):
+            deadline = time.monotonic() + timeout
+            while time.monotonic() < deadline:
+                if event in events():
+                    return
+                time.sleep(.05)
+            raise AssertionError(f'Timed out waiting for {event}\n{events()}')
 
-    def begin(name):
-        nonlocal start_offset
-        start_offset = len((root / 'events.log').read_text())
-        with (root / 'events.log').open('a') as file:
-            file.write(f'CASE {name}\n')
-        print(name, flush=True)
+        def begin(name):
+            nonlocal start_offset
+            start_offset = len((root / 'events.log').read_text())
+            with (root / 'events.log').open('a') as file:
+                file.write(f'CASE {name}\n')
+            print(name, flush=True)
 
-    def passed(name, **evidence):
-        results.append({'case': name, 'passed': True, **evidence})
-        print(f'PASS {name}', flush=True)
+        def passed(name, **evidence):
+            results.append({'case': name, 'passed': True, **evidence})
+            print(f'PASS {name}', flush=True)
 
-    def version():
-        return plistlib.loads((app / 'Contents' / 'Info.plist').read_bytes())['CFBundleVersion']
+        def version():
+            return plistlib.loads((app / 'Contents' / 'Info.plist').read_bytes())['CFBundleVersion']
 
-    def launch():
-        nonlocal process
-        (root / 'command').unlink(missing_ok=True)
-        process = subprocess.Popen([str(app / 'Contents' / 'MacOS' / 'ConsentSpike'), str(root)], env=ENV, stdout=(root / 'stdout.log').open('a'), stderr=subprocess.STDOUT)
-        wait_for('launched')
+        def launch():
+            nonlocal process
+            (root / 'command').unlink(missing_ok=True)
+            process = subprocess.Popen([str(app / 'Contents' / 'MacOS' / 'ConsentSpike'), str(root)], env=ENV, stdout=(root / 'stdout.log').open('a'), stderr=subprocess.STDOUT)
+            fixture.process = process
+            wait_for('launched')
 
-    def quit_and_check(action='quit', expected='1'):
-        command(action)
-        process.wait(timeout=15)
-        # The negative control replaces promptly; allow enough time to observe replacement.
-        time.sleep(2)
-        assert version() == expected, f'{action}: expected build {expected}, found {version()}'
+        def quit_and_check(action='quit', expected='1'):
+            command(action)
+            process.wait(timeout=15)
+            # The negative control replaces promptly; allow enough time to observe replacement.
+            time.sleep(2)
+            assert version() == expected, f'{action}: expected build {expected}, found {version()}'
 
-    def archive_requests():
-        return sum('/update.dmg' in entry['message'] for entry in requests)
+        def archive_requests():
+            return sum('/update.dmg' in entry['message'] for entry in requests)
 
-    try:
         sparkle = args.sparkle
         if sparkle is None:
             dependency_archive = root / 'Sparkle.tar.xz'
@@ -309,32 +417,6 @@ def main():
             command('quit')
             wait_for('build=2 ordinary-termination-allowed')
         (root / 'artifact.json').write_text(json.dumps({'sparkle_version': VERSION, 'sparkle_distribution_sha256': DIGEST, 'bundle_identifier': bundle_id, 'dmg_sha256': archive_hash, 'dmg_length': archive.stat().st_size, 'eddsa_signature': signature, 'official_signature_verification': {'exit': 0, 'output': verification.strip()}, 'os': run('sw_vers').strip(), 'toolchain': run('xcrun', 'clang', '--version').strip()}, indent=2))
-    except BaseException as error:
-        failure = str(error)
-        raise
-    finally:
-        if process is not None and process.poll() is None:
-            process.terminate()
-            process.wait(timeout=10)
-        # Only processes launched by this fixture and recorded with its isolated identity.
-        for pid in set(re.findall(r'pid=(\d+)', (root / 'events.log').read_text())):
-            try:
-                live = subprocess.run(['ps', '-p', pid, '-o', 'command='], capture_output=True, text=True)
-                expected = str(root / 'installed' / 'ConsentSpike.app' / 'Contents' / 'MacOS' / 'ConsentSpike')
-                if live.stdout.strip().startswith(expected):
-                    os.kill(int(pid), signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-        server.shutdown()
-        forbidden_server.shutdown()
-        shutil.rmtree(secrets)
-        (root / 'requests.json').write_text(json.dumps(requests, indent=2))
-        (root / 'results.json').write_text(json.dumps({'passed': failure is None, 'failure': failure, 'cases': results}, indent=2))
-        args.output.mkdir(parents=True, exist_ok=True)
-        for name in ('events.log', 'requests.json', 'stdout.log', 'results.json', 'artifact.json'):
-            if (root / name).exists():
-                shutil.copy2(root / name, args.output / name)
-        print(f'Evidence: {args.output}', flush=True)
 
 
 if __name__ == '__main__':
