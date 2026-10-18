@@ -47,7 +47,7 @@ extension GodoxSessionController {
     var terminationBlockReason: String? {
         AppTerminationSafety.blockReason(
             pendingCount: pendingCount,
-            canResolvePendingChanges: canApply || canDiscardPendingChanges,
+            canResolvePendingChanges: canApplyIgnoringOperationSuspension || canDiscardPendingChanges,
             phase: phase,
             isInteractiveEditActive: isInteractiveEditActive,
             isAutomaticApplyScheduled: isAutomaticApplyScheduled,
