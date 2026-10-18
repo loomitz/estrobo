@@ -16,7 +16,7 @@ Seams autorizados por Testing Decisions de spec.md: coordinador mediante puerto 
 
 ## Implementación y validación
 
-La [revisión final posterior](../review-final.md) añade constantes públicas y recuperación determinista para translocación/copia/autenticación, probadas con 13 callbacks/resultados del servicio. Los 26 casos reales de abajo corresponden al baseline `fd4cc73`; HTTP/lifecycle no cambian y ese delta posterior no se atribuye a la ejecución anterior. Confirmación independiente pendiente.
+La [revisión final posterior](../review-final.md) añade constantes públicas y recuperación determinista para translocación/copia/autenticación, probadas con 13 callbacks/resultados del servicio. Los 26 casos reales de abajo corresponden al baseline `fd4cc73`; HTTP/lifecycle no cambian y ese delta posterior no se atribuye a la ejecución anterior. Los mismos reviewers confirmaron las correcciones en `3acb7cc`, sin hallazgos abiertos; el reporte enlazado conserva ambos dictámenes y sus alcances.
 
 Servicio real app-local, descarga propia limitada y persistida, bridge AppKit compartido por producto/fixture, catálogo firmado y elegibilidad fresca, cache-only handoff, cancelación acreditada por ciclo terminado, notas EN/ES firmadas y errores públicos tipados. Factory/bridge listos para composición de 16; no se modificaron EstroboApp/AppDelegate en este ticket.
 

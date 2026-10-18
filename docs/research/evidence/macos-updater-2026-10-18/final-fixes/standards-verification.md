@@ -1,0 +1,13 @@
+Standards verification of `3acb7cc4f4aa5b2eb3e7207066c92f095b8753b7` against `dda8798`: **all five original findings resolved; zero open; no regression found within the correction scope.**
+
+1. **RESOLVED — Configured CI tests.** `scripts/tests/test_macos_updater_artifacts.py:38–42` explicitly removes the ambient root only for the missing-trust fixture. `UpdateCompositionCheck.swift:40–71` creates temporary metadata without a root, preserves the configured product, isolates preferences and cleans up. Independently reran the originally failing artifact test with the canonical synthetic public root: PASS. Workflow root export, distribution metadata/root matching and candidate preflight remain enforced.
+
+2. **RESOLVED — Dependency notices.** `scripts/macos-updater-artifacts.py:146–148,170–172` copies the complete verified `LICENSE` and rejects absence, symlinks or changed digest. Independently compared both recorded product notices byte-for-byte with `LICENSE` extracted from the SHA-256-pinned official archive; exact match. THIRD-PARTY-NOTICES now identifies Sparkle and its external notices without relicensing Estrobo. Missing/altered-notice regressions cover the public CLI.
+
+3. **RESOLVED — Catalog bounds.** `scripts/macos-update-catalog.py:43–49,68,266–267` enforces 1–64 MiB and 16,384 UTF-8 bytes/language through shared catalog validation and early prepare validation. CLI tests exercise exact boundaries, archive +1, English +1, multibyte Spanish +1, and rejection before signing/public requests in prepare/approve.
+
+4. **RESOLVED — Scoped guidance.** SECURITY, HOW-IT-WORKS and RELEASE-CHECKLIST distinguish beta4/iOS from updater candidates, describe exact host/helper permissions and retain pending production/platform gates. Historical self-signed commands are explicitly scoped; their verifier remains unchanged.
+
+5. **RESOLVED — Possible Primitive Obsession.** `SparkleUpdateService.swift:407–426` uses named public `SUError` cases, correctly classifies translocation/copy/authentication and retains signature/cancellation precedence. Thirteen public-callback/service regressions cover these paths; `prototype/EstroboMac/Makefile:769` includes them in normal aggregate tests. Existing artifact/catalog suites remain wired into Developer ID tooling.
+
+Verified all 13 source hashes, 23 evidence hashes and both recorded product binary/root-absence/notice identities. Archived results: artifacts 7/7 with absent and synthetic root, catalog 5/5, configured native composition, callback recovery 13/13, check/universal and package/signature verification. Full suites were not rerun. Live distribution, sandboxed upgrades, authorization, Intel/minimum-macOS and public feed gates remain pending.

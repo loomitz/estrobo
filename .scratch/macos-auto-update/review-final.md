@@ -1,6 +1,6 @@
 # Revisión final de implementación macOS — 2026-10-18
 
-Estado: correcciones implementadas y probadas; **confirmación independiente de los mismos reviewers pendiente**. No es distribución GO ni aprobación de publicación.
+Estado: **revisión final aprobada por los mismos reviewers independientes sobre `3acb7cc4f4aa5b2eb3e7207066c92f095b8753b7`; cero hallazgos abiertos en ambos ejes**. Este cierre posterior sólo cambia documentos y estados. No es distribución GO ni aprobación de publicación.
 
 Fixed point `68ea6fcc82bda027d044106a5c43004c4458f192`; HEAD revisado inicialmente `dda8798e34d2ecd8f1a9e3e05996162fdbb10160`. Los reportes originales completos se conservan separados: [Standards](../../docs/research/evidence/macos-updater-2026-10-18/final-fixes/standards-initial.md) y [Spec](../../docs/research/evidence/macos-updater-2026-10-18/final-fixes/spec-initial.md). Sus ubicaciones/líneas corresponden a ese HEAD, no al árbol corregido. Un único implementer corrigió ambos ejes en `codex/macos-updater-final-fixes`; no se mezclan ni rerankean los hallazgos.
 
@@ -16,7 +16,7 @@ Resultado inicial: **4 incumplimientos documentados + 1 smell de criterio**. May
 | P2 #4, guías públicas contradictorias | SECURITY y HOW-IT-WORKS distinguen beta 4/iOS de HTTPS exclusivo del nuevo shell macOS. RELEASE-CHECKLIST conserva el carril histórico y documenta los permisos exactos del host/helpers, avisos, raíz externa y gates pendientes; sus comandos locales ya no prescriben empaquetado autosignado para el candidato. No se cambió el verificador histórico. |
 | P2 #5, Primitive Obsession (criterio) | Se utilizan los casos públicos nombrados de `SUError` fijado. Translocación → ubicación; copia/autenticación → instalación/permisos, con mensajes ES/EN y precedencias conservadas. [RED](../../docs/research/evidence/macos-updater-2026-10-18/final-fixes/error-recovery-red.log), [GREEN: 13 casos](../../docs/research/evidence/macos-updater-2026-10-18/final-fixes/error-recovery-green.log). |
 
-Confirmación Standards: pendiente. No se convierte la autoevaluación del implementer en un veredicto independiente.
+Confirmación Standards: **5/5 resueltos, 0 abiertos, sin regresión encontrada en el alcance corregido** por el mismo reviewer original. [Dictamen exacto](../../docs/research/evidence/macos-updater-2026-10-18/final-fixes/standards-verification.md): verificó los hashes de 13 fuentes/23 evidencias, ambos productos y avisos exactos extraídos del archivo oficial; repitió independientemente sólo el caso de artifacts que fallaba con raíz sintética. El conteo inicial permanece 4 incumplimientos documentados + 1 smell de criterio.
 
 ## Spec
 
@@ -27,7 +27,7 @@ Resultado inicial: **2 defectos P2**, sin scope creep establecido. Mayor impacto
 | P2 #1, explicación útil para DMG/ubicación (historia 34) | Los callbacks públicos sintéticos `showUpdaterError` de Sparkle se observan a través de `UpdateService.check`: 1005 → ubicación; 4000/4001 → instalación/permisos. Se conservan cancelación, firma subyacente y autorización cancelada. 13 casos nativos en el target habitual `test`; no se añadió otro puerto de producto. |
 | P2 #2, mismo DMG y validación del catálogo aprobado (decisiones 13/18) | CLI `site` acepta ambos límites exactos; rechaza +1 byte de archivo, inglés ASCII y español multibyte. CLI `prepare`/`approve` rechazan límites excedidos antes de Keychain/firma/red pública. Validación compartida impide aprobar un catálogo que el consumidor rechazaría por estos límites. |
 
-Confirmación Spec: pendiente. Las correcciones se solapan con Standards #3/#5; se preservan ambos reportes y sus conteos.
+Confirmación Spec: **2/2 resueltos, 0 abiertos, sin regresión directamente causada identificada** por el mismo reviewer original. [Dictamen exacto](../../docs/research/evidence/macos-updater-2026-10-18/final-fixes/spec-verification.md): verificó las 13 fuentes/23 evidencias y ambos artefactos; no repitió suites. Las correcciones se solapan con Standards #3/#5; se preservan ambos reportes y sus conteos.
 
 ## Identidad, alcance y verificación
 
@@ -42,3 +42,7 @@ El [check y universal actuales](../../docs/research/evidence/macos-updater-2026-
 No se repitieron suites compartidas/iOS/website ni los 26 casos reales al no cambiar esas fronteras. Los textos ES/EN pasan `plutil -lint`; checks de enlaces locales y `git diff --check` se registran en la evidencia final. Raíz/backup productivos, dos builds Developer ID/notarizados/sandboxed, autorización/recuperación/datos, Intel/macOS 13, tráfico/feed/promoción/retirada públicos siguen pendientes. No hubo radio físico, signing/notary productivo, push, release ni deploy.
 
 El check staged detectó tres espacios finales emitidos por unittest en el RED de límites; se normalizaron únicamente esos espacios. El manifiesto conserva digest original/archivado y transformación; no se alteró el diagnóstico. `git diff --cached --check` pasa sobre todos los textos/evidencias.
+
+## Cierre independiente
+
+Los dictámenes fueron emitidos por los mismos dos reviewers que produjeron los reportes iniciales y entregados por el coordinador raíz desde `/private/tmp/estrobo-updater-final-standards-verification.md` y `/private/tmp/estrobo-updater-final-spec-verification.md`. Se archivaron byte por byte. La [procedencia del cierre](../../docs/research/evidence/macos-updater-2026-10-18/final-fixes/review-closure.json) fija el SHA probado `3acb7cc4f4aa5b2eb3e7207066c92f095b8753b7`, los digests de ambos dictámenes y el manifiesto original. Ese manifiesto conserva el estado histórico pendiente que tenía al entregar el commit para revisión; este cierre posterior registra su aprobación, sin reescribir la identidad de las fuentes/evidencias verificadas. Este commit posterior es exclusivamente documental y no acredita nuevas ejecuciones. La entrega queda lista para un merge separado a integración; los bundles de desarrollo sin raíz siguen disponibles en el worktree.
