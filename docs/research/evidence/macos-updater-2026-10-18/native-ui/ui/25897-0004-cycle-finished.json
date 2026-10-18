@@ -1,0 +1,61 @@
+{
+  "status" : "Build 1 · Update attempt failed; review and retry explicitly",
+  "stage" : "cycle-finished",
+  "controls" : {
+    "cancel" : {
+      "title" : "Cancel installation",
+      "enabled" : true,
+      "accessibilityIdentifier" : "cancel"
+    },
+    "veto" : {
+      "title" : "Veto next AppKit quit",
+      "enabled" : true,
+      "accessibilityIdentifier" : "veto"
+    },
+    "block" : {
+      "title" : "Block AppKit close",
+      "enabled" : true,
+      "accessibilityIdentifier" : "block"
+    },
+    "download" : {
+      "title" : "Download update",
+      "enabled" : true,
+      "accessibilityIdentifier" : "download"
+    },
+    "continue" : {
+      "title" : "Continue approved install",
+      "enabled" : false,
+      "accessibilityIdentifier" : "continue"
+    },
+    "unblock" : {
+      "title" : "Resolve close blocker",
+      "enabled" : true,
+      "accessibilityIdentifier" : "unblock"
+    },
+    "confirm-hold" : {
+      "title" : "Install and restart (pause)",
+      "enabled" : true,
+      "accessibilityIdentifier" : "confirm-hold"
+    },
+    "quit" : {
+      "title" : "Quit normally",
+      "enabled" : true,
+      "accessibilityIdentifier" : "quit"
+    },
+    "confirm" : {
+      "title" : "Install and restart",
+      "enabled" : true,
+      "accessibilityIdentifier" : "confirm"
+    },
+    "last-window" : {
+      "title" : "Close last window",
+      "enabled" : true,
+      "accessibilityIdentifier" : "last-window"
+    },
+    "confirm-evict" : {
+      "title" : "Install with cache evicted",
+      "enabled" : true,
+      "accessibilityIdentifier" : "confirm-evict"
+    }
+  }
+}

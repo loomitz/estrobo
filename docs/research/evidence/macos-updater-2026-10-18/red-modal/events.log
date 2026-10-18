@@ -1,0 +1,23 @@
+CASE visible-cancel-remains-usable-during-preparation
+2026-10-18 10:44:02 +0000 pid=23885 build=1 ui-controls-ready
+2026-10-18 10:44:02 +0000 pid=23885 build=1 launched
+2026-10-18 10:44:02 +0000 pid=23885 build=1 command mouse:download
+2026-10-18 10:44:02 +0000 pid=23885 build=1 ui-mouse-events-queued download
+2026-10-18 10:44:02 +0000 pid=23885 build=1 ui-action download
+2026-10-18 10:44:02 +0000 pid=23885 build=1 cache-download-started
+2026-10-18 10:44:02 +0000 pid=23885 build=1 cache-complete-without-consent
+2026-10-18 10:44:02 +0000 pid=23885 build=1 command mouse:confirm-hold
+2026-10-18 10:44:02 +0000 pid=23885 build=1 ui-mouse-events-queued confirm-hold
+2026-10-18 10:44:02 +0000 pid=23885 build=1 ui-action confirm-hold
+2026-10-18 10:44:02 +0000 pid=23885 build=1 cache-primed bytes=1231043 lookup=YES
+2026-10-18 10:44:02 +0000 pid=23885 build=1 confirmed-specific-offer
+2026-10-18 10:44:02 +0000 pid=23885 build=1 appkit-termination-deferred
+2026-10-18 10:44:02 +0000 pid=23885 build=1 checking
+2026-10-18 10:44:02 +0000 pid=23885 build=1 fresh-signed-offer-matches
+2026-10-18 10:44:02 +0000 pid=23885 build=1 offer-found
+2026-10-18 10:44:02 +0000 pid=23885 build=1 strict-cache-only lookup=YES
+2026-10-18 10:44:02 +0000 pid=23885 build=1 sparkle-cache-copy-started
+2026-10-18 10:44:02 +0000 pid=23885 build=1 extracting-after-consent
+2026-10-18 10:44:03 +0000 pid=23885 build=1 ready-held-after-consent
+2026-10-18 10:44:03 +0000 pid=23885 build=1 command mouse:cancel
+2026-10-18 10:44:03 +0000 pid=23885 build=1 ui-mouse-events-queued cancel
