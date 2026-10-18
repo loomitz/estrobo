@@ -2,13 +2,14 @@
 
 This is an isolated AppKit application and test runner, outside Estrobo's product target. It uses the **unmodified official Sparkle framework and installer**, real signed appcast XML and a real EdDSA-signed DMG. It never opens Estrobo, uses Bluetooth, accesses user Keychain items, publishes anything, or installs outside its unique temporary directory.
 
-The experiment demonstrates a public cache-only archive handoff. It also demonstrates a separate feed-origin policy incompatibility. **It does not authorize product integration.** Read [the gate report](../../docs/research/macos-updater-consent-gate.md) before interpreting a passing script exit.
+The current `--ui-events` experiment proves visible consent, cancellation, AppKit veto and retry with a public cache-only archive handoff. See [the 2026-10-18 gate report](../../docs/research/macos-updater-consent-ui-2026-10-18.md). The earlier feed-origin limitation is explicitly accepted by the revised specification; it remains documented as historical evidence. Passing this mechanism gate permits product implementation, not distribution.
 
 ## Run
 
 Requires a logged-in macOS desktop and full Xcode. The default toolchain path can be overridden with `DEVELOPER_DIR`.
 
 ```sh
+python3 prototype/MacUpdaterConsentSpike/run.py --ui-events --output /tmp/estrobo-consent-ui
 python3 prototype/MacUpdaterConsentSpike/run.py --output /tmp/estrobo-consent-evidence
 python3 prototype/MacUpdaterConsentSpike/run.py --negative-control --output /tmp/estrobo-consent-negative
 python3 prototype/MacUpdaterConsentSpike/run.py --redirect-diagnostic --output /tmp/estrobo-feed-redirect
@@ -30,6 +31,6 @@ The runner copies only text evidence to `--output`. It leaves the non-secret tem
 - `SPUUpdater` + `SPUUserDriver` + `SPUUpdaterDelegate`: real feed verification, selection, cache-only copy, extraction, EdDSA validation, installation and relaunch. No private Sparkle API, fork, swizzling, own signature implementation or event-only installer mock.
 - Foundation `URLSession`, `URLCache`, mutable `URLRequest.cachePolicy`: download first, retain disk bytes, prime a sufficiently large cache only after explicit consent, and set `.returnCacheDataDontLoad` through `willDownloadUpdate:withRequest:`. Cache misses fail without fetching the archive. SHA-256 is evidence, not a replacement for Sparkle signature validation.
 
-The fixture obtains a real AppKit veto before preparing Sparkle, deferring accepted termination with `.terminateLater`. This enters a termination runloop mode where ordinary polling/input is suspended. Prepared cancellation, newly unsafe work and quit-during-preparation are therefore invoked as scheduled **public actions from the real ready callback**. They establish installer control and subsequent disk/process outcomes. They do **not** establish that a user can click a cancel button during that modal termination phase. Interactive cancellation remains an explicit open gate.
+In current `--ui-events` mode, a real AppKit preflight deliberately returns `.terminateCancel`, leaving the normal event loop available while preparing the explicitly approved update. Visible buttons are exercised by posted native mouse events and hit-testing; Cmd-Q and the standard window-close button are native events too. At the final AppKit gate, a veto consumes the still-unused ready reply as `.skip`; only an accepted commitment consumes it as `.install` and briefly uses `.terminateLater`. No scheduled cancellation stands in for a user action. The fixture's pause checkpoint makes post-preparation interaction reproducible; the normal Install button continues automatically. The older default mechanical mode retains the earlier deferred-termination experiment and its scheduled actions for historical regression only.
 
 The standalone Foundation controls distinguish shared sessions (global `URLProtocol` registration consulted) from default configured sessions (not consulted), and demonstrate that `.reloadIgnoringLocalCacheData` does not accept a cache-only feed injection. They are supporting API diagnostics, not substitutes for the Sparkle runtime tests.

@@ -1,5 +1,7 @@
 # macOS updater mechanism gate — 2026-10-17
 
+**Historical report.** The authorized 2026-10-18 specification revision accepts Sparkle’s HTTPS feed redirects, and [the current native UI gate](macos-updater-consent-ui-2026-10-18.md) closes the earlier interactive consent gap. The blocked conclusion below describes the original contract and evidence at that date.
+
 **Product integration is blocked.** The real Sparkle 2.10.0 experiment proves a public cache-only DMG handoff and preserves consent in the tested lifecycle cases. A separate real feed redirect bypasses the required origin allowlist, and representative interactive cancellation during AppKit's pending termination remains unproven. These results do not satisfy the entire mandatory mechanism gate or authorize weakening spec decisions 2, 15, 17 and 22.
 
 Spec: [`.scratch/macos-auto-update/spec.md`](../../.scratch/macos-auto-update/spec.md). Ticket: [10](../../.scratch/macos-auto-update/issues/10-consent-gate.md). Prototype: [`MacUpdaterConsentSpike`](../../prototype/MacUpdaterConsentSpike/README.md). Base before implementation: `218e9ea69f5aa229c2bf815e64b72bdf34413fe7`, directly on integration `codex/macos-auto-update`. Product app, updater integration, radio session, release tooling, keys, feed and infrastructure were not modified by this experiment.

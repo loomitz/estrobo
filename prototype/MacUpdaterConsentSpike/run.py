@@ -96,8 +96,9 @@ class FixtureRun:
             return
         for pid in set(re.findall(r'pid=(\d+)', (self.root / 'events.log').read_text())):
             live = subprocess.run(['ps', '-p', pid, '-o', 'command='], capture_output=True, text=True, timeout=2)
-            expected = str(self.root / 'installed' / 'ConsentSpike.app' / 'Contents' / 'MacOS' / 'ConsentSpike')
-            if live.stdout.strip().startswith(expected):
+            expected = (self.root / 'installed' / 'ConsentSpike.app' / 'Contents' / 'MacOS' / 'ConsentSpike').resolve()
+            command = live.stdout.strip().split(maxsplit=1)
+            if expected.is_relative_to(self.root.resolve()) and command and pathlib.Path(command[0]).resolve() == expected:
                 try:
                     os.kill(int(pid), signal.SIGTERM)
                 except ProcessLookupError:
@@ -127,6 +128,9 @@ class FixtureRun:
                 if (self.root / name).exists():
                     self._attempt('copy ' + name, lambda name=name: shutil.copy2(self.root / name, self.output / name))
 
+        if output_ready and self.root is not None and (self.root / 'ui').exists():
+            self._attempt('copy visible UI evidence', lambda: shutil.copytree(self.root / 'ui', self.output / 'ui', dirs_exist_ok=True))
+
         def result():
             failure = f'{type(error).__name__}: {error}' if error is not None else None
             if failure is None and self.cleanup_errors:
@@ -149,12 +153,13 @@ def main():
     parser.add_argument('--output', type=pathlib.Path, required=True, help='Directory for text evidence (no keys or binaries)')
     parser.add_argument('--negative-control', action='store_true', help='Reproduce held ready callback installing on ordinary quit')
     parser.add_argument('--redirect-diagnostic', action='store_true', help='Prove public global URLProtocol cannot guard Sparkle feed redirects')
+    parser.add_argument('--ui-events', action='store_true', help='Drive visible controls through native AppKit mouse/key events')
     args = parser.parse_args()
     assert not (args.negative_control and args.redirect_diagnostic)
     with FixtureRun(args.output) as fixture:
         root = fixture.root
         secrets = fixture.secrets
-        (root / 'mode').write_text('baseline' if args.negative_control else 'redirect' if args.redirect_diagnostic else 'cache')
+        (root / 'mode').write_text('baseline' if args.negative_control else 'redirect' if args.redirect_diagnostic else 'ui' if args.ui_events else 'cache')
         requests = fixture.requests
         results = fixture.results
         slow_download = False
@@ -283,7 +288,151 @@ def main():
         (root / 'offer.plist').write_bytes(plistlib.dumps({'build': '2', 'url': base + '/update.dmg', 'length': archive.stat().st_size, 'signature': signature}))
         app = root / 'installed' / 'ConsentSpike.app'
         run('ditto', str(root / 'build1' / 'ConsentSpike.app'), str(app))
-        if args.redirect_diagnostic:
+        if args.ui_events:
+            def click(identifier):
+                command('mouse:' + identifier)
+                wait_for('ui-action ' + identifier)
+
+            begin('visible-download-ordinary-command-q')
+            launch()
+            wait_for('ui-controls-ready')
+            click('download')
+            wait_for('cache-complete-without-consent')
+            assert hashlib.sha256((root / 'cache.dmg').read_bytes()).hexdigest() == archive_hash
+            quit_and_check('key:quit')
+            passed('visible-download-ordinary-command-q', installed_build='1')
+
+            begin('visible-process-restart-close-window-button')
+            launch()
+            wait_for('ui-controls-ready')
+            assert version() == '1'
+            quit_and_check('mouse:window-close')
+            wait_for('last-window-closed')
+            passed('visible-process-restart-close-window-button', installed_build='1')
+
+            begin('visible-cancel-transfer-and-retry')
+            launch()
+            slow_download = True
+            click('download')
+            wait_for('cache-download-started')
+            click('cancel')
+            wait_for('cache-download-cancelled-or-failed')
+            assert not (root / 'cache.dmg').exists()
+            slow_download = False
+            click('download')
+            wait_for('cache-complete-without-consent')
+            assert hashlib.sha256((root / 'cache.dmg').read_bytes()).hexdigest() == archive_hash
+            quit_and_check('key:quit')
+            passed('visible-cancel-transfer-and-retry', installed_build='1')
+
+            begin('visible-cancel-remains-usable-during-preparation')
+            launch()
+            click('confirm-hold')
+            wait_for('ready-held-after-consent')
+            click('cancel')
+            wait_for('attempt-dismissed-window-restored')
+            wait_for('ui-cycle-finished')
+            quit_and_check('key:quit')
+            passed('visible-cancel-remains-usable-during-preparation', installed_build='1')
+
+            begin('visible-appkit-veto-before-preparation')
+            launch()
+            click('block')
+            click('confirm-hold')
+            wait_for('appkit-veto-consent-invalidated')
+            assert 'sparkle-cache-copy-started' not in events()
+            assert process.poll() is None
+            click('unblock')
+            quit_and_check('key:quit')
+            passed('visible-appkit-veto-before-preparation', installed_build='1')
+
+            begin('visible-final-appkit-veto-cancels-prepared-installer')
+            launch()
+            click('confirm-hold')
+            wait_for('ready-held-after-consent')
+            click('veto')
+            click('continue')
+            wait_for('appkit-veto-consent-invalidated')
+            wait_for('attempt-dismissed-window-restored')
+            wait_for('ui-cycle-finished')
+            assert process.poll() is None and version() == '1'
+            click('unblock')
+            quit_and_check('key:quit')
+            passed('visible-final-appkit-veto-cancels-prepared-installer', installed_build='1')
+
+            begin('visible-command-q-cancels-prepared-attempt')
+            launch()
+            click('confirm-hold')
+            wait_for('ready-held-after-consent')
+            quit_and_check('key:quit')
+            wait_for('ordinary-quit-awaits-installer-cancellation')
+            passed('visible-command-q-cancels-prepared-attempt', installed_build='1')
+
+            begin('visible-new-unsafe-work-invalidates-consent')
+            launch()
+            click('confirm-hold')
+            wait_for('ready-held-after-consent')
+            click('block')
+            wait_for('attempt-dismissed-window-restored')
+            wait_for('ui-cycle-finished')
+            assert process.poll() is None and version() == '1'
+            click('unblock')
+            quit_and_check('key:quit')
+            passed('visible-new-unsafe-work-invalidates-consent', installed_build='1')
+
+            begin('visible-fresh-signed-offer-change-rejected')
+            publish_feed(feed.replace('sparkle:version="2"', 'sparkle:version="3"'))
+            launch()
+            click('confirm')
+            wait_for('fresh-offer-rejected')
+            wait_for('ui-cycle-finished')
+            assert 'sparkle-cache-copy-started' not in events()
+            quit_and_check('key:quit')
+            publish_feed()
+            passed('visible-fresh-signed-offer-change-rejected', installed_build='1')
+
+            begin('visible-cache-eviction-fails-closed')
+            launch()
+            requests_before = archive_requests()
+            click('confirm-evict')
+            wait_for('strict-cache-only lookup=NO')
+            wait_for('ui-cycle-finished')
+            assert archive_requests() == requests_before
+            quit_and_check('key:quit')
+            passed('visible-cache-eviction-fails-closed', installed_build='1', additional_archive_requests=0)
+
+            begin('visible-tampered-cache-rejected-by-sparkle')
+            cache = bytearray((root / 'cache.dmg').read_bytes())
+            cache[len(cache) // 2] ^= 1
+            (root / 'cache.dmg').write_bytes(cache)
+            launch()
+            click('confirm')
+            wait_for('ui-cycle-finished')
+            assert 'error ' in events() and 'ready-after-consent' not in events()
+            quit_and_check('key:quit')
+            shutil.copy2(archive, root / 'cache.dmg')
+            passed('visible-tampered-cache-rejected-by-sparkle', installed_build='1')
+
+            begin('visible-cancel-and-retry-installs-exact-cache-and-relaunches')
+            launch()
+            click('confirm-hold')
+            wait_for('ready-held-after-consent')
+            click('cancel')
+            wait_for('ui-cycle-finished')
+            assert version() == '1' and process.poll() is None
+            requests_before = archive_requests()
+            click('confirm')
+            wait_for('appkit-final-commit-accepted')
+            wait_for('installing-approved-offer')
+            process.wait(timeout=15)
+            wait_for('build=2 ui-controls-ready')
+            wait_for('build=2 launched')
+            assert version() == '2'
+            assert archive_requests() == requests_before
+            passed('visible-cancel-and-retry-installs-exact-cache-and-relaunches', installed_build='2', additional_archive_requests=0, archive_sha256=archive_hash)
+            command('key:quit')
+            wait_for('build=2 ordinary-termination-allowed')
+        elif args.redirect_diagnostic:
             shutil.copy2(root / 'appcast.xml', root / 'redirected.xml')
             begin('forbidden-feed-redirect-bypasses-global-urlprotocol')
             launch()

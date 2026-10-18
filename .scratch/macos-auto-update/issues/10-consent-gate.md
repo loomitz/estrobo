@@ -2,8 +2,8 @@
 
 Parent: ../spec.md
 Type: task
-Status: open
-Assignee: none
+Status: resolved
+Assignee: consent_gate
 Blocked by: none
 
 ## Acceptance
@@ -26,3 +26,7 @@ Prototipo real y evidencia: [gate report](../../../docs/research/macos-updater-c
 ## Reopened — 2026-10-18
 
 Contrato revisado autorizado en spec.md decisión 15: redirecciones HTTPS del catálogo gestionadas por Sparkle, sin garantía de veto previo de dominio. Resolver interacción visible real (confirmación, cancelación, veto y reintento) usando APIs públicas; no acreditar temporizadores como clicks del usuario. Las firmas y la garantía de no instalar al cerrar sin confirmar se conservan.
+
+## Resolved — 2026-10-18
+
+[Informe actual y evidencia](../../../docs/research/macos-updater-consent-ui-2026-10-18.md): 12/12 recorridos con botones visibles y eventos nativos de mouse/teclado, Sparkle 2.10.0 real, feed y DMG firmados. Descargar/cerrar/reiniciar no instala; Cancelar, nuevo bloqueo y veto AppKit final cancelan antes de consumir `.install`. Cancelar y confirmar de nuevo reemplaza build 1 por 2 desde los mismos bytes de cache, sin nueva descarga, y relanza una ventana real. Regresiones de limpieza 5/5. El veto previo de dominio es una limitación aceptada por la revisión autorizada; los gates de distribución y sesión del producto pertenecen a los tickets siguientes y siguen pendientes.

@@ -5,6 +5,7 @@ import importlib.util
 import json
 import pathlib
 import socket
+import signal
 import subprocess
 import sys
 import tempfile
@@ -130,6 +131,36 @@ class CleanupContractTests(unittest.TestCase):
                     process.kill()
                     process.wait(timeout=3)
                 process.stdout.close()
+
+
+    def test_recorded_relaunch_is_cleaned_when_executable_path_uses_a_filesystem_alias(self):
+        with tempfile.TemporaryDirectory(prefix='estrobo-cleanup-test-') as temporary:
+            fixture = runner.FixtureRun(pathlib.Path(temporary) / 'evidence')
+            process = None
+            try:
+                with fixture:
+                    executable = fixture.root / 'installed' / 'ConsentSpike.app' / 'Contents' / 'MacOS' / 'ConsentSpike'
+                    executable.parent.mkdir(parents=True)
+                    actual = fixture.root / 'real-fixture-executable'
+                    source = fixture.root / 'fixture-process.c'
+                    source.write_text('#include <stdio.h>\n#include <unistd.h>\nint main(void) { puts("ready"); fflush(stdout); sleep(60); return 0; }\n')
+                    subprocess.run(['xcrun', 'clang', str(source), '-o', str(actual)], check=True, env=runner.ENV)
+                    executable.symlink_to(actual)
+                    process = subprocess.Popen([str(actual.resolve())], stdout=subprocess.PIPE, text=True)
+                    self.assertEqual(process.stdout.readline().strip(), 'ready')
+                    self.assertIsNone(process.poll())
+                    (fixture.root / 'events.log').write_text(f'pid={process.pid} build=2 launched\n')
+                process.wait(timeout=2)
+                self.assertEqual(process.returncode, -signal.SIGTERM)
+                self.assertFalse(fixture.secrets.exists())
+                result = json.loads((fixture.output / 'results.json').read_text())
+                self.assertTrue(result['passed'])
+            finally:
+                if process is not None and process.poll() is None:
+                    process.kill()
+                    process.wait(timeout=3)
+                if process is not None and process.stdout is not None:
+                    process.stdout.close()
 
 
 if __name__ == '__main__':
