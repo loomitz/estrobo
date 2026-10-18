@@ -1,0 +1,217 @@
+Building for debugging...
+[Pre-planning 1 / 269]
+[Planning deferred tasks]
+[60 / 132]
+[61 / 133] EstroboCore
+[71 / 178]
+[76 / 178]
+[80 / 178]
+[85 / 178]
+[89 / 178]
+[92 / 178]
+[94 / 178]
+[95 / 178]
+[105 / 178] EstroboCore
+[107 / 178] EstroboCore
+[116 / 180] EstroboCore
+[116 / 180] EstroboPersistence
+[125 / 197] EstroboPersistence
+[129 / 197] EstroboBluetooth
+[139 / 197] EstroboBluetooth
+[149 / 197] EstroboPersistence
+[150 / 197] EstroboBluetooth
+[151 / 197] EstroboCore
+[167 / 200] EstroboBluetoothTests-product
+[181 / 244]
+[188 / 244]
+[191 / 244]
+[193 / 244]
+[196 / 244]
+[199 / 244]
+[200 / 244]
+[211 / 244] EstroboBluetoothTests-product
+[221 / 244] EstroboPersistenceTests-product
+[226 / 244] EstroboPersistenceTests-product
+[230 / 244] EstroboBluetoothTests-product
+[238 / 244] EstroboCoreTests-product
+[240 / 244] EstroboCoreTests-product
+Build complete! (10.54 sec)
+Test Suite 'All tests' started at 2026-10-18 05:03:09.374.
+Test Suite 'EstroboPersistenceTests.xctest' started at 2026-10-18 05:03:09.375.
+Test Suite 'EstroboPersistenceSmokeTests' started at 2026-10-18 05:03:09.375.
+Test Case '-[EstroboPersistenceTests.EstroboPersistenceSmokeTests testInMemoryFactoryPersistsThroughPortsWithoutExternalStorage]' started.
+Test Case '-[EstroboPersistenceTests.EstroboPersistenceSmokeTests testInMemoryFactoryPersistsThroughPortsWithoutExternalStorage]' passed (0.001 seconds).
+Test Case '-[EstroboPersistenceTests.EstroboPersistenceSmokeTests testInMemoryRestorationPortRoundTripsARecoveryPoint]' started.
+Test Case '-[EstroboPersistenceTests.EstroboPersistenceSmokeTests testInMemoryRestorationPortRoundTripsARecoveryPoint]' passed (0.000 seconds).
+Test Case '-[EstroboPersistenceTests.EstroboPersistenceSmokeTests testSeparateInMemoryFactoriesDoNotShareState]' started.
+Test Case '-[EstroboPersistenceTests.EstroboPersistenceSmokeTests testSeparateInMemoryFactoriesDoNotShareState]' passed (0.000 seconds).
+Test Suite 'EstroboPersistenceSmokeTests' passed at 2026-10-18 05:03:09.377.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'RadioConnectionPreferencesTests' started at 2026-10-18 05:03:09.377.
+Test Case '-[EstroboPersistenceTests.RadioConnectionPreferencesTests testInMemoryStorePersistsNilAndPresentIdentifiers]' started.
+Test Case '-[EstroboPersistenceTests.RadioConnectionPreferencesTests testInMemoryStorePersistsNilAndPresentIdentifiers]' passed (0.000 seconds).
+Test Case '-[EstroboPersistenceTests.RadioConnectionPreferencesTests testSeparateInMemoryFactoriesIsolateConnectionPreferences]' started.
+Test Case '-[EstroboPersistenceTests.RadioConnectionPreferencesTests testSeparateInMemoryFactoriesIsolateConnectionPreferences]' passed (0.000 seconds).
+Test Case '-[EstroboPersistenceTests.RadioConnectionPreferencesTests testUserDefaultsJSONV1RoundTripsConnectionPreferences]' started.
+Test Case '-[EstroboPersistenceTests.RadioConnectionPreferencesTests testUserDefaultsJSONV1RoundTripsConnectionPreferences]' passed (0.002 seconds).
+Test Suite 'RadioConnectionPreferencesTests' passed at 2026-10-18 05:03:09.379.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'EstroboPersistenceTests.xctest' passed at 2026-10-18 05:03:09.379.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'All tests' passed at 2026-10-18 05:03:09.379.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+Test Suite 'All tests' started at 2026-10-18 05:03:09.597.
+Test Suite 'EstroboCoreTests.xctest' started at 2026-10-18 05:03:09.598.
+Test Suite 'EstroboCoreSmokeTests' started at 2026-10-18 05:03:09.598.
+Test Case '-[EstroboCoreTests.EstroboCoreSmokeTests testMultiFlashAccepts199HertzWithoutWideningLegacyEditorRange]' started.
+Test Case '-[EstroboCoreTests.EstroboCoreSmokeTests testMultiFlashAccepts199HertzWithoutWideningLegacyEditorRange]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.EstroboCoreSmokeTests testRadioCandidateIdentityIsStable]' started.
+Test Case '-[EstroboCoreTests.EstroboCoreSmokeTests testRadioCandidateIdentityIsStable]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.EstroboCoreSmokeTests testRadioCodeNeverDescribesItsSecret]' started.
+Test Case '-[EstroboCoreTests.EstroboCoreSmokeTests testRadioCodeNeverDescribesItsSecret]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.EstroboCoreSmokeTests testSafeProtocolRoundTripsAGroupFrame]' started.
+Test Case '-[EstroboCoreTests.EstroboCoreSmokeTests testSafeProtocolRoundTripsAGroupFrame]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.EstroboCoreSmokeTests testVisibilityPolicyRejectsHidingLastGroup]' started.
+Test Case '-[EstroboCoreTests.EstroboCoreSmokeTests testVisibilityPolicyRejectsHidingLastGroup]' passed (0.000 seconds).
+Test Suite 'EstroboCoreSmokeTests' passed at 2026-10-18 05:03:09.600.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'GodoxSessionControllerTests' started at 2026-10-18 05:03:09.600.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testAtomicGlobalPowerOffsetClampsAndLeavesDisabledGroupsUntouched]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testAtomicGlobalPowerOffsetClampsAndLeavesDisabledGroupsUntouched]' passed (0.534 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testAtomicGlobalPowerOffsetPersistsAndSchedulesAllEligibleGroupsOnce]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testAtomicGlobalPowerOffsetPersistsAndSchedulesAllEligibleGroupsOnce]' passed (0.540 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testAutomaticConnectionPreferenceIsExclusiveAndForgettingClearsIt]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testAutomaticConnectionPreferenceIsExclusiveAndForgettingClearsIt]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testAutomaticInitialValueSynchronizationDefersHeartbeatUntilReady]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testAutomaticInitialValueSynchronizationDefersHeartbeatUntilReady]' passed (0.538 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testCancelDropsUnconfirmedInitialValueSynchronization]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testCancelDropsUnconfirmedInitialValueSynchronization]' passed (0.536 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testCancelledContinuousEditPersistsFinalValueWithoutAutomaticDelivery]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testCancelledContinuousEditPersistsFinalValueWithoutAutomaticDelivery]' passed (0.538 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testContinuousEditPersistsAndSendsOnlyTheFinalValueAfterGestureEnds]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testContinuousEditPersistsAndSendsOnlyTheFinalValueAfterGestureEnds]' passed (0.549 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testContinuousMultiEditPersistsAndSchedulesOnlyItsFinalSettings]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testContinuousMultiEditPersistsAndSchedulesOnlyItsFinalSettings]' passed (0.547 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testDirectBeepActionRemainsPendingThroughA0AndEveryA1Followup]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testDirectBeepActionRemainsPendingThroughA0AndEveryA1Followup]' passed (0.545 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testDirectGlobalActionPendingClearsOnFailureAndBackgroundCancellation]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testDirectGlobalActionPendingClearsOnFailureAndBackgroundCancellation]' passed (1.623 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testDirectGlobalModelingMasterWritesOnlyA0AndPreservesGroupModelingDrafts]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testDirectGlobalModelingMasterWritesOnlyA0AndPreservesGroupModelingDrafts]' passed (0.544 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testDirectStandbyActionIsPendingUntilItsA0OnlyCompletion]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testDirectStandbyActionIsPendingUntilItsA0OnlyCompletion]' passed (0.541 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testExplicitDisconnectDoesNotCreateAForegroundReconnect]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testExplicitDisconnectDoesNotCreateAForegroundReconnect]' passed (0.546 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testExplicitReconnectCancellationDoesNotRetryOnTheNextForeground]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testExplicitReconnectCancellationDoesNotRetryOnTheNextForeground]' passed (0.549 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testExplicitScanCancellationClearsCodeBeforeDeferredIdle]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testExplicitScanCancellationClearsCodeBeforeDeferredIdle]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testForegroundReconnectIgnoresAnotherIdentifierAndUsesSessionCredential]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testForegroundReconnectIgnoresAnotherIdentifierAndUsesSessionCredential]' passed (0.547 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testGlobalModelingMasterRollsBackWhenJournalRejectsA0]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testGlobalModelingMasterRollsBackWhenJournalRejectsA0]' passed (0.548 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testGlobalMultiToggleIsBlockedDuringInteractiveMultiScrub]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testGlobalMultiToggleIsBlockedDuringInteractiveMultiScrub]' passed (0.549 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testGlobalMultiTransitionPendingTracksOnlyModeToggle]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testGlobalMultiTransitionPendingTracksOnlyModeToggle]' passed (0.550 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testGroupPowerAdjustmentAvailabilityTracksDirectionBoundsAndOffMode]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testGroupPowerAdjustmentAvailabilityTracksDirectionBoundsAndOffMode]' passed (0.546 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testIdleAfterConnectingFromCompletedScanStillClearsCode]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testIdleAfterConnectingFromCompletedScanStillClearsCode]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testInactiveReadyScenePreservesTransportSessionAndReturnsReadyWithoutHandshake]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testInactiveReadyScenePreservesTransportSessionAndReturnsReadyWithoutHandshake]' passed (0.552 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testInactiveScanClearsCodeBeforeDeferredIdle]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testInactiveScanClearsCodeBeforeDeferredIdle]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testInactiveSceneCancelsPendingTestWithoutRetryAndPreservesLink]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testInactiveSceneCancelsPendingTestWithoutRetryAndPreservesLink]' passed (0.548 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testInactiveSceneDropsUnconfirmedInitialValueSynchronization]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testInactiveSceneDropsUnconfirmedInitialValueSynchronization]' passed (0.545 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testIndividualModelingEditReenablesGlobalModelingMaster]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testIndividualModelingEditReenablesGlobalModelingMaster]' passed (0.543 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testInvalidSavedRadioLoadDoesNotEraseConnectionPreferences]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testInvalidSavedRadioLoadDoesNotEraseConnectionPreferences]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testJournalFailurePreventsA0AndStartedA0RemainsRecoverable]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testJournalFailurePreventsA0AndStartedA0RemainsRecoverable]' passed (1.090 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testManualMultiApplyNeverPublishesDirectGlobalActionPending]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testManualMultiApplyNeverPublishesDirectGlobalActionPending]' passed (0.542 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testMultiHertzAbovePublishedProfileRangeIsUnverifiedAndEncodesC7]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testMultiHertzAbovePublishedProfileRangeIsUnverifiedAndEncodesC7]' passed (0.546 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testNewWorkingGroupIsStagedOffAtItsCommonMinimum]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testNewWorkingGroupIsStagedOffAtItsCommonMinimum]' passed (1.087 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testPhysicalDisconnectionDeliveredAfterResumeStartsOneExactReconnect]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testPhysicalDisconnectionDeliveredAfterResumeStartsOneExactReconnect]' passed (0.533 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testPhysicalDisconnectionWhileInactiveAllowsOneExactReconnectOnReturn]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testPhysicalDisconnectionWhileInactiveAllowsOneExactReconnectOnReturn]' passed (0.543 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testPhysicalFailureDeliveredAfterResumeStartsOneExactReconnect]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testPhysicalFailureDeliveredAfterResumeStartsOneExactReconnect]' passed (0.546 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testPWOKAndSyncStartA0BeforeSerialA1Delivery]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testPWOKAndSyncStartA0BeforeSerialA1Delivery]' passed (0.537 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testReadyDisconnectDoubleFailureSignalKeepsOneExactReconnectScan]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testReadyDisconnectDoubleFailureSignalKeepsOneExactReconnectScan]' passed (0.548 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testReadyForegroundResumeRearmsOnePendingAutomaticApply]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testReadyForegroundResumeRearmsOnePendingAutomaticApply]' passed (0.550 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testReadyWorkspaceCanAddACompatibleGroupWithoutDisconnecting]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testReadyWorkspaceCanAddACompatibleGroupWithoutDisconnecting]' passed (0.538 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testReadyWorkspaceCancelPreservesConfigurationAndRejectsProfileChanges]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testReadyWorkspaceCancelPreservesConfigurationAndRejectsProfileChanges]' passed (0.542 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSavedRadioSearchArmsExactTargetBeforeSynchronousDiscovery]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSavedRadioSearchArmsExactTargetBeforeSynchronousDiscovery]' passed (0.001 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSavedRadioSearchConnectsOnlyTheExactRememberedIdentifierOnce]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSavedRadioSearchConnectsOnlyTheExactRememberedIdentifierOnce]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSavedRadioSearchPausesTimeoutWhileWaitingForBluetooth]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSavedRadioSearchPausesTimeoutWhileWaitingForBluetooth]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSavedRadioSearchWaitsThroughBluetoothUnavailableAndRearmsTimeout]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSavedRadioSearchWaitsThroughBluetoothUnavailableAndRearmsTimeout]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testScanCompletionPreservesSelectionAndCodeForEitherIdleCallbackTiming]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testScanCompletionPreservesSelectionAndCodeForEitherIdleCallbackTiming]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testScanFailuresStillClearSelectedRadioCode]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testScanFailuresStillClearSelectedRadioCode]' passed (0.000 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSecondInactiveTransitionDuringReconnectScanPreservesExactTarget]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSecondInactiveTransitionDuringReconnectScanPreservesExactTarget]' passed (0.532 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSimulatedTestPublishesItsOwnCorrelatedOutcome]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSimulatedTestPublishesItsOwnCorrelatedOutcome]' passed (0.537 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSuccessfulSavedRadioSyncRecordsItAsLastConnected]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testSuccessfulSavedRadioSyncRecordsItAsLastConnected]' passed (0.539 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testTestCommandFailsFastAndIsNeverRetried]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testTestCommandFailsFastAndIsNeverRetried]' passed (0.548 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testTestCommandIsSingleFlightUntilTransportReportsDelivery]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testTestCommandIsSingleFlightUntilTransportReportsDelivery]' passed (0.532 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testTestTimeoutPublishesFailureUntilSessionResetClearsIt]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testTestTimeoutPublishesFailureUntilSessionResetClearsIt]' passed (0.547 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testUncertainGlobalModelingA0KeepsDesiredStateAndRecoveryJournal]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testUncertainGlobalModelingA0KeepsDesiredStateAndRecoveryJournal]' passed (0.548 seconds).
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testUnrelatedApplyDoesNotReenableDisabledGlobalModelingMaster]' started.
+Test Case '-[EstroboCoreTests.GodoxSessionControllerTests testUnrelatedApplyDoesNotReenableDisabledGlobalModelingMaster]' passed (0.545 seconds).
+Test Suite 'GodoxSessionControllerTests' passed at 2026-10-18 05:03:34.598.
+	 Executed 53 tests, with 0 failures (0 unexpected) in 24.994 (24.999) seconds
+Test Suite 'EstroboCoreTests.xctest' passed at 2026-10-18 05:03:34.598.
+	 Executed 58 tests, with 0 failures (0 unexpected) in 24.995 (25.000) seconds
+Test Suite 'All tests' passed at 2026-10-18 05:03:34.598.
+	 Executed 58 tests, with 0 failures (0 unexpected) in 24.995 (25.001) seconds
+Test Suite 'All tests' started at 2026-10-18 05:03:34.817.
+Test Suite 'EstroboBluetoothTests.xctest' started at 2026-10-18 05:03:34.818.
+Test Suite 'EstroboBluetoothSmokeTests' started at 2026-10-18 05:03:34.818.
+Test Case '-[EstroboBluetoothTests.EstroboBluetoothSmokeTests testResetDropsAQueuedControlWriteBeforeDelivery]' started.
+Test Case '-[EstroboBluetoothTests.EstroboBluetoothSmokeTests testResetDropsAQueuedControlWriteBeforeDelivery]' passed (0.000 seconds).
+Test Case '-[EstroboBluetoothTests.EstroboBluetoothSmokeTests testScanStartDistinguishesTemporaryAndTerminalBluetoothStates]' started.
+Test Case '-[EstroboBluetoothTests.EstroboBluetoothSmokeTests testScanStartDistinguishesTemporaryAndTerminalBluetoothStates]' passed (0.000 seconds).
+Test Case '-[EstroboBluetoothTests.EstroboBluetoothSmokeTests testSimulatedFactoryDoesNotCreateLiveBluetooth]' started.
+Test Case '-[EstroboBluetoothTests.EstroboBluetoothSmokeTests testSimulatedFactoryDoesNotCreateLiveBluetooth]' passed (0.000 seconds).
+Test Suite 'EstroboBluetoothSmokeTests' passed at 2026-10-18 05:03:34.819.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'EstroboBluetoothTests.xctest' passed at 2026-10-18 05:03:34.819.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'All tests' passed at 2026-10-18 05:03:34.819.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+◇ Test run started.
+↳ Testing Library Version: 2074
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+◇ Test run started.
+↳ Testing Library Version: 2074
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.
+◇ Test run started.
+↳ Testing Library Version: 2074
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.

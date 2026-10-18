@@ -1,7 +1,8 @@
 # Implementación de actualizaciones macOS
 
 Tracker: Local Markdown
-Status: active
+Status: implementation-complete
+Final code-review: pending
 Integration branch: codex/macos-auto-update
 Base: origin/main 68ea6fc (mismo árbol que spec baseline 91eeeb9)
 Spec: spec.md
@@ -19,7 +20,13 @@ Los tickets 01-09 del checkout original son historial del mapa superseded. Ticke
 - [Composición productiva y recorrido integrado](issues/16-composition.md)
 - [Validación integrada y reporte final](issues/17-acceptance.md)
 
-## Disposición de implementación
+## Resultado actual — 2026-10-18
+
+Tickets activos 10–17 resueltos: código y validación local integrados completos bajo la decisión 15 revisada. [Aceptación final](../../docs/research/macos-updater-acceptance-2026-10-18.md) reúne evidencia real de consentimiento/adaptador, composición nativa, regresiones, builds/CLI y documentos, con identidades de fuente y límites. El bloque del 17 de octubre se conserva como historia, no como estado vigente.
+
+Pendiente: ejecutar `code-review` final sobre la rama de integración después del merge de 17, resolver todos sus hallazgos y registrar resultado; este reporte no sustituye ni adelanta ese gate del workflow. Siguen pendientes los gates operativos Developer ID/notarización/sandbox/dos builds, claves/backup, Intel/macOS13, autorización/recuperación/datos de producto y feed/promoción/retirada/tráfico públicos. Implementación local completa no habilita distribución ni publicación.
+
+## Disposición histórica de implementación — 2026-10-17
 
 2026-10-17: integración del producto detenida por incompatibilidad del contrato de red (spec, decisión 15) con las APIs públicas de Sparkle 2.10.0 evaluadas. La descarga desde cache y el consentimiento tienen evidencia real parcial favorable; no se confunden con cumplimiento del actualizador completo. Sparkle sigue redirecciones del catálogo hacia orígenes excluidos y no expone la sesión/delegado necesarios para vetarlas. Los controles independientes de Foundation confirman que registerClass afecta la sesión compartida, pero no la sesión privada de Sparkle; la carga del feed ignora la cache local.
 

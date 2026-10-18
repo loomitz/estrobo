@@ -1,0 +1,15 @@
+[
+  {
+    "host": "127.0.0.1:50674",
+    "message": "\"GET /update.dmg HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:50674",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 302 -"
+  },
+  {
+    "host": "localhost:50675",
+    "forbidden_origin": true,
+    "message": "\"GET /redirected.xml HTTP/1.1\" 200 -"
+  }
+]

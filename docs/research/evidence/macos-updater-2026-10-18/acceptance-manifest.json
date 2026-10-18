@@ -1,0 +1,293 @@
+{
+  "date": "2026-10-18",
+  "inspected_integration_commit": "787fd65dbd38efb5f0f4b9dd28c99c593d977610",
+  "scope": "Text evidence archival and source identity verification; no new runtime execution or distribution claim",
+  "archived_files": [
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/ats/ATSHost.swift",
+      "origin": "/private/tmp/estrobo-updater-ats-research/ATSHost.swift",
+      "sha256": "5e4d9f714a8d76ad465f76d95a9b78076d172560f69fec887033cd5587321b97",
+      "bytes": 3406,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "5e4d9f714a8d76ad465f76d95a9b78076d172560f69fec887033cd5587321b97"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/ats/environment.json",
+      "origin": "/private/tmp/estrobo-updater-ats-research/environment.json",
+      "sha256": "fc41e2b7c148c3cb8eeb724378df52ef7deb2284c2e29b7741131915d0bbff80",
+      "bytes": 432,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "fc41e2b7c148c3cb8eeb724378df52ef7deb2284c2e29b7741131915d0bbff80"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/ats/redirect-source-response.json",
+      "origin": "/private/tmp/estrobo-updater-ats-research/redirect-source-response.json",
+      "sha256": "9d894e16535f11ff5ed3de676f58bcdd1288fe816f208e0bbefd3361b7b7f6fa",
+      "bytes": 134,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "9d894e16535f11ff5ed3de676f58bcdd1288fe816f208e0bbefd3361b7b7f6fa"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/ats/run.py",
+      "origin": "/private/tmp/estrobo-updater-ats-research/run.py",
+      "sha256": "223b310030e31af2f42285ba05c8dd151bb421af91f701fd3ce5c1c712f6f7f9",
+      "bytes": 2698,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "223b310030e31af2f42285ba05c8dd151bb421af91f701fd3ce5c1c712f6f7f9"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/ats/runtime-results.json",
+      "origin": "/private/tmp/estrobo-updater-ats-research/runtime-results.json",
+      "sha256": "a8c5cac9d21aee8512feb79a04c5a13ba33b378d2a954d016cbe692d57d05d91",
+      "bytes": 5538,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "a8c5cac9d21aee8512feb79a04c5a13ba33b378d2a954d016cbe692d57d05d91"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/inline-notes/artifact.json",
+      "origin": "/private/tmp/estrobo-updater-inline-notes-evidence/artifact.json",
+      "sha256": "d8a8fedf39885ceb1c22fbe43c83372dc6d6620ae0774b8ac0d0fd9eabc508f2",
+      "bytes": 808,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "d8a8fedf39885ceb1c22fbe43c83372dc6d6620ae0774b8ac0d0fd9eabc508f2"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/inline-notes/events.log",
+      "origin": "/private/tmp/estrobo-updater-inline-notes-evidence/events.log",
+      "sha256": "96b43ba94433b20f1bd1801bf13e64f1733e49310e4042266c8a3c5fb603b76a",
+      "bytes": 1802,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "96b43ba94433b20f1bd1801bf13e64f1733e49310e4042266c8a3c5fb603b76a"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/inline-notes/requests.json",
+      "origin": "/private/tmp/estrobo-updater-inline-notes-evidence/requests.json",
+      "sha256": "5a482a0de2dac692baec64f2dd3f9de50076ac0a0a6e2e178f22aa8bff4cb662",
+      "bytes": 313,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "5a482a0de2dac692baec64f2dd3f9de50076ac0a0a6e2e178f22aa8bff4cb662"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/inline-notes/results.json",
+      "origin": "/private/tmp/estrobo-updater-inline-notes-evidence/results.json",
+      "sha256": "62f5526329c7c9addb3f8f506afb9366f805337af4027eaf2b8d4fe4c7e41e1c",
+      "bytes": 289,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "62f5526329c7c9addb3f8f506afb9366f805337af4027eaf2b8d4fe4c7e41e1c"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/inline-notes/stdout.log",
+      "origin": "/private/tmp/estrobo-updater-inline-notes-evidence/stdout.log",
+      "sha256": "467ebfb696db8dab3652e54de648053c7d272fdf23a06ef8e8a6e2201cf05410",
+      "bytes": 187,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "467ebfb696db8dab3652e54de648053c7d272fdf23a06ef8e8a6e2201cf05410"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/finish-review/estrobo-updater-design-detection.json",
+      "origin": "/private/tmp/estrobo-updater-design-detection.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/finish-review/estrobo-updater-ui-finish-review.md",
+      "origin": "/private/tmp/estrobo-updater-ui-finish-review.md",
+      "sha256": "3055b116696c443264d85b630321d8bc67529715bfd893c6121ab9c61edc55a8",
+      "bytes": 5476,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "3055b116696c443264d85b630321d8bc67529715bfd893c6121ab9c61edc55a8"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/finish-review/estrobo-updater-ui-finish-verdict.md",
+      "origin": "/private/tmp/estrobo-updater-ui-finish-verdict.md",
+      "sha256": "4acc70867f619a9e0979e4046397d44484d125f53d849f912ff0b788a1e485ff",
+      "bytes": 1338,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "4acc70867f619a9e0979e4046397d44484d125f53d849f912ff0b788a1e485ff"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-update-coordinator-swift.log",
+      "origin": "/private/tmp/estrobo-update-coordinator-swift.log",
+      "sha256": "0dc70b8b6e20d902d81414bbc7896e8e3d831fe28cc8a4242ce23e31a4602ef4",
+      "bytes": 22136,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "0dc70b8b6e20d902d81414bbc7896e8e3d831fe28cc8a4242ce23e31a4602ef4"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-updater-docs-html.log",
+      "origin": "/private/tmp/estrobo-updater-docs-html.log",
+      "sha256": "623bcde54e3aa901a6efd022664449928887c59bc75bebadc71d4e151cbd8c43",
+      "bytes": 299,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "623bcde54e3aa901a6efd022664449928887c59bc75bebadc71d4e151cbd8c43"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-updater-docs-links.log",
+      "origin": "/private/tmp/estrobo-updater-docs-links.log",
+      "sha256": "427d7d4077ed3e0b5381110fc0ec314a33d3bd4a6260309fff9e80168ccf2546",
+      "bytes": 70,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "427d7d4077ed3e0b5381110fc0ec314a33d3bd4a6260309fff9e80168ccf2546"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-updater-docs-public-state.headers",
+      "origin": "/private/tmp/estrobo-updater-docs-public-state.headers",
+      "sha256": "04abef26521a7289aec1506d55a9649cbb26f7b9b3218971c679d8a763f62bf9",
+      "bytes": 641,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "CRLF normalized to LF; trailing horizontal whitespace and final empty lines removed; original semantic text retained",
+      "origin_sha256": "1d663a11fa4d18631c5a08da2f4cc792111df64c48f1f21dc3583f7ad5f36a08"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-updater-docs-public-state.log",
+      "origin": "/private/tmp/estrobo-updater-docs-public-state.log",
+      "sha256": "fadb9003a31b9de8f18261717546abf7524344006255e31cd6dd9405e9b13e4f",
+      "bytes": 26,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "fadb9003a31b9de8f18261717546abf7524344006255e31cd6dd9405e9b13e4f"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-updater-docs-shell-syntax.log",
+      "origin": "/private/tmp/estrobo-updater-docs-shell-syntax.log",
+      "sha256": "93288a08748607972375a3348ca370a9649e27e2b4fb980c7821849ec2aa2ef1",
+      "bytes": 41,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "93288a08748607972375a3348ca370a9649e27e2b4fb980c7821849ec2aa2ef1"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-updater-docs-website-build.log",
+      "origin": "/private/tmp/estrobo-updater-docs-website-build.log",
+      "sha256": "07c9058219d86b97b732a41c75c0409df83541efa2b576eca4873855cb8693f7",
+      "bytes": 1124,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "CRLF normalized to LF; trailing horizontal whitespace and final empty lines removed; original semantic text retained",
+      "origin_sha256": "59f10b5da956fc6fc61663889030e498ef415fa83e97d00864db8c81c3231a5c"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-updater-docs-website-install.log",
+      "origin": "/private/tmp/estrobo-updater-docs-website-install.log",
+      "sha256": "a296069114cb4f1531fecec998d68e6b4de960fe0a2ce2b89764263989da8eab",
+      "bytes": 525,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "a296069114cb4f1531fecec998d68e6b4de960fe0a2ce2b89764263989da8eab"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-updater-ios-check.log",
+      "origin": "/private/tmp/estrobo-updater-ios-check.log",
+      "sha256": "5a8b98b6da7b184b43e577f3808c64f31c7bd484a627132e50cb83e388473207",
+      "bytes": 374405,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "CRLF normalized to LF; trailing horizontal whitespace and final empty lines removed; original semantic text retained",
+      "origin_sha256": "a438132dbb8550abd46f726838892a3ea8a836e20b6a7dec7c0e00f0d91039b9"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-updater-missing-public-root.log",
+      "origin": "/private/tmp/estrobo-updater-missing-public-root.log",
+      "sha256": "11499340d4671d6889f66403c7a9d7c3948459335845515322b5a4a650d157c6",
+      "bytes": 158,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "11499340d4671d6889f66403c7a9d7c3948459335845515322b5a4a650d157c6"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-updater-packaging-all-tools-final.log",
+      "origin": "/private/tmp/estrobo-updater-packaging-all-tools-final.log",
+      "sha256": "b6bfb32bd7c90974bf2b029cf8a183ec5a66f40af5667e620ef9cbd03e4becbc",
+      "bytes": 3830,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "b6bfb32bd7c90974bf2b029cf8a183ec5a66f40af5667e620ef9cbd03e4becbc"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-updater-packaging-universal.log",
+      "origin": "/private/tmp/estrobo-updater-packaging-universal.log",
+      "sha256": "e0d81c2a2ff603a98f458e5d1205dc6bd3c37419f2afcce8f4f73a58e8181334",
+      "bytes": 161,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "e0d81c2a2ff603a98f458e5d1205dc6bd3c37419f2afcce8f4f73a58e8181334"
+    },
+    {
+      "path": "docs/research/evidence/macos-updater-2026-10-18/acceptance-checks/estrobo-updater-packaging-verify.log",
+      "origin": "/private/tmp/estrobo-updater-packaging-verify.log",
+      "sha256": "a5dcf81f6c524bb92f0294e29a491125d170a0da524ed2b8e21bcbb72fc0d79e",
+      "bytes": 333,
+      "kind": "text-only evidence; no binary/private key/userdata",
+      "representation": "Byte-for-byte original text",
+      "origin_sha256": "a5dcf81f6c524bb92f0294e29a491125d170a0da524ed2b8e21bcbb72fc0d79e"
+    }
+  ],
+  "real_adapter_source_identity": [
+    {
+      "path": "prototype/EstroboMac/Sources/UpdateService.swift",
+      "compiled_sha256": "9eead77093ecff8b563962b6ab9dcaf8a2c872f049efcddb6b425a429055156e",
+      "compiled_commit": "fd4cc73f7a193fc029e15580e7eb59e8cec150ea",
+      "current_sha256": "e1b9483996480f8e78ebee05bc41974ed039e86c8dfdb8447b7e1e4511bcc292",
+      "current_matches_compiled": false,
+      "difference": "Protocol comment only; exact diff inspected during ticket 17"
+    },
+    {
+      "path": "prototype/EstroboMac/Sources/UpdateHTTPClient.swift",
+      "compiled_sha256": "9b3bb0aec0709cb6e479b8caa2949afbe928a4ee4816dd56355966d1ce46fbcc",
+      "compiled_commit": "fd4cc73f7a193fc029e15580e7eb59e8cec150ea",
+      "current_sha256": "9b3bb0aec0709cb6e479b8caa2949afbe928a4ee4816dd56355966d1ce46fbcc",
+      "current_matches_compiled": true,
+      "difference": null
+    },
+    {
+      "path": "prototype/EstroboMac/Sources/UpdateInstallationLifecycle.swift",
+      "compiled_sha256": "86e3a8786f3edc83a73f6c728e09e36974e5207d484ed0a1728f5338d73836ad",
+      "compiled_commit": "fd4cc73f7a193fc029e15580e7eb59e8cec150ea",
+      "current_sha256": "86e3a8786f3edc83a73f6c728e09e36974e5207d484ed0a1728f5338d73836ad",
+      "current_matches_compiled": true,
+      "difference": null
+    },
+    {
+      "path": "prototype/EstroboMac/Sources/SparkleUpdateService.swift",
+      "compiled_sha256": "65fc3dad0983ef8b5dc03dcbdd1da0deefd9a79884f51b755cfd21eefcc4e1fc",
+      "compiled_commit": "fd4cc73f7a193fc029e15580e7eb59e8cec150ea",
+      "current_sha256": "65fc3dad0983ef8b5dc03dcbdd1da0deefd9a79884f51b755cfd21eefcc4e1fc",
+      "current_matches_compiled": true,
+      "difference": null
+    },
+    {
+      "path": "prototype/MacUpdaterAdapterCheck/Host.swift",
+      "compiled_sha256": "11e30e430348bb6fd9da58e6c10219e86b76faaff5a4af1fd34de80d109dd5b8",
+      "compiled_commit": "fd4cc73f7a193fc029e15580e7eb59e8cec150ea",
+      "current_sha256": "11e30e430348bb6fd9da58e6c10219e86b76faaff5a4af1fd34de80d109dd5b8",
+      "current_matches_compiled": true,
+      "difference": null
+    }
+  ],
+  "shared_ios_source_unchanged_since_ios_compile": {
+    "compile_commit": "ca14ed7df409f40618c13b1afded9f64120cc76e",
+    "compared_to_commit": "787fd65dbd38efb5f0f4b9dd28c99c593d977610",
+    "paths": [
+      "Sources",
+      "Package.swift",
+      "prototype/EstroboIOS"
+    ],
+    "changed": false
+  }
+}

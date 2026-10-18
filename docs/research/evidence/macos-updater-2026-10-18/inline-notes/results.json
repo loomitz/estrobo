@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "failure": null,
+  "cleanup_errors": [],
+  "cases": [
+    {
+      "case": "forbidden-feed-redirect-bypasses-global-urlprotocol",
+      "passed": true,
+      "forbidden_origin_fetched": true,
+      "network_gate_passed": false,
+      "installed_build": "1"
+    }
+  ]
+}

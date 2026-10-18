@@ -1,10 +1,16 @@
 # Actualizaciones asistidas de Estrobo para macOS
 
-Status: ready-for-agent
-Label: ready-for-agent
+Status: implementation-complete
+Label: final-review-pending
 Owner: loomitz
 Tracker: Local Markdown
 Decision authority: preferencias confirmadas en conversación y decisiones restantes delegadas expresamente por el usuario al solicitar to-spec
+
+## Resultado actual — 2026-10-18
+
+Implementación y validación local integradas completas bajo el contrato HTTPS revisado; tickets activos 10–17 resueltos. [Reporte final de aceptación](../../docs/research/macos-updater-acceptance-2026-10-18.md) identifica commits, artefactos, fuentes compiladas, resultados y límites. La interacción real de consentimiento, adaptador Sparkle y composición productiva tienen evidencia; el bloqueo histórico de redirect ya no aplica tras la revisión autorizada. La revisión final Standards/Spec mediante `code-review` sigue pendiente después del merge de 17 y debe corregir sus hallazgos antes de cerrar el workflow `implement-spec`.
+
+No equivale a distribución GO: siguen pendientes raíz/custodia productiva, dos builds Developer ID/notarizados/sandboxed, autorización/recuperación/preservación de datos durante reemplazo productivo, Intel/macOS 13, feed/assets/promotion/withdrawal públicos y captura de tráfico del candidato. Las notas de planificación e investigaciones fechadas de abajo conservan su estado histórico; este resultado actual las contextualiza sin borrarlas. No se publicaron releases/catálogos ni se operó radio físico.
 
 ## Problem Statement
 
@@ -179,4 +185,4 @@ La elección de Sparkle conserva una condición obligatoria: demostrar que una d
 
 ## Revisión autorizada — 2026-10-18
 
-El usuario aceptó la recomendación de conservar Sparkle y revisar decisión 15 con «ok, continua». Se permite que Sparkle gestione las redirecciones HTTPS del catálogo sin veto previo de dominio. Permanecen obligatorios HTTPS/ATS, feed y paquetes firmados, verificación antes de extracción, Developer ID/notarización, ausencia de telemetría, consentimiento por oferta y seguridad del radio. Las pruebas históricas que acreditan ausencia del veto describen una limitación aceptada y no un gate fallido bajo este contrato revisado. Falta cerrar interacción visible de confirmación/cancelación/veto antes de integrar el producto. La autorización original de implementación y decisiones AFK continúa; no incluye promoción pública irreversible de una release.
+El usuario aceptó la recomendación de conservar Sparkle y revisar decisión 15 con «ok, continua». Se permite que Sparkle gestione las redirecciones HTTPS del catálogo sin veto previo de dominio. Permanecen obligatorios HTTPS/ATS, feed y paquetes firmados, verificación antes de extracción, Developer ID/notarización, ausencia de telemetría, consentimiento por oferta y seguridad del radio. Las pruebas históricas que acreditan ausencia del veto describen una limitación aceptada y no un gate fallido bajo este contrato revisado. En ese momento faltaba cerrar interacción visible de confirmación/cancelación/veto antes de integrar el producto; el ticket 10 la cerró después con 12/12 casos reales y 12/16 completaron adaptador/composición local. La autorización original de implementación y decisiones AFK continúa; no incluye promoción pública irreversible de una release.
