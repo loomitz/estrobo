@@ -101,6 +101,15 @@ shasum -a 256 -c SHA256SUMS</code></pre>
               <p>La verificación es correcta cuando tanto el DMG como el manifiesto muestran <strong>OK</strong>.</p>
             </div>
           </details>
+          <details class="verification-details">
+            <summary>Actualizaciones: beta 4 y la nueva implementación <i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div>
+              <p>Esta descarga <strong>{release.version}</strong> no contiene actualizador. La primera release que lo incorpore requerirá instalación manual verificada desde su release oficial. Esa nueva release y su catálogo público todavía no se han publicado; iOS/iPadOS no incluyen este mecanismo.</p>
+              <p>En la nueva implementación macOS, buscar y descargar en segundo plano empieza apagado y requiere tu elección. Buscar manualmente no activa esos ajustes. <strong>Instalar y reiniciar</strong> requiere confirmar una oferta concreta, con el transmisor desconectado y sin trabajo que bloquee el cierre. Puedes cancelar o aplazar; descargar, salir o reiniciar el Mac no autoriza instalar. Actualizar no conecta ni transmite al radio automáticamente.</p>
+              <p>El control Bluetooth sigue sin necesitar Internet. Sólo las actualizaciones contactan estrobo.app, GitHub y proveedores mediante HTTPS; reciben datos técnicos como IP y User-Agent y pueden conservar logs. No se envían Código del radio, UUID, nombres, presets, snapshots ni perfiles, y no hay analítica o telemetría. Las notas están incluidas en español/inglés sin recursos remotos automáticos.</p>
+              <p>Consulta <a href="https://github.com/loomitz/estrobo/blob/main/PRIVACY.md">Privacidad</a> y <a href="https://github.com/loomitz/estrobo/blob/main/SUPPORT.md">Soporte</a>. Las pruebas entre builds firmados/notarizados, Intel/macOS mínimo y publicación/retirada reales permanecen pendientes.</p>
+            </div>
+          </details>
         </section>
 
         <section class="guide-section guide-section-media" data-reveal>
@@ -204,6 +213,10 @@ shasum -a 256 -c SHA256SUMS</code></pre>
             <details>
               <summary>La operación quedó en estado incierto <i class="ph ph-plus" aria-hidden="true"></i></summary>
               <p>No compenses desde otra app. Reconecta el mismo UUID y sigue el flujo de recuperación hasta confirmar la escena completa.</p>
+            </details>
+            <details>
+              <summary>La nueva implementación no puede actualizar <i class="ph ph-plus" aria-hidden="true"></i></summary>
+              <p>Beta 4 no tiene este control. En un candidato nuevo sin raíz de producción, las actualizaciones aparecen no configuradas. Un error de red no significa que estés actualizado; conserva el control local y vuelve a buscar. Una firma u oferta inválida no se instala. Resuelve cualquier bloqueo en el espacio de trabajo y desconecta el transmisor; no borres recuperación ni fuerces el cierre. Para instalación manual usa sólo la release oficial apropiada: un downgrade no garantiza compatibilidad de datos.</p>
             </details>
           </div>
           <p class="support-link">¿Sigue fallando? <a href="https://github.com/loomitz/estrobo/blob/main/SUPPORT.md">Consulta soporte y cómo reportarlo <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a></p>

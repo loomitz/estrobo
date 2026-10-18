@@ -6,7 +6,7 @@
 
 <p align="center"><strong>Local, native macOS control for compatible Bluetooth-enabled Godox flash triggers.</strong></p>
 
-<p align="center"><sub>macOS 13+ &nbsp;·&nbsp; Apple Silicon + Intel &nbsp;·&nbsp; Local-only</sub></p>
+<p align="center"><sub>macOS 13+ &nbsp;·&nbsp; Apple Silicon + Intel &nbsp;·&nbsp; Local radio control</sub></p>
 
 <p align="center"><strong>English</strong> &nbsp;·&nbsp; <a href="README.es.md">Español</a></p>
 
@@ -71,13 +71,21 @@ The official beta 4 DMG and the app inside it are both signed and notarized. If 
 
 > **Release status:** `0.1.0-beta.4` is the current public beta. Published assets are immutable; verify all three files from the same GitHub prerelease.
 
+## macOS updates — implementation not yet released
+
+Public `0.1.0-beta.4` has no updater. The first release containing one will need the same manual installation and verification described above; no public download of that new release or approved catalog is available yet. The updater belongs only to the macOS shell and is not part of iOS/iPadOS.
+
+The new implementation provides **Check for Updates…** and an **Updates** section in Settings. Automatic checking and downloading start disabled; a manual check does not enable them. Transmitter control stays local: the only new connections are for updates, with ordinary provider technical data such as IP address and User-Agent, excluding Radio Codes, UUIDs, profiles, presets, and telemetry.
+
+Installing requires confirming a specific offer, disconnecting the transmitter, and resolving work that blocks quitting. You can cancel or postpone; downloading or quitting never installs. The app returns to the local workspace without automatically connecting or transmitting because it was updated. Real signed/notarized pair, Intel/minimum-macOS, and public promotion gates remain pending. See [Support](SUPPORT.en.md) and [Privacy](PRIVACY.en.md).
+
 ## Quick start
 
 1. Turn on the transmitter and close any other app connected to it.
 2. Open Estrobo and configure group compatibility, working groups, and at least one flash model per group.
 3. Click **Find**. Choose the trigger using its name, RSSI, and UUID suffix; the name and UUID help distinguish it but do not authenticate it cryptographically.
 4. Enter the six-digit **Radio Code**. It is the transmitter's local compatibility/proximity PIN, not a strong credential or a high-value secret. Do not reuse a personal PIN.
-5. The option to remember it starts off. If enabled, Estrobo adds that transmitter to its local saved-transmitter library only after completing `PWOK` and synchronization; its code remains unencrypted on this Mac and is never sent over the Internet. **Forget** removes only that saved transmitter and code.
+5. The option to remember it starts off. If enabled, Estrobo adds that transmitter to its local saved-transmitter library only after completing `PWOK` and synchronization; in public beta 4, its code remains unencrypted on this Mac and is never sent over the Internet. The development candidate migrates supported records to Keychain; see [Privacy](PRIVACY.en.md). **Forget** removes only that saved transmitter and code.
 6. The BLE handshake is still required. Once it completes, Estrobo acts as the source of truth and deliberately overwrites global A0 and every configured group's A1. The transmitter's previous state does not matter.
 7. In **Automatic**, a change is sent 700 ms after the last adjustment. Dragging does not transmit intermediate values: the delay starts when you release the control. You can also choose **On Apply** and use **Send now** or **Discard**.
 8. In beta 4, press **MULTI** beside Beep to turn Global Multi on or off; it opens no menu. Turning it on displays the inline console and atomically places every active compatible group in Multi. Non-participating groups remain Off and appear disabled behind an overlay; compatible groups can be added again there or from the console. The last participant can only be closed with the global button. Turning **MULTI** off makes every workspace group—including groups previously Off or TTL—active in Manual; the previous M/TTL/Off scene is not restored. Groups outside the workspace do not receive A1. Multi excludes HSS; use **Test** only after reviewing the active groups and the displayed model limit, and treat the optical result as unvalidated until the exact hardware matrix passes physical smoke.

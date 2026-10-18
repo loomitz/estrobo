@@ -6,6 +6,24 @@ Estrobo es un beta limitado y su canal de soporte es **GitHub Issues**. No exist
 
 La distribución pública vigente es la beta macOS `0.1.0-beta.4`. iOS y iPadOS permanecen como candidatos locales; sus requisitos declarados y resultados de Simulator no constituyen una distribución disponible ni compatibilidad física validada. Antes de TestFlight o App Store falta publicar un contacto de soporte que cumpla sus requisitos.
 
+## Actualizaciones macOS: versión pública y candidato
+
+La beta pública `0.1.0-beta.4` no incluye actualizador. La primera release que lo incorpore se instalará manualmente desde su release oficial, verificando DMG, manifiesto y `SHA256SUMS` del mismo tag. Todavía no se ha publicado esa release ni un catálogo de producción aprobado. El actualizador no forma parte de iOS/iPadOS.
+
+En la nueva implementación macOS, **Buscar actualizaciones…** en el menú Estrobo y **Actualizaciones** en Ajustes comparten el mismo estado. La búsqueda manual no activa automatismos; buscar y descargar en segundo plano empiezan apagados y requieren tu elección. Las notas están disponibles en español/inglés dentro de la oferta. La búsqueda y descarga pueden continuar durante una sesión Bluetooth; instalar exige desconectar el transmisor y resolver operaciones, edición, borradores o recuperación que bloqueen el cierre. Estrobo no desconecta, aplica ni descarta por ti.
+
+**Instalar y reiniciar** confirma una oferta concreta y vuelve a comprobar su vigencia, archivo firmado y seguridad antes de instalar. **Más tarde**, **Cancelar descarga** o **Cancelar instalación** permiten aplazar o cancelar según la etapa; una cancelación o un cambio de oferta exige confirmar otra vez. Descargar, cerrar Estrobo o reiniciar el Mac nunca autoriza instalar. Al relanzar, el espacio de trabajo se recupera sin conectar al transmisor ni enviarle valores automáticamente por la actualización.
+
+Si la actualización falla:
+
+- **No configurada:** el candidato sin raíz pública de producción permanece sin actualizaciones disponibles; no añadas una clave de pruebas ni eludas la verificación. Conserva tu copia y consulta soporte.
+- **Red/servidor:** el control local sigue disponible; vuelve a buscar cuando haya conexión. Un error no significa «estás actualizado». Tras fallos, los intentos automáticos esperan al menos 24 horas y respetan plazos de servidor conocidos más largos; reiniciar no adelanta ese plazo. La búsqueda manual sigue disponible.
+- **Firma, archivo u oferta inválida/retirada:** no se instala. Vuelve a buscar y descarga la oferta vigente; una descarga previa no evita comprobar de nuevo la elegibilidad.
+- **Instalación bloqueada:** resuelve el motivo visible en el espacio de trabajo y desconecta el transmisor. No borres recuperación ni fuerces el cierre.
+- **DMG, permisos o espacio:** abre la copia instalada en Aplicaciones, comprueba espacio disponible y vuelve a intentar la autorización del sistema cuando decidas instalar.
+
+Para recuperación manual utiliza sólo una release oficial apropiada para tus datos y verifica sus archivos. Preferimos una corrección con build superior: volver a una versión anterior no garantiza compatibilidad de preferencias o Keychain. No borres tus datos para hacer pasar una instalación. Los gates de actualización entre builds Developer ID/notarizados, Intel/macOS mínimo y publicación/retirada públicas siguen pendientes; los tests locales no los sustituyen. Consulta [Privacidad](PRIVACY.md) para las conexiones y datos técnicos de proveedores.
+
 ## Antes de abrir un issue
 
 1. Lee [Solución de problemas](docs/TROUBLESHOOTING.md).

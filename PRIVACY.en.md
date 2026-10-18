@@ -2,9 +2,9 @@
 
 <p align="center"><a href="PRIVACY.md">Español</a> &nbsp;·&nbsp; <strong>English</strong></p>
 
-Estrobo controls a transmitter locally over Bluetooth. The app does not create accounts, has no backend, does not request network access, includes no analytics or telemetry, and does not send data over the Internet.
+Estrobo controls the transmitter locally over Bluetooth, without accounts, a user backend, advertising, analytics, or telemetry. Public macOS `0.1.0-beta.4` and the iOS/iPadOS candidates have no updater or app network flow. The new macOS implementation adds connections exclusively to check for and download updates; no release containing that implementation has been published yet.
 
-This policy describes the shared development candidate for macOS, iOS, and iPadOS. The public macOS `0.1.0-beta.4` stores the Radio Code unencrypted in preferences only by opt-in; the Keychain migration described here belongs to the candidate and is not yet a new public release. There is no public iOS or iPadOS distribution. Your browser, GitHub, Apple operating system, and any other app you use to download, report, or diagnose have their own practices; they are not part of Estrobo’s traffic.
+This policy describes the shared development candidate for macOS, iOS, and iPadOS. The public macOS `0.1.0-beta.4` stores the Radio Code unencrypted in preferences only by opt-in; the Keychain migration described here belongs to the candidate and is not yet a new public release. There is no public iOS or iPadOS distribution. The production signing root, public catalog, and updater distribution gates remain pending. Your browser, GitHub, and Apple operating system have their own practices; opening a link or an operating-system validation is distinct from an updater request.
 
 ## Data Estrobo stores locally
 
@@ -15,6 +15,7 @@ The app’s sandbox container may retain:
 - desired A0/A1 snapshots and the latest confirmed local baselines;
 - named presets;
 - visual identity of groups;
+- in the new macOS implementation, update check/download preferences, the latest successful check, the next automatic attempt, and a cached DMG with its offer identity; installation confirmation is never stored as permanent authorization;
 - recovery points containing the radio UUID, group, and previous A1 snapshot;
 - if you choose, the remembered radio’s name and CoreBluetooth UUID; its Radio Code is stored separately in Keychain.
 
@@ -29,7 +30,7 @@ The Radio Code is a six-digit local compatibility/proximity parameter, not an ac
 - It is stored in the local Keychain as a device-only item that is available only while the device is unlocked. Keychain synchronization is disabled.
 - The remembered name and CoreBluetooth UUID may be stored in app preferences, but the Radio Code is not stored in that metadata record.
 - If Estrobo finds a supported plaintext record from an earlier beta, it migrates every code to Keychain and verifies the result before deleting the old plaintext record. An incomplete migration fails closed and remains retryable.
-- It is never sent over the Internet because Estrobo has no network flow.
+- It is never sent over the Internet: update requests exclude the Radio Code and session data, even though the new macOS app has network access.
 - Do not reuse a personal PIN.
 - **Forget** removes the saved name, UUID, and code and clears the visible value.
 - Canceling, a failure, or disconnecting clears the in-memory session code according to the relevant flow.
@@ -44,9 +45,17 @@ Commands travel directly between the iPhone, iPad, or Mac and the transmitter. E
 
 ## Network, analytics, and telemetry
 
-The app has no network client or server flow. Its code includes no analytics SDK, advertising, remote crash reporting, or telemetry.
+Bluetooth control does not require Internet access. Public macOS `0.1.0-beta.4` and the iOS/iPadOS candidates retain their behavior without app network traffic. The updater belongs only to the new macOS implementation; it does not update iOS/iPadOS or add HTTP to the radio core.
 
-When you open links to documentation, GitHub Releases, Issues, or Private Vulnerability Reporting, that action takes place outside Estrobo in your browser or on GitHub.
+In a future macOS release configured for updates, automatic checks and downloads start disabled. You can enable them separately in Updates; automatic downloading requires automatic checking. A manual check contacts the services even without automatic opt-in and does not change your preferences. Disabling automatic checks stops pending automatic work; local control remains available without Internet access.
+
+Checks contact `estrobo.app`; DMGs come from exact GitHub releases. These services and their providers receive ordinary technical data, such as IP address, User-Agent, and HTTPS connection data, and may retain logs under their own practices. The feed uses Sparkle’s standard HTTPS redirects: there is no domain allowlist that vetoes every feed origin before contacting it. HTTPS/ATS and mandatory signed-feed/archive verification remain enabled; actual public traffic remains a pending distribution gate.
+
+Requests exclude the Radio Code, authentication payloads, UUIDs, transmitter names, presets, snapshots, profiles, and studio identifiers. Sparkle system profiling is disabled. There is no analytics, advertising, remote crash reporting, or telemetry. Release notes are signed inline English/Spanish text, without automatic downloads of external pages, images, scripts, or resources.
+
+Installing and relaunching always requires confirmation of a specific offer with the transmitter disconnected and local work in a safe state. Downloading, quitting, or restarting the Mac grants no such permission. Updating retains the app identity and uses existing persistence/migration; it never deletes recovery to enable installation or connects to the radio because an update occurred. Real validation between signed/notarized builds remains pending.
+
+Opening documentation, manual-download, Issues, or Private Vulnerability Reporting links explicitly uses your browser/GitHub and follows those services’ practices.
 
 ## Logs, diagnostics, and reports
 

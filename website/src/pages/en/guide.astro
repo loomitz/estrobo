@@ -101,6 +101,15 @@ shasum -a 256 -c SHA256SUMS</code></pre>
               <p>Verification succeeds when both the DMG and manifest report <strong>OK</strong>.</p>
             </div>
           </details>
+          <details class="verification-details">
+            <summary>Updates: beta 4 and the new implementation <i class="ph ph-plus" aria-hidden="true"></i></summary>
+            <div>
+              <p>This <strong>{release.version}</strong> download has no updater. The first release containing one will require verified manual installation from its official release. That new release and its public catalog have not been published yet; iOS/iPadOS do not include this mechanism.</p>
+              <p>In the new macOS implementation, background checking and downloading start disabled and require your choice. Checking manually does not enable them. <strong>Install and Relaunch</strong> requires confirming a specific offer, with the transmitter disconnected and no work blocking quitting. You can cancel or postpone; downloading, quitting, or restarting the Mac never authorizes installation. Updating never connects or transmits to the radio automatically.</p>
+              <p>Bluetooth control still needs no Internet. Only updates contact estrobo.app, GitHub, and providers over HTTPS; they receive technical data such as IP address and User-Agent and may retain logs. Requests exclude Radio Codes, UUIDs, names, presets, snapshots, and profiles; there is no analytics or telemetry. English/Spanish notes are included without automatic remote resources.</p>
+              <p>See <a href="https://github.com/loomitz/estrobo/blob/main/PRIVACY.en.md">Privacy</a> and <a href="https://github.com/loomitz/estrobo/blob/main/SUPPORT.en.md">Support</a>. Signed/notarized pair, Intel/minimum-macOS, and real public promotion/withdrawal gates remain pending.</p>
+            </div>
+          </details>
         </section>
 
         <section class="guide-section guide-section-media" data-reveal>
@@ -204,6 +213,10 @@ shasum -a 256 -c SHA256SUMS</code></pre>
             <details>
               <summary>The operation is in an uncertain state <i class="ph ph-plus" aria-hidden="true"></i></summary>
               <p>Do not try to compensate from another app. Reconnect to the same UUID and follow the recovery flow until the complete scene is confirmed.</p>
+            </details>
+            <details>
+              <summary>The new implementation cannot update <i class="ph ph-plus" aria-hidden="true"></i></summary>
+              <p>Beta 4 has no update control. Updates are not configured in a new candidate without a production root. A network error never means you are up to date; keep local control and check again. Invalid signatures or offers are not installed. Resolve workspace blockers and disconnect the transmitter; do not delete recovery or force quit. For manual installation, use only the appropriate official release: a downgrade does not guarantee data compatibility.</p>
             </details>
           </div>
           <p class="support-link">Still not working? <a href="https://github.com/loomitz/estrobo/blob/main/SUPPORT.en.md">See support and how to report it <i class="ph ph-arrow-up-right" aria-hidden="true"></i></a></p>
