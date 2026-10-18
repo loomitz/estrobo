@@ -3080,6 +3080,12 @@ private struct LocalConfigurationPopover: View {
 
                     SettingsDivider()
 
+                    SettingsRow(title: "updates.title", alignment: .top) {
+                        UpdateSettingsSection()
+                    }
+
+                    SettingsDivider()
+
                     SettingsRow(title: "Vista", alignment: .top) {
                         VStack(alignment: .leading, spacing: 8) {
                             WorkspaceVariantSelector(

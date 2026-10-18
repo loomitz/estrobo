@@ -735,3 +735,11 @@ test-updates:
 .PHONY: test-updater-adapter
 test-updater-adapter: sparkle-dependency
 	@python3 ../MacUpdaterAdapterCheck/run.py --sparkle "$(SPARKLE_DIR)" $(if $(SPARKLE_ARCHIVE),--sparkle-archive "$(SPARKLE_ARCHIVE)",) --output "$(BUILD_DIR)/UpdaterAdapterEvidence"
+
+.PHONY: test-update-presentation
+test-update-presentation: sparkle-dependency
+	@/bin/rm -f -- "$(BUILD_DIR)/UpdatePresentationEvidence/results.json"
+	@/bin/mkdir -p "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/MacOS" "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/Resources"
+	@/usr/bin/ditto "$(RESOURCE_SOURCE_DIR)" "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/Resources"
+	"$(SWIFTC)" -whole-module-optimization -parse-as-library -warnings-as-errors -sdk "$(MACOS_SDK)" -target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" -framework SwiftUI -framework AppKit -framework CoreBluetooth -framework Security $(SPARKLE_FLAGS) $(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) $(SHARED_SOURCES) Tests/UpdatePresentationCheck.swift -o "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/MacOS/UpdatePresentationCheck"
+	@DYLD_FRAMEWORK_PATH="$(SPARKLE_DIR)" ESTROBO_UPDATE_UI_EVIDENCE_DIR="$(BUILD_DIR)/UpdatePresentationEvidence" "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/MacOS/UpdatePresentationCheck"

@@ -1,0 +1,326 @@
+{
+  "cases" : [
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-light-invitation",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-light-available",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-light-progress",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-light-downloaded",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-light-confirmation",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 408,
+      "isSheet" : true,
+      "name" : "en-light-confirmation-panel-0",
+      "width" : 520,
+      "windowClass" : "_NSAlertPanel"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-light-blocked",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-light-up-to-date",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-light-configuration",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-light-signature-error",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-dark-invitation",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-dark-available",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-dark-progress",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-dark-downloaded",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-dark-confirmation",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 408,
+      "isSheet" : true,
+      "name" : "en-dark-confirmation-panel-0",
+      "width" : 520,
+      "windowClass" : "_NSAlertPanel"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-dark-blocked",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-dark-up-to-date",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-dark-configuration",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "en-dark-signature-error",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-light-invitation",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-light-available",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-light-progress",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-light-downloaded",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-light-confirmation",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 408,
+      "isSheet" : true,
+      "name" : "es-light-confirmation-panel-0",
+      "width" : 524,
+      "windowClass" : "_NSAlertPanel"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-light-blocked",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-light-up-to-date",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-light-configuration",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-light-signature-error",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-dark-invitation",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-dark-available",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-dark-progress",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-dark-downloaded",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-dark-confirmation",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 408,
+      "isSheet" : true,
+      "name" : "es-dark-confirmation-panel-0",
+      "width" : 524,
+      "windowClass" : "_NSAlertPanel"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-dark-blocked",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-dark-up-to-date",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-dark-configuration",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    },
+    {
+      "captureMethod" : "NSView.cacheDisplay",
+      "height" : 1640,
+      "isSheet" : false,
+      "name" : "es-dark-signature-error",
+      "width" : 1360,
+      "windowClass" : "NSWindow"
+    }
+  ],
+  "fixture" : "Native NSHostingView, controlled UpdateService, simulated session and in-memory preferences; no Sparkle install or physical radio",
+  "passed" : true
+}
