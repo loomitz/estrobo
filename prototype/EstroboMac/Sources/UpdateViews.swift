@@ -202,10 +202,9 @@ enum UpdateCopy {
         return language.localizedFormat("updates.lastCheck", date.formatted(.dateTime.locale(language.locale).year().month().day().hour().minute()))
     }
     static func progress(_ progress: UpdateDownloadProgress, language: AppLanguage) -> String {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return language.localizedFormat("updates.progress", formatter.string(fromByteCount: Int64(clamping: progress.completedBytes)),
-            formatter.string(fromByteCount: Int64(clamping: progress.totalBytes)), Int(progress.fraction * 100))
+        let style = ByteCountFormatStyle(style: .file, spellsOutZero: false).locale(language.locale)
+        return language.localizedFormat("updates.progress", Int64(clamping: progress.completedBytes).formatted(style),
+            Int64(clamping: progress.totalBytes).formatted(style), Int(progress.fraction * 100))
     }
 }
 

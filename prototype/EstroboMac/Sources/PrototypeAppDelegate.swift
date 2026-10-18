@@ -8,6 +8,11 @@ import EstroboCore
 final class PrototypeAppDelegate: NSObject, NSApplicationDelegate {
     weak var controller: GodoxSessionController?
     var createMainWindow: (() -> Void)?
+    lazy var updateLifecycle = UpdateInstallationLifecycle(blockReason: { [weak self] in
+        guard let controller = self?.controller, let reason = controller.terminationBlockReason else { return nil }
+        controller.noteTerminationBlocked(reason)
+        return reason
+    }, restoreWindow: { [weak self] in self?.showMainWindow() })
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
@@ -35,14 +40,6 @@ final class PrototypeAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard let controller,
-              let blockReason = controller.terminationBlockReason else {
-            return .terminateNow
-        }
-        controller.noteTerminationBlocked(blockReason)
-        // A last-window close may still be tearing down its SwiftUI scene.
-        // Restore it on the next turn so a refused quit cannot strand the app.
-        DispatchQueue.main.async { [self] in showMainWindow() }
-        return .terminateCancel
+        updateLifecycle.applicationShouldTerminate(sender)
     }
 }

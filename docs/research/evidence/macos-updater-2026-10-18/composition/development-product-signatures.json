@@ -1,0 +1,49 @@
+{
+  "binarySHA256": "f67c98eceb2f3af8abe1ae4f655f38269f4b0ec83a316e0500f7f1ac6b534588",
+  "channel": "beta",
+  "components": [
+    {
+      "adHoc": true,
+      "entitlements": {},
+      "hardenedRuntime": false,
+      "path": "Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
+    },
+    {
+      "adHoc": true,
+      "entitlements": {},
+      "hardenedRuntime": false,
+      "path": "Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app"
+    },
+    {
+      "adHoc": true,
+      "entitlements": {},
+      "hardenedRuntime": false,
+      "path": "Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Installer.xpc"
+    },
+    {
+      "adHoc": true,
+      "entitlements": {},
+      "hardenedRuntime": false,
+      "path": "Contents/Frameworks/Sparkle.framework"
+    },
+    {
+      "adHoc": true,
+      "entitlements": {
+        "com.apple.security.app-sandbox": true,
+        "com.apple.security.device.bluetooth": true,
+        "com.apple.security.network.client": true,
+        "com.apple.security.temporary-exception.mach-lookup.global-name": [
+          "mx.loo.estrobo-spks",
+          "mx.loo.estrobo-spki"
+        ]
+      },
+      "hardenedRuntime": false,
+      "path": "."
+    }
+  ],
+  "installedBuild": "5",
+  "productBundleIdentifier": "mx.loo.estrobo",
+  "productionKeyPresent": false,
+  "scope": "Actual local development product signatures and exact entitlements; no Developer ID, notarization or installer execution proof",
+  "sourceProductVerified": true
+}

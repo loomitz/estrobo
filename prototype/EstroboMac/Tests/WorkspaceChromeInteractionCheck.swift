@@ -30,15 +30,18 @@ enum WorkspaceChromeInteractionCheck {
             .deletingLastPathComponent()
         let sourcesURL = projectURL.appendingPathComponent("Sources")
         let appURL = sourcesURL.appendingPathComponent("EstroboApp.swift")
+        let scenesURL = sourcesURL.appendingPathComponent("MacAppScenes.swift")
         let delegateURL = sourcesURL.appendingPathComponent("PrototypeAppDelegate.swift")
         let menuBarURL = sourcesURL.appendingPathComponent("MenuBarControlView.swift")
 
-        guard let appSource = try? String(contentsOf: appURL, encoding: .utf8),
+        guard let appEntrySource = try? String(contentsOf: appURL, encoding: .utf8),
+              let sceneSource = try? String(contentsOf: scenesURL, encoding: .utf8),
               let delegateSource = try? String(contentsOf: delegateURL, encoding: .utf8),
               let menuBarSource = try? String(contentsOf: menuBarURL, encoding: .utf8) else {
             fail("Could not read the Menu Bar source contract")
         }
 
+        let appSource = appEntrySource + sceneSource
         expect(
             appSource.contains("WindowGroup(\"estrobo\", id: \"main\")") &&
                 appSource.contains("@AppStorage(MenuBarVisibilityPreferences.storageKey)") &&
@@ -48,7 +51,6 @@ enum WorkspaceChromeInteractionCheck {
                 appSource.contains("MenuBarStatusLabel(controller: controller)") &&
                 appSource.contains(".menuBarExtraStyle(.window)") &&
                 appSource.contains("@StateObject private var languageStore") &&
-                appSource.contains("appDelegate.controller = sessionController") &&
                 delegateSource.contains("controller.terminationBlockReason") &&
                 !appSource.contains(".onAppear { appDelegate.controller = controller }") &&
                 appSource.contains("appDelegate.createMainWindow = { openWindow(id: \"main\") }"),

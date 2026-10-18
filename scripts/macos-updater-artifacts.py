@@ -225,7 +225,10 @@ def sign(app, identity, entitlements, keychain=None):
         empty = pathlib.Path(temporary) / 'empty.plist'
         empty.write_bytes(plistlib.dumps({}))
         for component in components(app):
-            command = ['/usr/bin/codesign', '--force', '--sign', identity, '--options', 'runtime',
+            # Ad hoc development signatures have no Team ID. Hardened Runtime
+            # library validation cannot authenticate their embedded framework.
+            # Explicit zero also clears flags inherited from vendor signatures.
+            command = ['/usr/bin/codesign', '--force', '--sign', identity, '--options', '0' if identity == '-' else 'runtime',
                        '--timestamp=none' if identity == '-' else '--timestamp', '--entitlements', str(entitlements if component == app else empty)]
             if keychain:
                 command.extend(['--keychain', keychain])
@@ -238,7 +241,7 @@ def verify_signatures(app, distribution=False, team=None, certificate=None):
     for component in components(app):
         subprocess.run(['/usr/bin/codesign', '--verify', '--strict', str(component)], check=True)
         details = subprocess.run(['/usr/bin/codesign', '-dvvv', str(component)], capture_output=True, text=True, check=True).stderr
-        if not re.search(r'flags=.*\(.*runtime.*\)', details):
+        if distribution and not re.search(r'flags=.*\(.*runtime.*\)', details):
             raise ValueError(f'Hardened Runtime missing: {component}')
         entitlement_result = subprocess.run(['/usr/bin/codesign', '-d', '--entitlements', ':-', '--xml', str(component)], capture_output=True, check=True)
         effective = plistlib.loads(entitlement_result.stdout) if entitlement_result.stdout.strip() else {}
