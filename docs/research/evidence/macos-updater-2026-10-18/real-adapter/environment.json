@@ -19,5 +19,7 @@
     "No Intel/macOS13 runtime",
     "No production public root/feed/assets",
     "No BLE/optical or physical radio operation"
-  ]
+  ],
+  "tested_source_commit": "fd4cc73f7a193fc029e15580e7eb59e8cec150ea",
+  "post_execution_source_change": "UpdateService.swift protocol comment clarifies that synchronous cancel() is intent and asynchronous install completion acknowledges cancellation. No executable implementation changed after the 26-case run."
 }
