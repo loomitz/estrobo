@@ -62,9 +62,13 @@ DEVELOPER_ID_CERTIFICATE_SHA256="${DEVELOPER_ID_CERTIFICATE_SHA256:A}"
 [[ -r "$DEVELOPER_ID_CERTIFICATE_SHA256" ]] || fail "Developer ID certificate digest not found"
 [[ "${DMG:h}" == "${MANIFEST:h}" && "${DMG:h}" == "${CHECKSUMS:h}" ]] || \
   fail "DMG, manifest, and checksums must share one directory"
+if [[ "$BUILD_NUMBER" =~ '^[1-9][0-9]*$' ]] && (( 10#$BUILD_NUMBER >= 5 )); then
+  python3 "${0:A:h}/macos-updater-artifacts.py" metadata --version "$VERSION" --build "$BUILD_NUMBER" --channel "${UPDATE_CHANNEL:-}" --tag "$TAG" --distribution
+else
 [[ "$TAG" =~ '^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$' ]] || fail "invalid release tag: $TAG"
 [[ "$TAG" == "v${VERSION}-beta.${BUILD_NUMBER}" ]] || \
   fail "tag '$TAG' does not match version/build 'v${VERSION}-beta.${BUILD_NUMBER}'"
+fi
 [[ "$COMMIT" =~ '^[0-9a-f]{40}$' ]] || fail "COMMIT must be a full lowercase Git commit SHA"
 [[ "$DEVELOPER_ID_TEAM_ID" =~ '^[A-Z0-9]{10}$' ]] || fail "invalid Developer ID Team ID"
 [[ "$dmg_identifier" == mx.loo.estrobo.dmg ]] || fail "unexpected DMG signing identifier"
@@ -117,6 +121,9 @@ expect_manifest_value product.name estrobo
 expect_manifest_value product.bundleIdentifier "$BUNDLE_IDENTIFIER"
 expect_manifest_value product.version "$VERSION"
 expect_manifest_value product.build "$BUILD_NUMBER"
+if (( 10#$BUILD_NUMBER >= 5 )); then
+  expect_manifest_value product.updateChannel "$UPDATE_CHANNEL"
+fi
 expect_manifest_value product.minimumMacOSVersion "$MACOSX_DEPLOYMENT_TARGET"
 [[ "$(manifest_json_value product.architectures)" == '["arm64","x86_64"]' ]] || \
   fail "manifest architectures must be exactly arm64 and x86_64"

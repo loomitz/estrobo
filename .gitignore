@@ -41,3 +41,6 @@ DerivedData/
 
 # Local design-tool state
 /.impeccable/
+
+# Generated from the reviewed macOS update source during website build
+/website/public/updates/macos/
