@@ -6,6 +6,24 @@ Estrobo is a limited beta, and its support channel is **GitHub Issues**. There i
 
 The current public distribution is macOS `0.1.0-beta.4`. iOS and iPadOS remain local candidates; their declared requirements and Simulator results do not constitute an available distribution or validated physical compatibility. A qualifying public support contact is still required before TestFlight or App Store distribution.
 
+## macOS updates: public version and candidate
+
+Public `0.1.0-beta.4` has no updater. The first release containing one will require manual installation from its official release, verifying the DMG, manifest, and `SHA256SUMS` from the same tag. That release and an approved production catalog have not been published yet. The updater is not part of iOS/iPadOS.
+
+In the new macOS implementation, **Check for Updates…** in the Estrobo menu and **Updates** in Settings share the same state. A manual check does not enable automation; background checking and downloading start disabled and require your choice. The offer includes English/Spanish release notes. Checking and downloading can continue during a Bluetooth session; installing requires a disconnected transmitter and resolution of operations, editing, drafts, or recovery that block quitting. Estrobo does not disconnect, apply, or discard for you.
+
+**Install and Relaunch** confirms a specific offer and rechecks its eligibility, signed archive, and safety before installing. **Later**, **Cancel Download**, or **Cancel Installation** let you postpone or cancel at the relevant stage; cancellation or an offer change requires new confirmation. Downloading, quitting Estrobo, or restarting the Mac never authorizes installation. Relaunch restores the workspace without connecting to the transmitter or sending it values automatically because of the update.
+
+If updating fails:
+
+- **Not configured:** the candidate without a production public root remains unavailable for updates; do not add a fixture key or bypass verification. Keep your copy and contact support.
+- **Network/server:** local control remains available; check again when connected. An error does not mean “up to date.” After failures, automatic attempts wait at least 24 hours and honor longer known server deadlines; relaunching does not shorten that wait. Manual checking remains available.
+- **Invalid signature/archive or changed/withdrawn offer:** it is not installed. Check again and download the current offer; a previous download never bypasses fresh eligibility checking.
+- **Installation blocked:** resolve the displayed reason in the workspace and disconnect the transmitter. Do not delete recovery or force quit.
+- **DMG, permissions, or space:** open the copy installed in Applications, check available space, and retry system authorization when you choose to install.
+
+For manual recovery, use only an official release appropriate for your data and verify its files. We favor a correction with a higher build: returning to an older version does not guarantee preference or Keychain compatibility. Do not erase your data to enable installation. Signed/notarized Developer ID upgrades, Intel/minimum-macOS execution, and public promotion/withdrawal gates remain pending; local tests do not replace them. See [Privacy](PRIVACY.en.md) for provider connections and technical data.
+
 ## Before opening an issue
 
 1. Read [Troubleshooting](docs/TROUBLESHOOTING.md).

@@ -6,7 +6,7 @@
 
 <p align="center"><strong>Control local y nativo desde macOS para disparadores de flash Godox compatibles con Bluetooth.</strong></p>
 
-<p align="center"><sub>macOS 13+ &nbsp;·&nbsp; Apple Silicon + Intel &nbsp;·&nbsp; Todo permanece local</sub></p>
+<p align="center"><sub>macOS 13+ &nbsp;·&nbsp; Apple Silicon + Intel &nbsp;·&nbsp; Control local del radio</sub></p>
 
 <p align="center"><a href="README.md">English</a> &nbsp;·&nbsp; <strong>Español</strong></p>
 
@@ -71,13 +71,21 @@ Tanto el DMG oficial de beta 4 como la app que contiene están firmados y notari
 
 > **Estado del release:** `0.1.0-beta.4` es la beta pública vigente. Los assets publicados son inmutables; verifica los tres archivos del mismo prerelease de GitHub.
 
+## Actualizaciones macOS — implementación aún no publicada
+
+La beta pública `0.1.0-beta.4` no incluye actualizador. La primera release que lo incorpore necesitará la misma instalación manual y verificación descritas arriba; todavía no existe una descarga pública de esa nueva release ni un catálogo aprobado. El actualizador pertenece sólo al shell macOS y no forma parte de iOS/iPadOS.
+
+La nueva implementación ofrece **Buscar actualizaciones…** y una sección **Actualizaciones** en Ajustes. La búsqueda y descarga automáticas empiezan apagadas; la búsqueda manual no las activa. El control del transmisor sigue siendo local: las únicas conexiones nuevas son para actualizaciones, con datos técnicos normales de proveedores como IP y User-Agent, sin Código del radio, UUID, perfiles, presets ni telemetría.
+
+Instalar requiere confirmar una oferta concreta, desconectar el transmisor y resolver el trabajo que bloquee el cierre. Puedes cancelar o aplazar; descargar o cerrar no instala. La app vuelve al espacio de trabajo local sin conectar ni transmitir automáticamente por haber actualizado. Los gates reales de firma/notarización entre builds, Intel/macOS mínimo y publicación pública permanecen pendientes. Consulta [Soporte](SUPPORT.md) y [Privacidad](PRIVACY.md).
+
 ## Inicio rápido
 
 1. Enciende el transmisor y cierra cualquier otra app conectada a él.
 2. Abre Estrobo y configura la compatibilidad de grupos, los grupos de trabajo y al menos un modelo de flash por grupo.
 3. Pulsa **Buscar**. Elige el radio usando nombre, RSSI y el sufijo de UUID; nombre y UUID ayudan a distinguirlo, pero no lo autentican criptográficamente.
 4. Introduce el **Código del radio** de seis dígitos. Es el PIN local de compatibilidad y proximidad del transmisor, no una credencial fuerte ni un secreto de alto valor. No reutilices un PIN personal.
-5. La opción para recordarlo comienza apagada. Si la activas, Estrobo añade ese transmisor a su biblioteca local de transmisores guardados sólo después de completar `PWOK` y la sincronización; su código permanece sin cifrar en este Mac y nunca se envía a Internet. **Olvidar** elimina únicamente ese transmisor y código guardados.
+5. La opción para recordarlo comienza apagada. Si la activas, Estrobo añade ese transmisor a su biblioteca local de transmisores guardados sólo después de completar `PWOK` y la sincronización; en la beta pública 4, su código permanece sin cifrar en este Mac y nunca se envía a Internet. El candidato migra los registros compatibles a Keychain; consulta [Privacidad](PRIVACY.md). **Olvidar** elimina únicamente ese transmisor y código guardados.
 6. El handshake BLE sigue siendo obligatorio. Una vez completado, Estrobo actúa como fuente de verdad y sobrescribe deliberadamente el estado global A0 y los A1 de todos los grupos configurados. No importa el estado previo del transmisor.
 7. En **Automático**, un cambio se envía 700 ms después del último ajuste. Un arrastre no transmite valores intermedios: el plazo comienza al soltar. También puedes elegir **Con botón** y usar **Enviar ahora** o **Descartar**.
 8. En beta 4, pulsa **MULTI**, junto a Beep, para activar o desactivar Multi global; no abre ningún menú. Al activarlo se muestra la consola inline y todos los grupos activos compatibles pasan juntos a Multi. Los grupos que no participan quedan Off y aparecen desactivados mediante un overlay; desde ahí o desde la consola puedes volver a añadir los compatibles. El último participante sólo se puede cerrar con el botón global. Al desactivar **MULTI**, todos los grupos del workspace —incluidos los que antes estaban Off o en TTL— quedan activos en Manual; no se restaura la escena M/TTL/Off anterior. Los grupos fuera del workspace no reciben A1. Multi excluye HSS; usa **Test** sólo después de revisar los grupos activos y el límite de modelo mostrado, y considera el resultado óptico no validado hasta que la matriz exacta de hardware supere el smoke físico.
