@@ -1,0 +1,31 @@
+$ python3 ../scripts/macos-update-catalog.py site && astro check && astro build
+05:45:59 [types] Generated 63ms
+05:45:59 [check] Getting diagnostics for Astro files in /private/tmp/estrobo-macos-updater-documentation/website...
+Result (17 files):
+- 0 errors
+- 0 warnings
+- 0 hints
+
+05:46:01 [types] Generated 14ms
+05:46:01 [build] output: "static"
+05:46:01 [build] mode: "static"
+05:46:01 [build] directory: /private/tmp/estrobo-macos-updater-documentation/website/dist/
+05:46:01 [build] Collecting build info...
+05:46:01 [build] ✓ Completed in 33ms.
+05:46:01 [build] Building static entrypoints...
+05:46:01 [vite] ✓ built in 475ms
+05:46:01 [vite] ✓ built in 25ms
+05:46:01 [build] Rearranging server assets...
+
+ generating static routes
+05:46:01   ├─ /404.html (+4ms)
+05:46:01   ├─ /en/guide/index.html (+2ms)
+05:46:01   ├─ /en/index.html (+2ms)
+05:46:01   ├─ /guia/index.html (+1ms)
+05:46:01   ├─ /sitemap.xml (+1ms)
+05:46:01   ├─ /index.html (+1ms)
+05:46:01 ✓ Completed in 19ms.
+
+05:46:01 [build] ✓ Completed in 532ms.
+05:46:01 [build] 5 page(s) built in 565ms
+05:46:01 [build] Complete!
