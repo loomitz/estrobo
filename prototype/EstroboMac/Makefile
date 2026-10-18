@@ -707,3 +707,10 @@ run: build
 clean:
 	@/bin/rm -rf -- "$(APP_BUNDLE)" "$(LEGACY_APP_BUNDLE)" "$(UNIVERSAL_DIR)" "$(SLICE_DIR)" "$(BUILD_DIR)/Notarization" "$(TEST_EXECUTABLE)" "$(SESSION_TEST_EXECUTABLE)" "$(STUDIO_LIBRARY_TEST_EXECUTABLE)" "$(LOCALIZATION_TEST_EXECUTABLE)" "$(MODELING_MENU_POINTER_TEST_EXECUTABLE)" "$(WORKSPACE_CHROME_TEST_EXECUTABLE)" "$(BRAND_ASSET_TEST_EXECUTABLE)" "$(INTERACTIVE_EDITING_TEST_EXECUTABLE)" "$(MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE)" "$(RADIO_TRANSPORT_ADAPTER_TEST_EXECUTABLE)" "$(SIMULATED_TRANSPORT_TEST_EXECUTABLE)" "$(SECURE_PERSISTENCE_TEST_EXECUTABLE)"
 	@print "Eliminados los artefactos de $(APP_NAME)"
+
+.PHONY: test-updates
+test: test-updates
+test-updates:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" -warnings-as-errors -sdk "$(MACOS_SDK)" -target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" -framework Combine -framework CoreBluetooth -framework Security Sources/AppLocalization.swift Sources/AppTerminationSafety.swift Sources/MockRadioRuntime.swift Sources/UpdateClock.swift Sources/UpdateCoordinator.swift Sources/UpdatePreferences.swift Sources/UpdateService.swift $(SHARED_SOURCES) Tests/UpdateCoordinatorCheck.swift -o "$(BUILD_DIR)/UpdateCoordinatorCheck"
+	@"$(BUILD_DIR)/UpdateCoordinatorCheck"
