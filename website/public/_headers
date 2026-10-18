@@ -1,0 +1,8 @@
+/updates/macos/appcast.xml
+  Cache-Control: no-cache, max-age=0, must-revalidate
+  Content-Type: application/xml; charset=utf-8
+  X-Content-Type-Options: nosniff
+
+/updates/macos/state.json
+  Cache-Control: no-cache, max-age=0, must-revalidate
+  Content-Type: application/json; charset=utf-8

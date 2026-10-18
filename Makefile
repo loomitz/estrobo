@@ -1,3 +1,4 @@
+SPARKLE_DIR ?= $(CURDIR)/.build/Sparkle/2.10.0
 MAC_PROTOTYPE_DIR := $(CURDIR)/prototype/EstroboMac
 BUILD_DIR ?= $(MAC_PROTOTYPE_DIR)/Build
 DIST_DIR ?= $(CURDIR)/Dist
@@ -51,7 +52,7 @@ mac-prototype-package:
 mac-prototype-package-existing:
 	$(MAKE) -C "$(MAC_PROTOTYPE_DIR)" package-existing BUILD_DIR="$(abspath $(BUILD_DIR))" DIST_DIR="$(abspath $(DIST_DIR))"
 
-mac-prototype-developer-id-tools-test:
+mac-prototype-developer-id-tools-test: mac-prototype-updater-tools-test
 	./scripts/test-developer-id-release-tools.sh
 	./scripts/test-local-developer-id-release-source.sh
 	./scripts/test-developer-id-dmg-tools.sh
@@ -165,3 +166,9 @@ ios-accessory-spike-check: ios-project
 
 ios-advertisement-probe-check: ios-project
 	DEVELOPER_DIR="$(IOS_DEVELOPER_DIR)" ./scripts/ios-accessory-setup-run.sh probe
+
+.PHONY: mac-prototype-updater-tools-test
+mac-prototype-updater-tools-test:
+	$(MAKE) -C "$(MAC_PROTOTYPE_DIR)" sparkle-dependency SPARKLE_DIR="$(SPARKLE_DIR)"
+	SPARKLE_DIR="$(SPARKLE_DIR)" python3 scripts/tests/test_macos_updater_artifacts.py
+	SPARKLE_DIR="$(SPARKLE_DIR)" python3 scripts/tests/test_macos_update_catalog.py

@@ -75,9 +75,13 @@ DEVELOPER_ID_CERTIFICATE_SHA256="${DEVELOPER_ID_CERTIFICATE_SHA256:A}"
 [[ -r "$APP_NOTARIZATION_METADATA" ]] || fail "app notarization metadata not found"
 [[ -r "$DEVELOPER_ID_CERTIFICATE" ]] || fail "Developer ID certificate not found"
 [[ -r "$DEVELOPER_ID_CERTIFICATE_SHA256" ]] || fail "Developer ID certificate digest not found"
+if [[ "$BUILD_NUMBER" =~ '^[1-9][0-9]*$' ]] && (( 10#$BUILD_NUMBER >= 5 )); then
+  python3 "${0:A:h}/macos-updater-artifacts.py" metadata --version "$VERSION" --build "$BUILD_NUMBER" --channel "${UPDATE_CHANNEL:-}" --tag "$TAG" --distribution
+else
 [[ "$TAG" =~ '^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$' ]] || fail "invalid release tag: $TAG"
 [[ "$TAG" == "v${VERSION}-beta.${BUILD_NUMBER}" ]] || \
   fail "tag '$TAG' does not match version/build 'v${VERSION}-beta.${BUILD_NUMBER}'"
+fi
 [[ "$COMMIT" =~ '^[0-9a-f]{40}$' ]] || fail "COMMIT must be a full lowercase Git commit SHA"
 [[ "$DEVELOPER_ID_TEAM_ID" =~ '^[A-Z0-9]{10}$' ]] || fail "invalid Developer ID Team ID"
 [[ "$DEVELOPER_ID_SIGNING_IDENTITY" != - ]] || fail "Developer ID signing identity cannot be ad hoc"
@@ -495,6 +499,9 @@ certificate_digest="$(/usr/bin/awk 'NF { print tolower($1); exit }' "$DEVELOPER_
 /usr/bin/plutil -insert product.bundleIdentifier -string "$BUNDLE_IDENTIFIER" "$staged_manifest"
 /usr/bin/plutil -insert product.version -string "$VERSION" "$staged_manifest"
 /usr/bin/plutil -insert product.build -string "$BUILD_NUMBER" "$staged_manifest"
+if (( 10#$BUILD_NUMBER >= 5 )); then
+  /usr/bin/plutil -insert product.updateChannel -string "$UPDATE_CHANNEL" "$staged_manifest"
+fi
 /usr/bin/plutil -insert product.architectures -json '["arm64","x86_64"]' "$staged_manifest"
 /usr/bin/plutil -insert product.minimumMacOSVersion -string "$MACOSX_DEPLOYMENT_TARGET" "$staged_manifest"
 /usr/bin/plutil -insert source -dictionary "$staged_manifest"

@@ -40,11 +40,15 @@ done
 [[ -r "$NOTARIZATION_WAIT_RESULT" ]] || fail "notarization wait result not found: $NOTARIZATION_WAIT_RESULT"
 [[ -r "$NOTARIZATION_LOG" ]] || fail "notarization log not found: $NOTARIZATION_LOG"
 [[ -r "$NOTARIZATION_METADATA" ]] || fail "notarization metadata not found: $NOTARIZATION_METADATA"
+if [[ "$BUILD_NUMBER" =~ '^[1-9][0-9]*$' ]] && (( 10#$BUILD_NUMBER >= 5 )); then
+  python3 "${0:A:h}/macos-updater-artifacts.py" metadata --version "$VERSION" --build "$BUILD_NUMBER" --channel "${UPDATE_CHANNEL:-}" --tag "$CANDIDATE_TAG" --distribution
+else
 [[ "$CANDIDATE_TAG" =~ '^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$' ]] || \
   fail "invalid candidate tag: $CANDIDATE_TAG"
 expected_candidate_tag="v${VERSION}-beta.${BUILD_NUMBER}"
 [[ "$CANDIDATE_TAG" == "$expected_candidate_tag" ]] || \
   fail "candidate tag '$CANDIDATE_TAG' does not match version/build '$expected_candidate_tag'"
+fi
 [[ "$COMMIT" =~ '^[0-9a-f]{40}$' ]] || fail "COMMIT must be a full lowercase Git commit SHA"
 [[ "$DEVELOPER_ID_TEAM_ID" =~ '^[A-Z0-9]{10}$' ]] || fail "invalid Developer ID Team ID"
 
