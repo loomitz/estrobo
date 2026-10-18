@@ -6,7 +6,7 @@ Integration branch: codex/macos-auto-update
 Base: origin/main 68ea6fc (mismo árbol que spec baseline 91eeeb9)
 Spec: spec.md
 
-Los tickets 01-09 del checkout original son historial del mapa superseded. Tickets activos 10-15; dependencias en cada archivo. La autoridad AFK del usuario permite decidir las fronteras de prueba ya propuestas en spec.md sin otra entrevista. No autoriza publicación irreversible de releases.
+Los tickets 01-09 del checkout original son historial del mapa superseded. Tickets activos 10-16; dependencias en cada archivo. La autoridad AFK del usuario permite decidir las fronteras de prueba ya propuestas en spec.md sin otra entrevista. No autoriza publicación irreversible de releases.
 
 ## Tickets
 
@@ -16,6 +16,7 @@ Los tickets 01-09 del checkout original son historial del mapa superseded. Ticke
 - [Menú y Ajustes localizados y accesibles](issues/13-ui.md)
 - [Empaquetado, firma y catálogo aprobado](issues/14-packaging.md)
 - [Documentación, validación y revisión final](issues/15-acceptance.md)
+- [Composición productiva y recorrido integrado](issues/16-composition.md)
 
 ## Disposición de implementación
 
@@ -28,3 +29,7 @@ Se conserva el mecanismo y sus requisitos, sin introducir fork/APIs privadas, se
 Usuario aprobó revisar decisión 15 y continuar. El veto previo de dominios de redirecciones HTTPS del catálogo deja de ser requisito. Ticket 10 se reabre para cerrar interacción visible; después se retoman 11 y 14 en paralelo. Mantener autenticidad, HTTPS/ATS, consentimiento y seguridad de sesión. El diagnóstico histórico permanece como evidencia de la limitación aceptada.
 
 Decisión técnica de reintentos: el puerto conserva Retry-After/status cuando están disponibles. Sparkle omite esos metadatos en algunos errores del feed; fallback conservador 24h y persistencia del plazo conocido, sin interpretar strings ni simular headers. Se registra en decisión 6 bajo la delegación de implementación existente.
+
+## Partición por puerto estable — 2026-10-18
+
+Tickets 10 y 11 resueltos estabilizan el mecanismo y el puerto del coordinador. 13 implementa componentes/presentación nativa, localización y pruebas de menú/Ajustes sobre ese puerto; depende de 11 y puede avanzar en paralelo con 12. La composición productiva de EstroboApp, AppDelegate, factory y bridge se extrae a 16, dependiente de 12 y 13. 15 depende ahora de 14 y 16. Esta partición conserva una sola instancia y el recorrido final original; evita acoplar el trabajo de presentación a detalles todavía en implementación del adaptador y mantiene toda la validación integrada al final.
