@@ -58,10 +58,14 @@ for required_name in \
   require_value "$required_name"
 done
 
+if [[ "$BUILD_NUMBER" =~ '^[1-9][0-9]*$' ]] && (( 10#$BUILD_NUMBER >= 5 )); then
+  python3 "${0:A:h}/macos-updater-artifacts.py" metadata --version "$VERSION" --build "$BUILD_NUMBER" --channel "${UPDATE_CHANNEL:-}" --tag "$APPROVED_TAG" --distribution
+else
 [[ "$APPROVED_TAG" =~ '^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$' ]] || \
   fail "APPROVED_TAG is not a beta release tag"
 beta_number="${APPROVED_TAG##*.}"
 (( 10#$beta_number >= 3 )) || fail "Developer ID approval is not valid for legacy beta.1 or beta.2"
+fi
 [[ "$APPROVED_COMMIT" =~ '^[0-9a-f]{40}$' ]] || \
   fail "APPROVED_COMMIT must be a full lowercase Git commit SHA"
 [[ "$APPROVED_DMG_SHA256" =~ '^[0-9a-f]{64}$' ]] || \

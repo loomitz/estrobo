@@ -3,6 +3,9 @@ name: Developer ID candidate
 on:
   workflow_dispatch:
 
+env:
+  SPARKLE_PUBLIC_ED_KEY: ${{ vars.ESTROBO_SPARKLE_PUBLIC_ED_KEY }}
+
 permissions:
   contents: read
 
@@ -20,6 +23,7 @@ jobs:
       version: ${{ steps.candidate.outputs.version }}
       build_number: ${{ steps.candidate.outputs.build_number }}
       candidate_tag: ${{ steps.candidate.outputs.candidate_tag }}
+      update_channel: ${{ steps.candidate.outputs.update_channel }}
     steps:
       # actions/checkout v7.0.1, pinned to its verified commit.
       - name: Check out protected main
@@ -50,11 +54,10 @@ jobs:
           plist="prototype/EstroboMac/Info.plist"
           version="$(plutil -extract CFBundleShortVersionString raw -o - "$plist")"
           build_number="$(plutil -extract CFBundleVersion raw -o - "$plist")"
-          candidate_tag="v${version}-beta.${build_number}"
-          if [[ ! "$candidate_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-beta\.[0-9]+$ ]]; then
-            echo "Invalid version/build candidate: $candidate_tag" >&2
-            exit 1
-          fi
+          update_channel="$(plutil -extract EstroboUpdateChannel raw -o - "$plist")"
+          candidate_tag="$(plutil -extract EstroboReleaseTag raw -o - "$plist")"
+          python3 scripts/macos-updater-artifacts.py metadata --version "$version" \
+            --build "$build_number" --channel "$update_channel" --tag "$candidate_tag" --distribution
           tag_lookup_status=0
           git ls-remote --exit-code origin "refs/tags/$candidate_tag" \
             >/dev/null 2>&1 || tag_lookup_status=$?
@@ -76,6 +79,7 @@ jobs:
             echo "version=$version"
             echo "build_number=$build_number"
             echo "candidate_tag=$candidate_tag"
+            echo "update_channel=$update_channel"
           } >>"$GITHUB_OUTPUT"
 
       - name: Test Developer ID tooling without credentials
@@ -140,6 +144,8 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
       BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
       CANDIDATE_TAG: ${{ needs.prepare.outputs.candidate_tag }}
+      TAG: ${{ needs.prepare.outputs.candidate_tag }}
+      UPDATE_CHANNEL: ${{ needs.prepare.outputs.update_channel }}
       RELEASE_COMMIT: ${{ needs.prepare.outputs.commit }}
       DEVELOPER_ID_TEAM_ID: ${{ vars.ESTROBO_APPLE_TEAM_ID }}
       EXPECTED_CERTIFICATE_SHA256: ${{ vars.ESTROBO_DEVELOPER_ID_CERT_SHA256 }}
@@ -475,6 +481,8 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
       BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
       CANDIDATE_TAG: ${{ needs.prepare.outputs.candidate_tag }}
+      TAG: ${{ needs.prepare.outputs.candidate_tag }}
+      UPDATE_CHANNEL: ${{ needs.prepare.outputs.update_channel }}
       RELEASE_COMMIT: ${{ needs.prepare.outputs.commit }}
       DEVELOPER_ID_TEAM_ID: ${{ vars.ESTROBO_APPLE_TEAM_ID }}
     steps:

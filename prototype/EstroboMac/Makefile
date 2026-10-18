@@ -6,8 +6,9 @@ APP_NAME := estrobo
 BUILD_DIR ?= Build
 DIST_DIR ?= Dist
 VERSION ?= 0.1.0
-BUILD_NUMBER ?= 4
-TAG ?= v$(VERSION)-beta.$(BUILD_NUMBER)
+BUILD_NUMBER ?= 5
+UPDATE_CHANNEL ?= beta
+TAG ?= $(if $(filter stable,$(UPDATE_CHANNEL)),v$(VERSION)+build.$(BUILD_NUMBER),v$(VERSION)-beta.$(BUILD_NUMBER))
 SIGNING_IDENTITY ?=
 SIGNING_KEYCHAIN ?=
 DEVELOPER_ID_SIGNING_IDENTITY ?=
@@ -49,6 +50,16 @@ DEVELOPER_ID_LOCAL_SOURCE_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-loc
 DEVELOPER_ID_DMG_PACKAGE_SCRIPT := $(REPOSITORY_ROOT)/scripts/package-macos-developer-id-dmg.sh
 DEVELOPER_ID_DMG_VERIFY_SCRIPT := $(REPOSITORY_ROOT)/scripts/verify-macos-developer-id-dmg.sh
 DEVELOPER_ID_LOCAL_APPROVAL_SCRIPT := $(REPOSITORY_ROOT)/scripts/finalize-local-developer-id-release-approval.sh
+override SPARKLE_VERSION := 2.10.0
+override SPARKLE_SHA256 := c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c
+SPARKLE_DIR ?= $(abspath $(REPOSITORY_ROOT)/.build/Sparkle/$(SPARKLE_VERSION))
+override SPARKLE_FRAMEWORK_DIR := $(SPARKLE_DIR)
+SPARKLE_ARCHIVE ?=
+SPARKLE_PUBLIC_ED_KEY ?=
+export SPARKLE_PUBLIC_ED_KEY UPDATE_CHANNEL
+UPDATER_ARTIFACT_TOOL := $(REPOSITORY_ROOT)/scripts/macos-updater-artifacts.py
+SPARKLE_FLAGS := -F"$(SPARKLE_FRAMEWORK_DIR)" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks
+SPARKLE_ARCHIVE_ARGS := $(if $(SPARKLE_ARCHIVE),--archive "$(SPARKLE_ARCHIVE)",)
 APP_BUNDLE := $(BUILD_DIR)/$(APP_NAME).app
 LEGACY_APP_BUNDLE := $(BUILD_DIR)/GodoxMacControlPrototype.app
 CONTENTS_DIR := $(APP_BUNDLE)/Contents
@@ -110,7 +121,7 @@ COMMIT ?= $(shell git -C "$(REPOSITORY_ROOT)" rev-parse HEAD 2>/dev/null || prin
 
 build: $(EXECUTABLE)
 
-check: check-module-boundaries
+check: sparkle-dependency check-module-boundaries
 	"$(SWIFTC)" \
 		-parse-as-library \
 		-warnings-as-errors \
@@ -121,6 +132,7 @@ check: check-module-boundaries
 		-framework AppKit \
 		-framework CoreBluetooth \
 		-framework Security \
+		$(SPARKLE_FLAGS) \
 		$(SOURCES)
 
 # Build each SwiftPM module independently. This proves that the session
@@ -212,7 +224,7 @@ test-modeling-menu-pointer:
 		-o "$(MODELING_MENU_POINTER_TEST_EXECUTABLE)"
 	@"$(MODELING_MENU_POINTER_TEST_EXECUTABLE)"
 
-test-workspace-chrome:
+test-workspace-chrome: sparkle-dependency
 	@/bin/mkdir -p "$(BUILD_DIR)"
 	"$(SWIFTC)" \
 		-parse-as-library \
@@ -223,11 +235,12 @@ test-workspace-chrome:
 		-framework AppKit \
 		-framework CoreBluetooth \
 		-framework Security \
+		$(SPARKLE_FLAGS) \
 		$(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) \
 		$(SHARED_SOURCES) \
 		Tests/WorkspaceChromeInteractionCheck.swift \
 		-o "$(WORKSPACE_CHROME_TEST_EXECUTABLE)"
-	@"$(WORKSPACE_CHROME_TEST_EXECUTABLE)"
+	@DYLD_FRAMEWORK_PATH="$(SPARKLE_DIR)" "$(WORKSPACE_CHROME_TEST_EXECUTABLE)"
 
 test-brand-assets: $(EXECUTABLE)
 	@/bin/mkdir -p "$(BUILD_DIR)"
@@ -241,7 +254,7 @@ test-brand-assets: $(EXECUTABLE)
 		-o "$(BRAND_ASSET_TEST_EXECUTABLE)"
 	@"$(BRAND_ASSET_TEST_EXECUTABLE)" "$(APP_BUNDLE)"
 
-test-interactive-editing:
+test-interactive-editing: sparkle-dependency
 	@/bin/mkdir -p "$(BUILD_DIR)"
 	"$(SWIFTC)" \
 		-parse-as-library \
@@ -252,11 +265,12 @@ test-interactive-editing:
 		-framework AppKit \
 		-framework CoreBluetooth \
 		-framework Security \
+		$(SPARKLE_FLAGS) \
 		$(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) \
 		$(SHARED_SOURCES) \
 		Tests/InteractiveEditingCheck.swift \
 		-o "$(INTERACTIVE_EDITING_TEST_EXECUTABLE)"
-	@"$(INTERACTIVE_EDITING_TEST_EXECUTABLE)"
+	@DYLD_FRAMEWORK_PATH="$(SPARKLE_DIR)" "$(INTERACTIVE_EDITING_TEST_EXECUTABLE)"
 
 test-menu-bar-accessibility: build
 	@/bin/mkdir -p "$(BUILD_DIR)"
@@ -269,11 +283,12 @@ test-menu-bar-accessibility: build
 		-framework AppKit \
 		-framework CoreBluetooth \
 		-framework Security \
+		$(SPARKLE_FLAGS) \
 		$(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) \
 		$(SHARED_SOURCES) \
 		Tests/MenuBarAccessibilityCheck.swift \
 		-o "$(MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE)"
-	@ESTROBO_TEST_APP_BUNDLE="$(APP_BUNDLE)" \
+	@DYLD_FRAMEWORK_PATH="$(SPARKLE_DIR)" ESTROBO_TEST_APP_BUNDLE="$(APP_BUNDLE)" \
 		"$(MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE)"
 
 test-launch-responsiveness: build
@@ -321,7 +336,7 @@ signing-certificate-check:
 		"$(SIGNING_CERTIFICATE)" \
 		"$(SIGNING_CERTIFICATE_SHA256)"
 
-$(EXECUTABLE): $(SOURCES) $(INFO_PLIST) $(ENTITLEMENTS) $(RESOURCE_FILES)
+$(EXECUTABLE): $(SOURCES) $(INFO_PLIST) $(ENTITLEMENTS) $(RESOURCE_FILES) | sparkle-dependency
 	@/bin/rm -rf -- "$(APP_BUNDLE)"
 	@/bin/mkdir -p "$(MACOS_DIR)" "$(RESOURCES_DIR)"
 	@/bin/cp "$(INFO_PLIST)" "$(CONTENTS_DIR)/Info.plist"
@@ -339,16 +354,16 @@ $(EXECUTABLE): $(SOURCES) $(INFO_PLIST) $(ENTITLEMENTS) $(RESOURCE_FILES)
 		-framework AppKit \
 		-framework CoreBluetooth \
 		-framework Security \
+		$(SPARKLE_FLAGS) \
 		-o "$(EXECUTABLE)" \
 		$(SOURCES)
-	/usr/bin/codesign --force --sign - \
-		--options runtime \
-		--entitlements "$(ENTITLEMENTS)" \
-		"$(APP_BUNDLE)"
+	@python3 "$(UPDATER_ARTIFACT_TOOL)" configure --app "$(APP_BUNDLE)" --version "$(VERSION)" --build "$(BUILD_NUMBER)" --channel "$(UPDATE_CHANNEL)" --tag "$(TAG)"
+	@python3 "$(UPDATER_ARTIFACT_TOOL)" embed --app "$(APP_BUNDLE)" --directory "$(SPARKLE_DIR)" $(SPARKLE_ARCHIVE_ARGS)
+	@python3 "$(UPDATER_ARTIFACT_TOOL)" sign --app "$(APP_BUNDLE)" --identity - --entitlements "$(ENTITLEMENTS)"
 	@/usr/bin/codesign --verify --deep --strict "$(APP_BUNDLE)"
 	@print "Construida: $(APP_BUNDLE)"
 
-universal:
+universal: sparkle-dependency
 	@set -euo pipefail; \
 	/bin/rm -rf -- "$(UNIVERSAL_DIR)" "$(SLICE_DIR)"; \
 	/bin/mkdir -p "$(UNIVERSAL_MACOS_DIR)" "$(UNIVERSAL_RESOURCES_DIR)" "$(SLICE_DIR)/arm64" "$(SLICE_DIR)/x86_64"; \
@@ -371,6 +386,7 @@ universal:
 			-framework CoreBluetooth \
 			-framework Security \
 			-o "$(SLICE_DIR)/$${arch}/$(APP_NAME)" \
+			$(SPARKLE_FLAGS) \
 			$(SOURCES); \
 	done; \
 	/usr/bin/lipo -create \
@@ -379,6 +395,8 @@ universal:
 		-output "$(UNIVERSAL_EXECUTABLE)"; \
 	/usr/bin/lipo "$(UNIVERSAL_EXECUTABLE)" -verify_arch arm64; \
 	/usr/bin/lipo "$(UNIVERSAL_EXECUTABLE)" -verify_arch x86_64; \
+	python3 "$(UPDATER_ARTIFACT_TOOL)" configure --app "$(UNIVERSAL_APP_BUNDLE)" --version "$(VERSION)" --build "$(BUILD_NUMBER)" --channel "$(UPDATE_CHANNEL)" --tag "$(TAG)"; \
+	python3 "$(UPDATER_ARTIFACT_TOOL)" embed --app "$(UNIVERSAL_APP_BUNDLE)" --directory "$(SPARKLE_DIR)" $(SPARKLE_ARCHIVE_ARGS); \
 	print "Construido sin firmar: $(UNIVERSAL_APP_BUNDLE)"
 
 release-preflight:
@@ -465,6 +483,7 @@ developer-id-certificate-check:
 		"$(DEVELOPER_ID_TEAM_ID)"
 
 developer-id-preflight:
+	@python3 "$(UPDATER_ARTIFACT_TOOL)" metadata --version "$(VERSION)" --build "$(BUILD_NUMBER)" --channel "$(UPDATE_CHANNEL)" --tag "$(TAG)" --distribution
 	@set -euo pipefail; \
 	if [[ -z "$(DEVELOPER_ID_SIGNING_IDENTITY)" || "$(DEVELOPER_ID_SIGNING_IDENTITY)" == "-" ]]; then \
 		print -u2 "DEVELOPER_ID_SIGNING_IDENTITY debe apuntar a una identidad Developer ID Application válida."; \
@@ -484,19 +503,7 @@ developer-id-preflight:
 		"$(DEVELOPER_ID_TEAM_ID)"
 
 developer-id-release: developer-id-preflight universal
-	@set -euo pipefail; \
-	keychain_args=(); \
-	if [[ -n "$(DEVELOPER_ID_SIGNING_KEYCHAIN)" ]]; then \
-		keychain_args=(--keychain "$(DEVELOPER_ID_SIGNING_KEYCHAIN)"); \
-	fi; \
-	/usr/bin/codesign --force \
-		--sign "$(DEVELOPER_ID_SIGNING_IDENTITY)" \
-		"$${keychain_args[@]}" \
-		--options runtime \
-		--timestamp \
-		--entitlements "$(ENTITLEMENTS)" \
-		"$(UNIVERSAL_APP_BUNDLE)"; \
-	print "Firmado con Developer ID y sello de tiempo seguro: $(UNIVERSAL_APP_BUNDLE)"
+	@python3 "$(UPDATER_ARTIFACT_TOOL)" sign --app "$(UNIVERSAL_APP_BUNDLE)" --identity "$(DEVELOPER_ID_SIGNING_IDENTITY)" --entitlements "$(ENTITLEMENTS)" $(if $(DEVELOPER_ID_SIGNING_KEYCHAIN),--keychain "$(DEVELOPER_ID_SIGNING_KEYCHAIN)",)
 
 developer-id-release-verify: developer-id-release
 	@$(MAKE) developer-id-verify-signed-existing \
@@ -707,3 +714,13 @@ run: build
 clean:
 	@/bin/rm -rf -- "$(APP_BUNDLE)" "$(LEGACY_APP_BUNDLE)" "$(UNIVERSAL_DIR)" "$(SLICE_DIR)" "$(BUILD_DIR)/Notarization" "$(TEST_EXECUTABLE)" "$(SESSION_TEST_EXECUTABLE)" "$(STUDIO_LIBRARY_TEST_EXECUTABLE)" "$(LOCALIZATION_TEST_EXECUTABLE)" "$(MODELING_MENU_POINTER_TEST_EXECUTABLE)" "$(WORKSPACE_CHROME_TEST_EXECUTABLE)" "$(BRAND_ASSET_TEST_EXECUTABLE)" "$(INTERACTIVE_EDITING_TEST_EXECUTABLE)" "$(MENU_BAR_ACCESSIBILITY_TEST_EXECUTABLE)" "$(RADIO_TRANSPORT_ADAPTER_TEST_EXECUTABLE)" "$(SIMULATED_TRANSPORT_TEST_EXECUTABLE)" "$(SECURE_PERSISTENCE_TEST_EXECUTABLE)"
 	@print "Eliminados los artefactos de $(APP_NAME)"
+
+.PHONY: sparkle-dependency test-updater-artifacts updater-metadata
+sparkle-dependency:
+	@python3 "$(UPDATER_ARTIFACT_TOOL)" dependency --directory "$(SPARKLE_DIR)" $(SPARKLE_ARCHIVE_ARGS)
+
+test-updater-artifacts:
+	@$(if $(SPARKLE_ARCHIVE),SPARKLE_ARCHIVE="$(SPARKLE_ARCHIVE)",) python3 "$(REPOSITORY_ROOT)/scripts/tests/test_macos_updater_artifacts.py"
+
+updater-metadata:
+	@python3 "$(UPDATER_ARTIFACT_TOOL)" metadata --version "$(VERSION)" --build "$(BUILD_NUMBER)" --channel "$(UPDATE_CHANNEL)" --tag "$(TAG)"

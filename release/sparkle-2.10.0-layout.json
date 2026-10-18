@@ -1,0 +1,373 @@
+{
+  "Autoupdate": {
+    "kind": "symlink",
+    "target": "Versions/Current/Autoupdate"
+  },
+  "Resources": {
+    "kind": "symlink",
+    "target": "Versions/Current/Resources"
+  },
+  "Sparkle": {
+    "kind": "symlink",
+    "target": "Versions/Current/Sparkle"
+  },
+  "Updater.app": {
+    "kind": "symlink",
+    "target": "Versions/Current/Updater.app"
+  },
+  "Versions": {
+    "kind": "directory"
+  },
+  "Versions/B": {
+    "kind": "directory"
+  },
+  "Versions/B/Autoupdate": {
+    "kind": "file",
+    "executable": true
+  },
+  "Versions/B/Resources": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/Base.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/Base.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/Info.plist": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/ReleaseNotesColorStyle.css": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/SUUpdateAlert.nib": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/SUUpdatePermissionPrompt.nib": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/ar.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/ar.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/ca.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/ca.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/cs.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/cs.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/da.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/da.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/de.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/de.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/el.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/el.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/es.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/es.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/fa.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/fa.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/fi.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/fi.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/fr.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/fr.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/he.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/he.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/hr.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/hr.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/hu.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/hu.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/is.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/is.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/it.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/it.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/ja.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/ja.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/ko.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/ko.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/nb.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/nb.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/nl.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/nl.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/nn.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/nn.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/pl.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/pl.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/pt-BR.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/pt-BR.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/pt-PT.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/pt-PT.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/ro.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/ro.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/ru.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/ru.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/sk.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/sk.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/sl.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/sl.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/sv.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/sv.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/th.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/th.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/tr.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/tr.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/uk.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/uk.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/vi.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/vi.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/zh_CN.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/zh_CN.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/zh_HK.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/zh_HK.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Resources/zh_TW.lproj": {
+    "kind": "directory"
+  },
+  "Versions/B/Resources/zh_TW.lproj/Sparkle.strings": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Sparkle": {
+    "kind": "file",
+    "executable": true
+  },
+  "Versions/B/Updater.app": {
+    "kind": "directory"
+  },
+  "Versions/B/Updater.app/Contents": {
+    "kind": "directory"
+  },
+  "Versions/B/Updater.app/Contents/Info.plist": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Updater.app/Contents/MacOS": {
+    "kind": "directory"
+  },
+  "Versions/B/Updater.app/Contents/MacOS/Updater": {
+    "kind": "file",
+    "executable": true
+  },
+  "Versions/B/Updater.app/Contents/PkgInfo": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/Updater.app/Contents/_CodeSignature": {
+    "kind": "directory"
+  },
+  "Versions/B/Updater.app/Contents/_CodeSignature/CodeResources": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/XPCServices": {
+    "kind": "directory"
+  },
+  "Versions/B/XPCServices/Installer.xpc": {
+    "kind": "directory"
+  },
+  "Versions/B/XPCServices/Installer.xpc/Contents": {
+    "kind": "directory"
+  },
+  "Versions/B/XPCServices/Installer.xpc/Contents/Info.plist": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/XPCServices/Installer.xpc/Contents/MacOS": {
+    "kind": "directory"
+  },
+  "Versions/B/XPCServices/Installer.xpc/Contents/MacOS/Installer": {
+    "kind": "file",
+    "executable": true
+  },
+  "Versions/B/XPCServices/Installer.xpc/Contents/_CodeSignature": {
+    "kind": "directory"
+  },
+  "Versions/B/XPCServices/Installer.xpc/Contents/_CodeSignature/CodeResources": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/B/_CodeSignature": {
+    "kind": "directory"
+  },
+  "Versions/B/_CodeSignature/CodeResources": {
+    "kind": "file",
+    "executable": false
+  },
+  "Versions/Current": {
+    "kind": "symlink",
+    "target": "B"
+  },
+  "XPCServices": {
+    "kind": "symlink",
+    "target": "Versions/Current/XPCServices"
+  }
+}

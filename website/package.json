@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "astro dev",
     "check": "astro check",
-    "build": "astro check && astro build",
+    "build": "python3 ../scripts/macos-update-catalog.py site && astro check && astro build",
     "preview": "astro preview"
   },
   "dependencies": {
