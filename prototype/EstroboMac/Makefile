@@ -714,3 +714,11 @@ test-updates:
 	@/bin/mkdir -p "$(BUILD_DIR)"
 	"$(SWIFTC)" -warnings-as-errors -sdk "$(MACOS_SDK)" -target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" -framework Combine -framework CoreBluetooth -framework Security Sources/AppLocalization.swift Sources/AppTerminationSafety.swift Sources/MockRadioRuntime.swift Sources/UpdateClock.swift Sources/UpdateCoordinator.swift Sources/UpdatePreferences.swift Sources/UpdateService.swift $(SHARED_SOURCES) Tests/UpdateCoordinatorCheck.swift -o "$(BUILD_DIR)/UpdateCoordinatorCheck"
 	@"$(BUILD_DIR)/UpdateCoordinatorCheck"
+
+.PHONY: test-update-presentation
+test-update-presentation:
+	@/bin/rm -f -- "$(BUILD_DIR)/UpdatePresentationEvidence/results.json"
+	@/bin/mkdir -p "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/MacOS" "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/Resources"
+	@/usr/bin/ditto "$(RESOURCE_SOURCE_DIR)" "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/Resources"
+	"$(SWIFTC)" -whole-module-optimization -parse-as-library -warnings-as-errors -sdk "$(MACOS_SDK)" -target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" -framework SwiftUI -framework AppKit -framework CoreBluetooth -framework Security $(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) $(SHARED_SOURCES) Tests/UpdatePresentationCheck.swift -o "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/MacOS/UpdatePresentationCheck"
+	@ESTROBO_UPDATE_UI_EVIDENCE_DIR="$(BUILD_DIR)/UpdatePresentationEvidence" "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/MacOS/UpdatePresentationCheck"

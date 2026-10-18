@@ -1,0 +1,219 @@
+[
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXWindow",
+    "title" : "Presentation capture en true",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXScrollArea",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Updates"
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Installed version"
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "0.1.0 · build 4 · Estrobo beta channel"
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Last successful check: Oct 18, 2026 at 5:20 AM"
+  },
+  {
+    "description" : "",
+    "identifier" : "updates.status",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Resolve pending work before installing."
+  },
+  {
+    "description" : "",
+    "identifier" : "updates.blocker",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Wait for transmitter connection, disconnection or scanning to finish. Then leave it disconnected."
+  },
+  {
+    "description" : "Open Workspace",
+    "identifier" : "updates.workspace",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "0.1.0 · build 5 · Estrobo beta channel"
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "What’s new"
+  },
+  {
+    "description" : "",
+    "identifier" : "updates.notes",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Workspace improvements.\nNo changes sent to the transmitter."
+  },
+  {
+    "description" : "Check for Updates…",
+    "identifier" : "updates.check",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "Install and Restart…",
+    "identifier" : "updates.install",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "Later",
+    "identifier" : "updates.postpone",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Check for updates in the background"
+  },
+  {
+    "description" : "",
+    "identifier" : "updates.automaticChecks",
+    "role" : "AXCheckBox",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Download updates in the background"
+  },
+  {
+    "description" : "",
+    "identifier" : "updates.automaticDownloads",
+    "role" : "AXCheckBox",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Estrobo checks every 24 hours while open. Installation always requires your confirmation."
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "To download in the background, enable background checks."
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Checks contact estrobo.app and its providers; downloads contact GitHub. They receive ordinary connection data, such as IP and user agent, without transmitter data or analytics."
+  },
+  {
+    "description" : "Contact Support",
+    "identifier" : "updates.support",
+    "role" : "AXLink",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "Manual Download",
+    "identifier" : "updates.manual",
+    "role" : "AXLink",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Presentation capture en true"
+  }
+]
