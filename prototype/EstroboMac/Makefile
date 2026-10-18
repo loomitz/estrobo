@@ -736,6 +736,10 @@ test-updates:
 test-updater-adapter: sparkle-dependency
 	@python3 ../MacUpdaterAdapterCheck/run.py --sparkle "$(SPARKLE_DIR)" $(if $(SPARKLE_ARCHIVE),--sparkle-archive "$(SPARKLE_ARCHIVE)",) --output "$(BUILD_DIR)/UpdaterAdapterEvidence"
 
+.PHONY: test-update-error-recovery
+test-update-error-recovery: sparkle-dependency
+	@SPARKLE_DIR="$(SPARKLE_DIR)" python3 -B Tests/run-update-error-recovery.py
+
 .PHONY: test-update-presentation
 test-update-presentation: sparkle-dependency
 	@/bin/rm -f -- "$(BUILD_DIR)/UpdatePresentationEvidence/results.json"
@@ -762,4 +766,4 @@ test-update-scenes: sparkle-dependency
 # Native presentation/composition use the same GUI session already required by
 # menu accessibility and launch checks. The real signed-DMG adapter fixture is
 # deliberately opt-in via test-updater-adapter; it is not part of this suite.
-test: test-update-presentation test-update-composition test-update-scenes
+test: test-update-presentation test-update-composition test-update-scenes test-update-error-recovery

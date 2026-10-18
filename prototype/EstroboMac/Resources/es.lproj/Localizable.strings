@@ -919,10 +919,10 @@
 "updates.error.signature" = "La firma no es válida. No se instalará esta actualización. Vuelve a buscar o consulta soporte.";
 "updates.error.invalidOffer" = "La oferta cambió o ya no es válida. Vuelve a buscar y confirma la nueva oferta.";
 "updates.error.archive" = "El archivo descargado no pudo verificarse. Vuelve a descargar la actualización.";
-"updates.error.installation" = "No se pudo instalar. Conserva esta copia de Estrobo, vuelve a intentarlo o consulta soporte.";
+"updates.error.installation" = "No se pudo instalar. Comprueba los permisos de instalación, conserva esta copia de Estrobo y vuelve a intentarlo o consulta soporte.";
 "updates.error.cancelled" = "La actualización se canceló. Puedes volver a intentarlo.";
 "updates.error.unsafeSession" = "El trabajo con el transmisor cambió. Resuélvelo antes de volver a confirmar la instalación.";
-"updates.error.readOnlyLocation" = "Mueve Estrobo desde el DMG a Aplicaciones, abre esa copia y vuelve a intentar.";
+"updates.error.readOnlyLocation" = "Mueve Estrobo a Aplicaciones, abre esa copia y vuelve a intentar.";
 "updates.error.authorizationCancelled" = "Se canceló la autorización del sistema. Estrobo sigue disponible; puedes volver a intentar cuando decidas instalar.";
 "updates.error.diskSpace" = "No hay suficiente espacio para actualizar. Libera espacio y vuelve a descargar.";
 "updates.support" = "Contactar soporte";

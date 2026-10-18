@@ -65,7 +65,7 @@ The candidate contract is fail-closed and ordered:
 
 1. verify the pinned Apple certificate, Team ID, and imported private identity;
 2. build both architecture slices and sign once with Hardened Runtime, the exact entitlements, and `--timestamp`;
-3. verify Developer ID authority, TeamIdentifier, secure timestamp, certificate bytes, slices, plist, and the App Sandbox + Bluetooth entitlement allowlist;
+3. verify Developer ID authority, TeamIdentifier, secure timestamp, certificate bytes, slices, plist, and the exact entitlement allowlist for that product: App Sandbox + Bluetooth for beta 4/manual, or the updater host/components contract below for the later Sparkle candidate;
 4. create a temporary ZIP and submit it without automatic retry;
 5. persist the submission ID, exact upload ZIP, wait result, and log, and require matching IDs, upload digest, and `Accepted` status;
 6. staple and validate the ticket on the `.app`;

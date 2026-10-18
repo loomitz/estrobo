@@ -1,5 +1,7 @@
 # Revisión de la rama de integración
 
+Historial de la revisión del spike de 2026-10-17. La [revisión final actual de 2026-10-18](review-final.md) conserva separados Standards/Spec y sus correcciones; su confirmación independiente sigue pendiente.
+
 Fixed point: `68ea6fcc82bda027d044106a5c43004c4458f192` (origin/main verificado).
 Reviewed HEAD: `c7e6c0a94136166fb9b889de4897b93441a3eb67`.
 Diff: `git diff 68ea6fc...HEAD`.

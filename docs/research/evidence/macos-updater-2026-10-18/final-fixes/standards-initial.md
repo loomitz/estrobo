@@ -1,0 +1,15 @@
+Documented-standard breaches:
+
+1. **P1 — Configured CI cannot pass its own tests.** `.github/workflows/developer-id-candidate.yml:6–7,86,128` exports `SPARKLE_PUBLIC_ED_KEY` globally, but `scripts/tests/test_macos_updater_artifacts.py:38–47` inherits it while asserting trust is absent; `prototype/EstroboMac/Tests/UpdateCompositionCheck.swift:43–44` likewise requires the actual product key to be nil. Rule: `CONTRIBUTING.md:3,33` (deterministic tests). Verified with synthetic public root `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=` and `python3 -B scripts/tests/test_macos_updater_artifacts.py ArtifactTests.test_embedded_bundle_rejects_unexpected_executable_and_missing_release_trust`: fails `0 == 0` at line47. Isolate missing-key fixtures from valid public configuration; preserve configured candidate gates.
+
+2. **P1 — Required dependency notices are omitted.** `scripts/macos-updater-artifacts.py:133–144` embeds only `Sparkle.framework`; the verified distribution's top-level `LICENSE` is outside that tree, and product resources contain no notice/license. `THIRD-PARTY-NOTICES.md` also remains unchanged. Rules: `THIRD-PARTY-NOTICES.md:32–37` requires notice text and updating its inventory; `docs/RELEASE-CHECKLIST.md:24` requires new dependencies reflected there. Include the pinned Sparkle license/third-party notices in packaged materials and document the dependency without changing Estrobo's licensing.
+
+3. **P2 — Producer ignores documented consumer bounds.** `scripts/macos-update-catalog.py:59,71` accepts any positive archive length and unbounded notes. Rule: `release/macos-updates/README.md:5`, “keep candidates within those limits” (64 MiB; 16,384 UTF-8 bytes/language). Direct synthetic calls accepted 64 MiB+1 and 16,386-byte Spanish notes; `SparkleUpdateService.swift:254–275` rejects them. Enforce both bounds before prepare/approval can produce a signed, categorically unusable feed.
+
+4. **P2 — Public/security release guidance contradicts the new contract.** Rule: `CONTRIBUTING.md:35` requires updating public documentation for observable changes. `SECURITY.md:40` and `docs/HOW-IT-WORKS.md:3,15` still universally deny network access; `docs/RELEASE-CHECKLIST.md:87` forbids the required updater entitlements, and lines32–33 prescribe the obsolete self-signed lane. Scope these statements/gates to beta4 versus updater candidates; retain iOS and historical contracts.
+
+Judgement-call baseline smell:
+
+5. **P2 — Possible Primitive Obsession.** `prototype/EstroboMac/Sources/SparkleUpdateService.swift:407–413`: “case 1003, 4012” / “case 2000, 3000, 4002...4010” / “default: … .network”. Pinned `SUErrors.h:45,59–60` defines translocation1005, copy4000 and authentication4001; without an underlying error all become connection advice. Use named public error cases and complete local-install recovery mapping, with focused callback tests.
+
+Count: 4 documented-standard breaches; 1 judgement-call smell. Accepted HTTPS redirects and pending live distribution/platform gates are not findings.

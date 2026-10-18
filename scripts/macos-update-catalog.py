@@ -27,6 +27,9 @@ SPARKLE = '{http://www.andymatuschak.org/xml-namespaces/sparkle}'
 ESTROBO = '{https://estrobo.app/xmlns/updates}'
 STATE_URL = 'https://estrobo.app/updates/macos/state.json'
 HEADERS = '/updates/macos/appcast.xml\n  Cache-Control: no-cache, max-age=0, must-revalidate\n  Content-Type: application/xml; charset=utf-8\n  X-Content-Type-Options: nosniff\n'
+# Shipped macOS consumer contract (UpdateHTTPClient / SparkleUpdateService).
+MAXIMUM_ARCHIVE_BYTES = 64 * 1024 * 1024
+MAXIMUM_NOTES_UTF8_BYTES = 16_384
 
 
 def read_json(path):
@@ -35,6 +38,15 @@ def read_json(path):
 
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def validate_consumer_limits(length, notes):
+    if type(length) is not int or not 0 < length <= MAXIMUM_ARCHIVE_BYTES:
+        raise ValueError('Archive exceeds consumer limit: 1–67,108,864 bytes')
+    if set(notes) != {'en', 'es'} or any(not isinstance(note, str) or not note.strip() for note in notes.values()):
+        raise ValueError('Self-contained release notes in English and Spanish are required')
+    if any(len(note.encode('utf-8')) > MAXIMUM_NOTES_UTF8_BYTES for note in notes.values()):
+        raise ValueError('Release notes exceed consumer limit: 16,384 UTF-8 bytes per language')
 
 
 def validate_catalog(catalog, withdrawals):
@@ -53,10 +65,11 @@ def validate_catalog(catalog, withdrawals):
             raise ValueError(f'Duplicate build in catalog: {build}')
         builds.add(build)
         archive = offer['archive']
+        validate_consumer_limits(archive['length'], offer['releaseNotes'])
         expected = f"https://github.com/loomitz/estrobo/releases/download/{offer['tag']}/estrobo-{offer['tag']}-macos-universal.dmg"
         if archive['url'] != expected:
             raise ValueError('Archive URL must identify the exact GitHub release DMG; aliases are forbidden')
-        if type(archive['length']) is not int or archive['length'] <= 0 or not re.fullmatch('[0-9a-f]{64}', archive['sha256']):
+        if not re.fullmatch('[0-9a-f]{64}', archive['sha256']):
             raise ValueError('Invalid final archive length/SHA-256')
         try:
             signature = base64.b64decode(archive['edSignature'], validate=True)
@@ -68,8 +81,6 @@ def validate_catalog(catalog, withdrawals):
             raise ValueError('Distributed archives must contain both supported architectures')
         if not re.fullmatch(r'[0-9]+\.[0-9]+(?:\.[0-9]+)?', offer['minimumMacOSVersion']):
             raise ValueError('Invalid minimum system version')
-        if set(offer['releaseNotes']) != {'en','es'} or any(not isinstance(note,str) or not note.strip() for note in offer['releaseNotes'].values()):
-            raise ValueError('Self-contained release notes in English and Spanish are required')
     return retired
 
 
@@ -252,6 +263,8 @@ def prepare(args):
     artifacts.public_key(key, required=True)
     channel = product['updateChannel']
     artifacts.validate_release_metadata(product['version'], product['build'], channel, origin['tag'])
+    notes = {'en': args.notes_en.read_text(encoding='utf-8'), 'es': args.notes_es.read_text(encoding='utf-8')}
+    validate_consumer_limits(args.archive.stat().st_size, notes)
     # Reuse the canonical final-approval verifier, preserving source/CI/notary/
     # exact tuple and physical smoke requirements. Catalog signing adds no authority.
     environment = dict(os.environ, DMG=str(args.archive.resolve()), MANIFEST=str(args.manifest.resolve()), CHECKSUMS=str(args.checksums.resolve()),
@@ -272,7 +285,7 @@ def prepare(args):
     catalog = read_json(args.source / 'catalog.json')
     withdrawals = read_json(args.source / 'withdrawals.json')
     offer = {'build':product['build'], 'version':product['version'], 'channel':channel, 'tag':origin['tag'],
-             'minimumMacOSVersion':product['minimumMacOSVersion'], 'architectures':product['architectures'], 'releaseNotes':{'en':args.notes_en.read_text(), 'es':args.notes_es.read_text()},
+             'minimumMacOSVersion':product['minimumMacOSVersion'], 'architectures':product['architectures'], 'releaseNotes':notes,
              'manifestSHA256':sha(args.manifest),
              'archive':{'url':f"https://github.com/loomitz/estrobo/releases/download/{origin['tag']}/{args.archive.name}",
                         'length':args.archive.stat().st_size, 'sha256':sha(args.archive), 'edSignature':signature}}

@@ -12,6 +12,7 @@ Implementación local para el shell macOS; **no es una nueva release pública**.
 - Empaquetado universal con firma explícita de helpers/framework/host, allowlists precisas y raíz pública externa obligatoria para distribución. Asignación global de builds, canal explícito y tags estables correctivos independientes del marketing version.
 - Herramientas locales de candidato/aprobación/retirada del catálogo y build del sitio que valida bytes aprobados e historial público. Publicación/despliegue requieren autorización separada, estado fresco, serialización y verificación pública; no hay CAS de infraestructura.
 - Privacidad/soporte/guías bilingües distinguen las conexiones nuevas de actualización de beta 4 e iOS/iPadOS. Proveedores reciben IP/User-Agent y pueden registrar datos técnicos; los datos de radio/perfil permanecen locales.
+- Translocación/DMG, fallos de copia y autenticación del instalador muestran recuperación local y permisos en español/inglés. El catálogo rechaza archivos mayores de 64 MiB o notas mayores de 16,384 bytes UTF-8 por idioma; el bundle incluye y verifica los avisos oficiales completos de Sparkle.
 
 **Pendiente de distribución:** raíz EdDSA/backup recuperable, upgrade exacto firmado/notarizado, Intel y macOS mínimo, autorización/translocación/recuperación, catálogo/assets públicos y tráfico/cache/retirada. La aceptación integrada y revisión final se registran aparte; builds, fixtures ad hoc y tests simulados no acreditan esos gates.
 

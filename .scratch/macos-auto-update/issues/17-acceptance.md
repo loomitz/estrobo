@@ -26,6 +26,8 @@ Seams autorizados por Testing Decisions de spec.md: coordinador mediante puerto 
 
 ## Resolution — 2026-10-18
 
+La [revisión final posterior](../review-final.md) conserva reportes y conteos Standards/Spec separados. Sus correcciones ya están probadas por un único implementer y esperan confirmación de los mismos reviewers; no es un cierre independiente ni distribución GO. La aceptación actual distingue el baseline real de 26 casos de la clasificación determinista posterior con 13 pruebas focales.
+
 [Aceptación local integrada](../../../docs/research/macos-updater-acceptance-2026-10-18.md) consolida 10–16, fuentes productivas inspeccionadas, commits/hashes/toolchains/artefactos, matriz PASS/PENDING y regresiones. Reutiliza 12/12 controles reales de consentimiento, 26/26 del adaptador real, 14 recorridos del coordinador, 40 capturas EN/ES/AX, escenas/delegate/runtime productivos, build/universal, shared/iOS, CLI/catálogo y documentos/website. Conserva honestamente el aggregate inicial fallido por firma ad hoc y la continuación corregida verde.
 
 Se incorporaron textos/evidencia durable de ATS externo (HTTP y HTTPS→HTTP rechazados con -1022), parser real de notas bilingües y revisión visual independiente inicial/final `ship`. Se declara sustitución del rol finish por reviewer genérico independiente y límite de render nativo directo sin captura de compositor. [Informe de transporte/notas](../../../docs/research/macos-updater-transport-notes-2026-10-18.md).

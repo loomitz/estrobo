@@ -919,10 +919,10 @@
 "updates.error.signature" = "The signature is invalid. This update will not be installed. Check again or contact support.";
 "updates.error.invalidOffer" = "The offer changed or is no longer valid. Check again and confirm the new offer.";
 "updates.error.archive" = "The downloaded file could not be verified. Download the update again.";
-"updates.error.installation" = "Could not install. Keep this copy of Estrobo, retry or contact support.";
+"updates.error.installation" = "Could not install. Check installation permissions, keep this copy of Estrobo, and retry or contact support.";
 "updates.error.cancelled" = "The update was cancelled. You can try again.";
 "updates.error.unsafeSession" = "Work with the transmitter changed. Resolve it before confirming installation again.";
-"updates.error.readOnlyLocation" = "Move Estrobo from the DMG to Applications, open that copy and try again.";
+"updates.error.readOnlyLocation" = "Move Estrobo to Applications, open that copy and try again.";
 "updates.error.authorizationCancelled" = "System authorization was cancelled. Estrobo remains available; retry when you choose to install.";
 "updates.error.diskSpace" = "There is not enough disk space to update. Free some space and download again.";
 "updates.support" = "Contact Support";

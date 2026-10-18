@@ -1,0 +1,23 @@
+FF
+======================================================================
+FAIL: test_prepare_and_approve_reject_consumer_limits_before_signing_or_public_requests (__main__.CatalogTests.test_prepare_and_approve_reject_consumer_limits_before_signing_or_public_requests) (length=67108865, esBytes=7)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/tmp/estrobo-macos-updater-final-fixes/scripts/tests/test_macos_update_catalog.py", line 47, in test_prepare_and_approve_reject_consumer_limits_before_signing_or_public_requests
+    self.assertIn('consumer limit', prepared.stderr.lower())
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'consumer limit' not found in "macos update catalog rejected: 'commit'\n"
+
+======================================================================
+FAIL: test_prepare_and_approve_reject_consumer_limits_before_signing_or_public_requests (__main__.CatalogTests.test_prepare_and_approve_reject_consumer_limits_before_signing_or_public_requests) (length=123, esBytes=16385)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/tmp/estrobo-macos-updater-final-fixes/scripts/tests/test_macos_update_catalog.py", line 47, in test_prepare_and_approve_reject_consumer_limits_before_signing_or_public_requests
+    self.assertIn('consumer limit', prepared.stderr.lower())
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'consumer limit' not found in "macos update catalog rejected: 'commit'\n"
+
+----------------------------------------------------------------------
+Ran 1 test in 0.209s
+
+FAILED (failures=2)

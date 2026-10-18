@@ -1,0 +1,32 @@
+FFF
+======================================================================
+FAIL: test_site_accepts_consumer_boundaries_and_rejects_oversized_archives_and_utf8_notes (__main__.CatalogTests.test_site_accepts_consumer_boundaries_and_rejects_oversized_archives_and_utf8_notes) (length=67108865, enBytes=7, esBytes=7)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/tmp/estrobo-macos-updater-final-fixes/scripts/tests/test_macos_update_catalog.py", line 34, in test_site_accepts_consumer_boundaries_and_rejects_oversized_archives_and_utf8_notes
+    self.assertEqual(result.returncode == 0, valid, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True != False :
+
+======================================================================
+FAIL: test_site_accepts_consumer_boundaries_and_rejects_oversized_archives_and_utf8_notes (__main__.CatalogTests.test_site_accepts_consumer_boundaries_and_rejects_oversized_archives_and_utf8_notes) (length=123, enBytes=16385, esBytes=7)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/tmp/estrobo-macos-updater-final-fixes/scripts/tests/test_macos_update_catalog.py", line 34, in test_site_accepts_consumer_boundaries_and_rejects_oversized_archives_and_utf8_notes
+    self.assertEqual(result.returncode == 0, valid, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True != False :
+
+======================================================================
+FAIL: test_site_accepts_consumer_boundaries_and_rejects_oversized_archives_and_utf8_notes (__main__.CatalogTests.test_site_accepts_consumer_boundaries_and_rejects_oversized_archives_and_utf8_notes) (length=123, enBytes=7, esBytes=16385)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/tmp/estrobo-macos-updater-final-fixes/scripts/tests/test_macos_update_catalog.py", line 34, in test_site_accepts_consumer_boundaries_and_rejects_oversized_archives_and_utf8_notes
+    self.assertEqual(result.returncode == 0, valid, result.stderr)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: True != False :
+
+----------------------------------------------------------------------
+Ran 1 test in 0.203s
+
+FAILED (failures=3)

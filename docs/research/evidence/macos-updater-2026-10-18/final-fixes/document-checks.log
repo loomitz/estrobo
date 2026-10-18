@@ -1,0 +1,3 @@
+prototype/EstroboMac/Resources/en.lproj/Localizable.strings: OK
+prototype/EstroboMac/Resources/es.lproj/Localizable.strings: OK
+PASS: 107 existing local links, 16 shell blocks parsed without execution, ES/EN strings valid, git diff --check clean

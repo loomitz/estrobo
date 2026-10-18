@@ -1,0 +1,14 @@
+F
+======================================================================
+FAIL: test_embedded_bundle_rejects_unexpected_executable_and_missing_release_trust (__main__.ArtifactTests.test_embedded_bundle_rejects_unexpected_executable_and_missing_release_trust)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/tmp/estrobo-macos-updater-final-fixes/scripts/tests/test_macos_updater_artifacts.py", line 47, in test_embedded_bundle_rejects_unexpected_executable_and_missing_release_trust
+    self.assertNotEqual(rejected.returncode, 0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+----------------------------------------------------------------------
+Ran 1 test in 1.809s
+
+FAILED (failures=1)

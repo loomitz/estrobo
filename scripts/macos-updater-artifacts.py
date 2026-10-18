@@ -17,6 +17,8 @@ import urllib.request
 
 VERSION = '2.10.0'
 SHA256 = 'c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c'
+# Exact top-level LICENSE from the archive pinned above, including external notices.
+NOTICE_SHA256 = '389a4e4e9a32f059775b13a06e25a591445ba229d2838d26dd3e7c0c45127cfe'
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
@@ -141,6 +143,9 @@ def embed(app, directory, archive):
         (framework / name).unlink()
         shutil.rmtree(framework / 'Versions/B' / name)
     shutil.rmtree(framework / 'Versions/B/XPCServices/Downloader.xpc')
+    resources = app / 'Contents/Resources'
+    resources.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(directory / 'LICENSE', resources / 'Sparkle-LICENSE.txt')
 
 
 def verify_bundle(app, distribution=False):
@@ -162,6 +167,9 @@ def verify_bundle(app, distribution=False):
             raise ValueError(f'Incorrect updater bundle setting: {name}')
     if info.get('NSAppTransportSecurity'):
         raise ValueError('Updater bundles must use default ATS without exceptions')
+    notice = app / 'Contents/Resources/Sparkle-LICENSE.txt'
+    if not notice.is_file() or notice.is_symlink() or digest(notice) != NOTICE_SHA256:
+        raise ValueError('Required exact Sparkle/third-party notices are missing or altered')
     framework = app / 'Contents/Frameworks/Sparkle.framework'
     framework_info = plistlib.loads((framework / 'Versions/B/Resources/Info.plist').read_bytes())
     if framework_info.get('CFBundleShortVersionString') != VERSION or framework_info.get('CFBundleIdentifier') != 'org.sparkle-project.Sparkle':
