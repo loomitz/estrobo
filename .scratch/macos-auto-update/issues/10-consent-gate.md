@@ -2,8 +2,8 @@
 
 Parent: ../spec.md
 Type: task
-Status: blocked
-Assignee: consent_gate
+Status: open
+Assignee: none
 Blocked by: none
 
 ## Acceptance
@@ -22,3 +22,7 @@ Prototipo real y evidencia: [gate report](../../../docs/research/macos-updater-c
 - El cierre AppKit diferido suspende entrada/polling normal: cancelar mediante acción pública programada acredita control del instalador, no interacción visible. Cancelación interactiva pendiente.
 - Diagnóstico real de feed sigue un redirect a origen prohibido. Sparkle usa sesión privada sin seam público para el guard obligatorio de decisión 15; URLProtocol global no intercepta esa sesión. Gate de red falla.
 - No se habilita integración de producto ni se desbloquean sus tickets dependientes. Decisiones 2 y 22 exigen detenerla; conservar requisitos. Distribución Developer ID/notarizada/sandbox/multiplataforma permanece pendiente.
+
+## Reopened — 2026-10-18
+
+Contrato revisado autorizado en spec.md decisión 15: redirecciones HTTPS del catálogo gestionadas por Sparkle, sin garantía de veto previo de dominio. Resolver interacción visible real (confirmación, cancelación, veto y reintento) usando APIs públicas; no acreditar temporizadores como clicks del usuario. Las firmas y la garantía de no instalar al cerrar sin confirmar se conservan.
