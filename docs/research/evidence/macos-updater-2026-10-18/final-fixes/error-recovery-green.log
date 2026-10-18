@@ -1,0 +1,15 @@
+sandbox_extension_issue_file_to_process failed for /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T/estrobo-error-recovery-0ncs9cip/Recovery.app: 1 (Operation not permitted)
+PASS disk-image: expected=readOnlyLocation actual=readOnlyLocation acknowledged=true
+PASS translocated: expected=readOnlyLocation actual=readOnlyLocation acknowledged=true
+PASS copy-failure: expected=installation actual=installation acknowledged=true
+PASS authentication-failure: expected=installation actual=installation acknowledged=true
+PASS write-permission: expected=readOnlyLocation actual=readOnlyLocation acknowledged=true
+PASS authorization-cancelled: expected=authorizationCancelled actual=authorizationCancelled acknowledged=true
+PASS authorize-later: expected=authorizationCancelled actual=authorizationCancelled acknowledged=true
+PASS signature: expected=signature actual=signature acknowledged=true
+PASS validation: expected=signature actual=signature acknowledged=true
+PASS underlying-signature: expected=signature actual=signature acknowledged=true
+PASS underlying-cancel: expected=authorizationCancelled actual=authorizationCancelled acknowledged=true
+PASS cancel-precedence: expected=cancelled actual=cancelled acknowledged=true
+PASS network: expected=network actual=network acknowledged=true
+13 public callback/service recovery cases verified; synthetic errors only

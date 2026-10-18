@@ -386,7 +386,7 @@ final class SparkleUpdateService: NSObject, UpdateService, SPUUpdaterDelegate, S
     private func successfulNoUpdate(_ error: Error) -> Bool {
         let value = error as NSError
         return operation == .check && feedValidated && selectedOffer == nil && cycleFailure == nil &&
-            value.domain == SUSparkleErrorDomain && value.code == 1001
+            value.domain == SUSparkleErrorDomain && value.code == Int(SUError.noUpdateError.rawValue)
     }
 
     private func trace(_ error: Error, depth: Int = 0) {
@@ -405,11 +405,21 @@ final class SparkleUpdateService: NSObject, UpdateService, SPUUpdaterDelegate, S
         }
         if value.domain == SUSparkleErrorDomain {
             switch value.code {
-            case 1001: return UpdateServiceFailure(.invalidOffer)
-            case 3001, 3002: return UpdateServiceFailure(.signature)
-            case 1003, 4012: return UpdateServiceFailure(.readOnlyLocation)
-            case 4007, 4008: return UpdateServiceFailure(.authorizationCancelled)
-            case 2000, 3000, 4002...4010: return UpdateServiceFailure(.installation)
+            case Int(SUError.noUpdateError.rawValue): return UpdateServiceFailure(.invalidOffer)
+            case Int(SUError.signatureError.rawValue), Int(SUError.validationError.rawValue):
+                return UpdateServiceFailure(.signature)
+            case Int(SUError.runningFromDiskImageError.rawValue), Int(SUError.runningTranslocated.rawValue),
+                 Int(SUError.installationWriteNoPermissionError.rawValue):
+                return UpdateServiceFailure(.readOnlyLocation)
+            case Int(SUError.installationCanceledError.rawValue), Int(SUError.installationAuthorizeLaterError.rawValue):
+                return UpdateServiceFailure(.authorizationCancelled)
+            case Int(SUError.temporaryDirectoryError.rawValue), Int(SUError.unarchivingError.rawValue),
+                 Int(SUError.fileCopyFailure.rawValue), Int(SUError.authenticationFailure.rawValue),
+                 Int(SUError.missingUpdateError.rawValue), Int(SUError.missingInstallerToolError.rawValue),
+                 Int(SUError.relaunchError.rawValue), Int(SUError.installationError.rawValue),
+                 Int(SUError.downgradeError.rawValue), Int(SUError.notValidUpdateError.rawValue),
+                 Int(SUError.agentInvalidationError.rawValue):
+                return UpdateServiceFailure(.installation)
             default: return UpdateServiceFailure(.network)
             }
         }

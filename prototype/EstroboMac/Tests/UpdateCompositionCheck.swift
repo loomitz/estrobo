@@ -34,24 +34,40 @@ enum UpdateCompositionCheck {
         expect(session.phase == .idle && session.connectedDeviceName == nil && next.coordinator.snapshot.installed == installed,
                "Composition must retain installed metadata and start disconnected")
         await verifyCloseProtocol()
-        await verifyProductionConfiguration()
+        do { try await verifyProductionConfiguration() }
+        catch { expect(false, "Missing-root production configuration check failed: \(error)") }
         print("Update composition verified")
     }
-    static func verifyProductionConfiguration() async {
+    static func verifyProductionConfiguration() async throws {
         guard let path = ProcessInfo.processInfo.environment["ESTROBO_TEST_APP_BUNDLE"], let bundle = Bundle(path: path),
-              let installed = InstalledUpdateVersion(bundle: bundle) else { expect(false, "The actual product bundle must provide installed metadata"); return }
-        expect(bundle.bundleIdentifier == "mx.loo.estrobo" && bundle.object(forInfoDictionaryKey: "SUPublicEDKey") == nil,
-               "This development proof requires the actual product identity without a distribution key")
+              let installed = InstalledUpdateVersion(bundle: bundle) else { throw CompositionFailure.invalidProductMetadata }
+        expect(bundle.bundleIdentifier == "mx.loo.estrobo", "The actual product must retain its identity")
+        // Exercise missing trust before SPU initialization, without mutating the
+        // configured product or opening its Sparkle/defaults domain.
+        let fixture = FileManager.default.temporaryDirectory.appendingPathComponent("estrobo-missing-root-\(UUID()).app")
+        defer { try? FileManager.default.removeItem(at: fixture) }
+        let contents = fixture.appendingPathComponent("Contents")
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        var info = bundle.infoDictionary!
+        info.removeValue(forKey: "SUPublicEDKey")
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+            .write(to: contents.appendingPathComponent("Info.plist"))
+        guard let missingRoot = Bundle(url: fixture) else { throw CompositionFailure.invalidFixtureBundle }
+        let suite = "mx.loo.estrobo.tests.missing-root.\(UUID())"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
         let session = MockRadioRuntime.makeController()
         let delegate = PrototypeAppDelegate()
-        let runtime = MacUpdateRuntime(installed: installed, session: session, appDelegate: delegate, preferences: UpdatePreferences(),
-            serviceFactory: { SparkleUpdateService.makeProduction(lifecycle: $0, bundle: bundle) })
+        let runtime = MacUpdateRuntime(installed: installed, session: session, appDelegate: delegate, preferences: UpdatePreferences(defaults: defaults),
+            serviceFactory: { SparkleUpdateService.makeProduction(lifecycle: $0, bundle: missingRoot) })
         runtime.coordinator.checkManually()
         await settle()
-        expect(runtime.coordinator.snapshot.failure?.kind == .configuration && runtime.coordinator.snapshot.stage == .error,
-               "The production factory must expose missing trust configuration honestly")
-        expect(session.phase == .idle && !runtime.coordinator.snapshot.automaticChecks,
-               "Unavailable update configuration must preserve disconnected local control and opt-out")
+        guard runtime.coordinator.snapshot.failure?.kind == .configuration && runtime.coordinator.snapshot.stage == .error else {
+            throw CompositionFailure.missingTrustNotReported
+        }
+        guard session.phase == .idle && !runtime.coordinator.snapshot.automaticChecks else {
+            throw CompositionFailure.localControlOrOptOutChanged
+        }
     }
     static func verifyCloseProtocol() async {
         let session = MockRadioRuntime.makeController()
@@ -102,6 +118,10 @@ enum UpdateCompositionCheck {
     static func expect(_ value: @autoclosure () -> Bool, _ message: String) {
         if !value() { fputs("FAIL: \(message)\n", stderr); exit(1) }
     }
+}
+
+private enum CompositionFailure: Error {
+    case invalidProductMetadata, invalidFixtureBundle, missingTrustNotReported, localControlOrOptOutChanged
 }
 
 @MainActor private final class CompositionClock: UpdateClock {

@@ -2,7 +2,7 @@
 
 Tracker: Local Markdown
 Status: implementation-complete
-Final code-review: pending
+Final code-review: passed (Standards 5 resolved / 0 open; Spec 2 resolved / 0 open; reviewed 3acb7cc)
 Integration branch: codex/macos-auto-update
 Base: origin/main 68ea6fc (mismo árbol que spec baseline 91eeeb9)
 Spec: spec.md
@@ -24,7 +24,7 @@ Los tickets 01-09 del checkout original son historial del mapa superseded. Ticke
 
 Tickets activos 10–17 resueltos: código y validación local integrados completos bajo la decisión 15 revisada. [Aceptación final](../../docs/research/macos-updater-acceptance-2026-10-18.md) reúne evidencia real de consentimiento/adaptador, composición nativa, regresiones, builds/CLI y documentos, con identidades de fuente y límites. El bloque del 17 de octubre se conserva como historia, no como estado vigente.
 
-Pendiente: ejecutar `code-review` final sobre la rama de integración después del merge de 17, resolver todos sus hallazgos y registrar resultado; este reporte no sustituye ni adelanta ese gate del workflow. Siguen pendientes los gates operativos Developer ID/notarización/sandbox/dos builds, claves/backup, Intel/macOS13, autorización/recuperación/datos de producto y feed/promoción/retirada/tráfico públicos. Implementación local completa no habilita distribución ni publicación.
+Revisión final ejecutada en `dda8798`: 4 incumplimientos Standards + 1 smell de criterio y 2 defectos Spec. [Reporte separado por eje](review-final.md), con reportes originales y correcciones por un único implementer. Raíz de fixtures, avisos oficiales, límites de catálogo, guías públicas y recuperación local ya tienen corrección/prueba focal; **confirmación independiente completa sobre `3acb7cc4f4aa5b2eb3e7207066c92f095b8753b7`: [Standards 5/5](../../docs/research/evidence/macos-updater-2026-10-18/final-fixes/standards-verification.md) y [Spec 2/2](../../docs/research/evidence/macos-updater-2026-10-18/final-fixes/spec-verification.md), cero abiertos, sin regresiones identificadas en su alcance**. El baseline real de 26 casos conserva su fuente original y el delta determinista actual de clasificación tiene 13 pruebas públicas posteriores. El gate independiente final está cerrado; este cierre documental no cambia las fuentes probadas y espera el merge separado de la entrega a integración. Siguen pendientes los gates operativos Developer ID/notarización/sandbox/dos builds, claves/backup, Intel/macOS13, autorización/recuperación/datos de producto y feed/promoción/retirada/tráfico públicos. Implementación local completa no habilita distribución ni publicación.
 
 ## Disposición histórica de implementación — 2026-10-17
 

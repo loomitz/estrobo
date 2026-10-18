@@ -1,14 +1,16 @@
 # Actualizaciones asistidas de Estrobo para macOS
 
 Status: implementation-complete
-Label: final-review-pending
+Label: final-review-passed
 Owner: loomitz
 Tracker: Local Markdown
 Decision authority: preferencias confirmadas en conversación y decisiones restantes delegadas expresamente por el usuario al solicitar to-spec
 
 ## Resultado actual — 2026-10-18
 
-Implementación y validación local integradas completas bajo el contrato HTTPS revisado; tickets activos 10–17 resueltos. [Reporte final de aceptación](../../docs/research/macos-updater-acceptance-2026-10-18.md) identifica commits, artefactos, fuentes compiladas, resultados y límites. La interacción real de consentimiento, adaptador Sparkle y composición productiva tienen evidencia; el bloqueo histórico de redirect ya no aplica tras la revisión autorizada. La revisión final Standards/Spec mediante `code-review` sigue pendiente después del merge de 17 y debe corregir sus hallazgos antes de cerrar el workflow `implement-spec`.
+Implementación y validación local integradas completas bajo el contrato HTTPS revisado; tickets activos 10–17 resueltos. [Reporte final de aceptación](../../docs/research/macos-updater-acceptance-2026-10-18.md) identifica commits, artefactos, fuentes compiladas, resultados y límites. La interacción real de consentimiento, adaptador Sparkle y composición productiva tienen evidencia; el bloqueo histórico de redirect ya no aplica tras la revisión autorizada. La revisión final Standards/Spec mediante `code-review` identificó hallazgos después del merge de 17; los mismos reviewers confirmaron sus correcciones en `3acb7cc`, con cero abiertos en ambos ejes. Implementación, aceptación local y revisión final quedan completas; la integración final corresponde al merge separado de esta entrega.
+
+La [revisión final](review-final.md) ya identificó 4 incumplimientos Standards y 1 smell de criterio, más 2 defectos Spec. Un único implementer corrigió raíz de fixtures, avisos oficiales, límites de catálogo, documentación y recuperación local por constantes públicas; las pruebas focales pasan. La [confirmación Standards](../../docs/research/evidence/macos-updater-2026-10-18/final-fixes/standards-verification.md) cerró 5/5 y la [confirmación Spec](../../docs/research/evidence/macos-updater-2026-10-18/final-fixes/spec-verification.md) cerró 2/2, ambas sobre `3acb7cc4f4aa5b2eb3e7207066c92f095b8753b7`, sin regresiones identificadas en el alcance revisado. El baseline real de 26 casos se conserva con su fuente original; el delta actual de clasificación tiene 13 casos públicos focales posteriores y no se atribuye al baseline.
 
 No equivale a distribución GO: siguen pendientes raíz/custodia productiva, dos builds Developer ID/notarizados/sandboxed, autorización/recuperación/preservación de datos durante reemplazo productivo, Intel/macOS 13, feed/assets/promotion/withdrawal públicos y captura de tráfico del candidato. Las notas de planificación e investigaciones fechadas de abajo conservan su estado histórico; este resultado actual las contextualiza sin borrarlas. No se publicaron releases/catálogos ni se operó radio físico.
 

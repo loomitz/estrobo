@@ -1,0 +1,28 @@
+sandbox_extension_issue_file_to_process failed for /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T/estrobo-error-recovery-qgbld04o/Recovery.app: 1 (Operation not permitted)
+FAIL: Error Domain=PublicCallbackRecoveryMismatch Code=1 "(null)"
+PASS disk-image: expected=readOnlyLocation actual=readOnlyLocation acknowledged=true
+FAIL translocated: expected=readOnlyLocation actual=network acknowledged=true
+FAIL copy-failure: expected=installation actual=network acknowledged=true
+FAIL authentication-failure: expected=installation actual=network acknowledged=true
+PASS write-permission: expected=readOnlyLocation actual=readOnlyLocation acknowledged=true
+PASS authorization-cancelled: expected=authorizationCancelled actual=authorizationCancelled acknowledged=true
+PASS authorize-later: expected=authorizationCancelled actual=authorizationCancelled acknowledged=true
+PASS signature: expected=signature actual=signature acknowledged=true
+PASS validation: expected=signature actual=signature acknowledged=true
+PASS underlying-signature: expected=signature actual=signature acknowledged=true
+PASS underlying-cancel: expected=authorizationCancelled actual=authorizationCancelled acknowledged=true
+PASS cancel-precedence: expected=cancelled actual=cancelled acknowledged=true
+PASS network: expected=network actual=network acknowledged=true
+Traceback (most recent call last):
+  File "/private/tmp/estrobo-macos-updater-final-fixes/prototype/EstroboMac/Tests/run-update-error-recovery.py", line 69, in <module>
+    main()
+    ~~~~^^
+  File "/private/tmp/estrobo-macos-updater-final-fixes/prototype/EstroboMac/Tests/run-update-error-recovery.py", line 59, in main
+    subprocess.run([str(executable), str(root), f'http://127.0.0.1:{server.server_port}/appcast.xml'],
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                   check=True, timeout=90, env=dict(ENV, DYLD_FRAMEWORK_PATH=str(SPARKLE)))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.3_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py", line 577, in run
+    raise CalledProcessError(retcode, process.args,
+                             output=stdout, stderr=stderr)
+subprocess.CalledProcessError: Command '['/var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T/estrobo-error-recovery-qgbld04o/Recovery.app/Contents/MacOS/Recovery', '/var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T/estrobo-error-recovery-qgbld04o', 'http://127.0.0.1:56148/appcast.xml']' returned non-zero exit status 1.

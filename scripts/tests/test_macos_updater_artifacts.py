@@ -36,7 +36,10 @@ class ArtifactTests(unittest.TestCase):
             temporary = pathlib.Path(temporary)
             dependency = temporary / 'dependency'
             def invoke(*args):
-                return subprocess.run(['python3', str(TOOL), *map(str, args)], capture_output=True, text=True)
+                # This case exercises missing trust, independently of configured CI.
+                environment = dict(os.environ)
+                environment.pop('SPARKLE_PUBLIC_ED_KEY', None)
+                return subprocess.run(['python3', str(TOOL), *map(str, args)], capture_output=True, text=True, env=environment)
             self.assertEqual(invoke('dependency', '--directory', dependency, '--archive', ARCHIVE).returncode, 0)
             app = temporary / 'estrobo.app'
             (app / 'Contents/MacOS').mkdir(parents=True)
@@ -116,6 +119,35 @@ class ArtifactTests(unittest.TestCase):
                 stream.write(b'altered')
             self.assertNotEqual(invoke('verify-signatures', '--app', app).returncode, 0)
 
+    def test_bundle_includes_exact_official_notices_and_rejects_omission_or_tampering(self):
+        with tempfile.TemporaryDirectory(prefix='estrobo-updater-notices-test-') as temporary:
+            temporary = pathlib.Path(temporary)
+            dependency = temporary / 'dependency'
+            app = temporary / 'estrobo.app'
+            def invoke(*args):
+                return subprocess.run(['python3', str(TOOL), *map(str, args)], capture_output=True, text=True)
+            self.assertEqual(invoke('dependency', '--directory', dependency, '--archive', ARCHIVE).returncode, 0)
+            (app / 'Contents/MacOS').mkdir(parents=True)
+            shutil.copy('/usr/bin/true', app / 'Contents/MacOS/estrobo')
+            shutil.copy2(ROOT / 'prototype/EstroboMac/Info.plist', app / 'Contents/Info.plist')
+            self.assertEqual(invoke('configure', '--app', app, '--version', '0.1.0', '--build', '5', '--channel', 'beta', '--tag', 'v0.1.0-beta.5').returncode, 0)
+            self.assertEqual(invoke('embed', '--app', app, '--directory', dependency, '--archive', ARCHIVE).returncode, 0)
+            notice = app / 'Contents/Resources/Sparkle-LICENSE.txt'
+            self.assertTrue(notice.is_file(), 'Pinned Sparkle and external licenses must ship with the app')
+            official = (dependency / 'LICENSE').read_bytes()
+            self.assertEqual(notice.read_bytes(), official)
+            self.assertEqual(invoke('verify-bundle', '--app', app).returncode, 0)
+            for contents in (None, official + b'altered'):
+                with self.subTest(contents='missing' if contents is None else 'altered'):
+                    notice.unlink()
+                    if contents is not None:
+                        notice.write_bytes(contents)
+                    rejected = invoke('verify-bundle', '--app', app)
+                    self.assertNotEqual(rejected.returncode, 0)
+                    self.assertIn('notice', rejected.stderr.lower())
+                    if not notice.exists():
+                        notice.write_bytes(official)
+
     def test_stable_rebuild_tags_keep_marketing_version_and_global_build_independent(self):
         for tag, valid in [('v0.1.0+build.6', True), ('v0.1.0', True), ('v0.1.0+build.5', False), ('v0.1.0-beta.6', False)]:
             result = subprocess.run(['python3', str(TOOL), 'metadata', '--version', '0.1.0', '--build', '6', '--channel', 'stable', '--tag', tag], capture_output=True, text=True)
@@ -146,7 +178,7 @@ class ArtifactTests(unittest.TestCase):
             self.assertEqual(invoke('configure','--app',app,'--version','0.1.0','--build','5','--channel','beta','--tag','v0.1.0-beta.5').returncode,0)
             self.assertEqual(invoke('embed','--app',app,'--directory',dependency,'--archive',ARCHIVE).returncode,0)
             resource=app / 'Contents/Resources/hidden.png'
-            resource.parent.mkdir()
+            resource.parent.mkdir(exist_ok=True)
             shutil.copy('/usr/bin/true',resource)
             resource.chmod(0o644)
             rejected=invoke('verify-bundle','--app',app)

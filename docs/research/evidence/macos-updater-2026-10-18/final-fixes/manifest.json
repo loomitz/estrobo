@@ -1,0 +1,122 @@
+{
+  "reviewedBase": "dda8798e34d2ecd8f1a9e3e05996162fdbb10160",
+  "fixedPoint": "68ea6fcc82bda027d044106a5c43004c4458f192",
+  "status": "fixes-tested-independent-confirmation-pending",
+  "environment": {
+    "macOS": "27.0.1",
+    "architecture": "arm64",
+    "developerDirectory": "/Applications/Xcode-beta.app/Contents/Developer",
+    "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.27.1 clang-2100.3.27.1)\nTarget: arm64-apple-macosx27.0.0"
+  },
+  "sourceSHA256": {
+    "scripts/macos-updater-artifacts.py": "c3296ca605828548d99aa492ebf670caa8e2e093349f9c06a5e2f038c9107d65",
+    "scripts/macos-update-catalog.py": "1640dabbd770d5280781bcab5164eda1a088038b8d17edccc0a16148f56a4cc3",
+    "scripts/tests/test_macos_updater_artifacts.py": "b80565f9dc3918eee373489f0d1bd7e75f610b38819b2f0b50ac728dd96ad373",
+    "scripts/tests/test_macos_update_catalog.py": "aae5a254a0016f0e2ff2ab934e91b0f7977602aafd65e1924998d4fbb09e6e78",
+    "prototype/EstroboMac/Sources/SparkleUpdateService.swift": "40b219ea0064f04bbe8a79589e2bcee0343ea3a88b5f2bf650450b2177d171af",
+    "prototype/EstroboMac/Sources/UpdateHTTPClient.swift": "9b3bb0aec0709cb6e479b8caa2949afbe928a4ee4816dd56355966d1ce46fbcc",
+    "prototype/EstroboMac/Sources/UpdateInstallationLifecycle.swift": "86e3a8786f3edc83a73f6c728e09e36974e5207d484ed0a1728f5338d73836ad",
+    "prototype/EstroboMac/Tests/UpdateCompositionCheck.swift": "498a3c118c32e6a13684c83f09d9849da435bfca76b5e3a22d7cbd28bdff381e",
+    "prototype/EstroboMac/Tests/UpdateErrorRecoveryCheck.swift": "58516ffabde86c8844033d4f4f6f2d9119acec55d503e6553ca2e223b6086a40",
+    "prototype/EstroboMac/Tests/run-update-error-recovery.py": "8934958edb938c3a44bd0cb25a5eb1db41f011819b0c7b6e11a7176f51f5ebbe",
+    "prototype/EstroboMac/Makefile": "04e20344cdbdcee6f6c61d2fc7f5643c4f7d8c8fd24455adfffeb3484305d924",
+    "prototype/EstroboMac/Resources/en.lproj/Localizable.strings": "e20d2856373c39b07818a6f6a1eebc10cf6837cd9822bae36e9ecbc60b97f2a6",
+    "prototype/EstroboMac/Resources/es.lproj/Localizable.strings": "8704f3b41d6201106ae4c79cdf40448f2f30db30ab24c9fc1131e8a01fc83863"
+  },
+  "syntheticProductRootPreserved": true,
+  "packagedNoticeSHA256": "389a4e4e9a32f059775b13a06e25a591445ba229d2838d26dd3e7c0c45127cfe",
+  "results": {
+    "artifactSuiteWithoutRoot": {
+      "tests": 7,
+      "exitCode": 0
+    },
+    "artifactSuiteSyntheticRoot": {
+      "tests": 7,
+      "exitCode": 0
+    },
+    "catalogSuite": {
+      "tests": 5,
+      "exitCode": 0
+    },
+    "nativeCompositionSyntheticRoot": {
+      "exitCode": 0,
+      "currentFixtureLog": "composition-root-cleanup-green.log"
+    },
+    "publicCallbackRecoveryCases": {
+      "cases": 13,
+      "exitCode": 0
+    },
+    "productCheckUniversal": {
+      "exitCode": 0,
+      "rootAbsentInCurrentProducts": true,
+      "arm64Build": "Reused current source binary; explicit root-empty configure and ad hoc re-seal after make env change did not update existing bundle metadata",
+      "universal": "Recompiled arm64/x86_64, then ad hoc five-component signing and exact signature/layout/entitlement/slice verification; not distribution trust"
+    }
+  },
+  "realAdapterBaseline": {
+    "commit": "fd4cc73f7a193fc029e15580e7eb59e8cec150ea",
+    "cases": 26,
+    "rerun": false,
+    "delta": "Only deterministic public error classification/named constants changed in SparkleUpdateService; HTTP and lifecycle unchanged. Synthetic recovery tests do not prove actual translocation or authorization."
+  },
+  "evidenceSHA256": {
+    "artifacts-configured-green.log": "84f8a5ad24526cac4ebbd532463ded1c766bcac855887e399a8306b5331d5962",
+    "artifacts-unconfigured-green.log": "84f8a5ad24526cac4ebbd532463ded1c766bcac855887e399a8306b5331d5962",
+    "catalog-bounds-green.log": "3a907cd1dbbd951d445faaf8a8ee721b7a9043c7d4dcbaf7acd8d226ca304ca9",
+    "catalog-bounds-red.log": "36dce55b8865a844129bd017f2dc282a770ba89e6a7330335ddb25d0e6c1ded9",
+    "catalog-prepare-green.log": "457020f97c13263e5bb5931db0dfcc490ef0359d9dfd79045c3e5ac24f744a88",
+    "catalog-prepare-red.log": "e3f30afb14be88b71ed0a9943e1b7187be77d7fef57bd6d83c401cf309ce1248",
+    "catalog-suite-green.log": "a67e78e64f9dcab69f69c08c8bc435464a580507c06d675d9301e5803bb3a0ab",
+    "composition-root-cleanup-green.log": "8bc37cbf812fff240cdfdfd9063b8e805815acc1160bdc2acb81c05246dd1906",
+    "composition-root-green.log": "44a31887fd8f7c327ead3f3f3e77ff8f7034c6681d57a00148c43c7600484d97",
+    "composition-root-red.log": "8f0ad7766a42579613707f6ad815c29814a08e7c81f75849a7e8c75e99b3eb63",
+    "configured-root-green.log": "b427442c34941506e73006208435498c3f14004a9631f327cbd192d450ded7f1",
+    "configured-root-red.log": "fcbacef4dff60ad8194ed2f9d9d3f5fdf2fa14b4ba672ee7a861549a73d5cca2",
+    "document-checks.log": "abf65c405950946453d3157fe78f96131db7bd2a8c16e3d0df6cc02945c1c92d",
+    "error-recovery-green.log": "2ee3671406e4451f45e763c5d0b09f782edba2af9ff979329bb300444999e516",
+    "error-recovery-red.log": "fd761d0011a04fe56d69dde93679a61dafbe835b546b2fd6516cd96c6d2ad2cc",
+    "native-final-green.log": "ef64a4a75e767b1f2711fa3fc1c035316b1f9661e933b0efee04b482ac323a8c",
+    "notices-green.log": "1c02ed8b6a2e107b2c0fc01942146c248024ee8427cef04237565b36aac4808a",
+    "notices-red.log": "b7e3a7a5f962c8d95e2e73cd6c46bd5d82346edd822bddfa16a62c30f38a189b",
+    "product-artifacts.json": "ed95259a693eeb1867732790d0594cd83ddbc93837c58fe80591ce87a2efdfd7",
+    "product-unconfigured-universal.log": "70b2a01a4b01941df570d134eb39f86c8161f4e7ea45a2d0cf4e99f00f82a77f",
+    "product-verify.log": "caf0f5d8e12cf9d24d186941af858a969b1a314f3b93f098ff6490743070c736",
+    "spec-initial.md": "13f8f543902f07f496fc753be7c68045ee921e3d249d3135a10981bea71160e5",
+    "standards-initial.md": "cf01c781b0c312e97fa2223f30d5d4b25878f4784e02d578569eaf0f6fd99229"
+  },
+  "productArtifacts": [
+    {
+      "path": "prototype/EstroboMac/Build/estrobo.app",
+      "rootAbsent": true,
+      "bundleIdentifier": "mx.loo.estrobo",
+      "version": "0.1.0",
+      "build": "5",
+      "architecture": "arm64",
+      "binarySHA256": "971db0ec9dba24a190f72b8b6ceb877c9cac2af69e2ce743d86eda6d259237b5",
+      "noticeSHA256": "389a4e4e9a32f059775b13a06e25a591445ba229d2838d26dd3e7c0c45127cfe",
+      "signature": "local ad hoc development; no distribution trust",
+      "embeddedSourceBase": "dda8798e34d2ecd8f1a9e3e05996162fdbb10160",
+      "actualSourceIdentity": "Pending fixes over reviewedBase; exact compiled/tested sources in sourceSHA256; not a clean baseline build"
+    },
+    {
+      "path": "prototype/EstroboMac/Build/Universal/estrobo.app",
+      "rootAbsent": true,
+      "bundleIdentifier": "mx.loo.estrobo",
+      "version": "0.1.0",
+      "build": "5",
+      "architecture": "x86_64 arm64",
+      "binarySHA256": "e0963236f6df8e84269b6eb6f2ad5f581365b401e641572c83f820c00c68cb70",
+      "noticeSHA256": "389a4e4e9a32f059775b13a06e25a591445ba229d2838d26dd3e7c0c45127cfe",
+      "signature": "local ad hoc development; no distribution trust",
+      "embeddedSourceBase": "dda8798e34d2ecd8f1a9e3e05996162fdbb10160",
+      "actualSourceIdentity": "Pending fixes over reviewedBase; exact compiled/tested sources in sourceSHA256; not a clean baseline build"
+    }
+  ],
+  "evidenceTransformations": {
+    "catalog-bounds-red.log": {
+      "originalSHA256": "fd107029f5d60ff71ebdee275161f092bfdfab39fbcd138d1ffd20640fc4650c",
+      "archivedSHA256": "36dce55b8865a844129bd017f2dc282a770ba89e6a7330335ddb25d0e6c1ded9",
+      "transformation": "Removed trailing spaces from 3 unittest assertion lines only; no diagnostic text or results changed"
+    }
+  }
+}

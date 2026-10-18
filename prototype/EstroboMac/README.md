@@ -45,6 +45,7 @@ make mac-prototype-updater-tools-test
 make -C prototype/EstroboMac test-updates
 make -C prototype/EstroboMac test-updater-adapter
 make -C prototype/EstroboMac test-update-presentation
+make -C prototype/EstroboMac test-update-error-recovery
 make mac-prototype-universal
 ```
 
