@@ -26,3 +26,5 @@ Se conserva el mecanismo y sus requisitos, sin introducir fork/APIs privadas, se
 ## Reanudación — 2026-10-18
 
 Usuario aprobó revisar decisión 15 y continuar. El veto previo de dominios de redirecciones HTTPS del catálogo deja de ser requisito. Ticket 10 se reabre para cerrar interacción visible; después se retoman 11 y 14 en paralelo. Mantener autenticidad, HTTPS/ATS, consentimiento y seguridad de sesión. El diagnóstico histórico permanece como evidencia de la limitación aceptada.
+
+Decisión técnica de reintentos: el puerto conserva Retry-After/status cuando están disponibles. Sparkle omite esos metadatos en algunos errores del feed; fallback conservador 24h y persistencia del plazo conocido, sin interpretar strings ni simular headers. Se registra en decisión 6 bajo la delegación de implementación existente.
