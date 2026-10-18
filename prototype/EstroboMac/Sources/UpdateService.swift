@@ -60,7 +60,7 @@ struct UpdateOffer: Equatable, Sendable {
     }
 }
 
-struct DownloadedUpdate: Equatable, Sendable {
+struct DownloadedUpdate: Equatable, Codable, Sendable {
     let offerIdentity: UpdateOfferIdentity
     let localFile: URL
     let length: UInt64
@@ -82,6 +82,7 @@ struct UpdateServiceFailure: Error, Equatable, Sendable {
     enum Kind: String, Sendable {
         case configuration, network, rateLimit, signature, invalidOffer
         case archive, installation, cancelled, unsafeSession
+        case readOnlyLocation, authorizationCancelled, diskSpace
     }
     let kind: Kind
     let retryAfter: Date?
@@ -99,8 +100,9 @@ struct UpdateServiceFailure: Error, Equatable, Sendable {
 /// Installation revalidates that feed and exact downloaded identity, then calls
 /// precommit synchronously on MainActor immediately before archive preparation
 /// and again before committing installation. A false reply MUST cancel without
-/// consuming installer approval. Cancellation returns only when preparation has
-/// been cancelled, so the coordinator can safely release its session suspension.
+/// consuming installer approval. cancel() requests cancellation synchronously;
+/// the async install operation returns only after preparation has stopped, so the
+/// coordinator can safely release its session suspension when that task finishes.
 @MainActor
 protocol UpdateService: AnyObject {
     func check(for installed: InstalledUpdateVersion) async throws -> [UpdateOffer]
