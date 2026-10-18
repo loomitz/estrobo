@@ -724,3 +724,9 @@ test-updater-artifacts:
 
 updater-metadata:
 	@python3 "$(UPDATER_ARTIFACT_TOOL)" metadata --version "$(VERSION)" --build "$(BUILD_NUMBER)" --channel "$(UPDATE_CHANNEL)" --tag "$(TAG)"
+.PHONY: test-updates
+test: test-updates
+test-updates:
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" -warnings-as-errors -sdk "$(MACOS_SDK)" -target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" -framework Combine -framework CoreBluetooth -framework Security Sources/AppLocalization.swift Sources/AppTerminationSafety.swift Sources/MockRadioRuntime.swift Sources/UpdateClock.swift Sources/UpdateCoordinator.swift Sources/UpdatePreferences.swift Sources/UpdateService.swift $(SHARED_SOURCES) Tests/UpdateCoordinatorCheck.swift -o "$(BUILD_DIR)/UpdateCoordinatorCheck"
+	@"$(BUILD_DIR)/UpdateCoordinatorCheck"

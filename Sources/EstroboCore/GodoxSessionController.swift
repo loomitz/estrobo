@@ -107,6 +107,8 @@ final class GodoxSessionController: NSObject, ObservableObject {
     @Published private(set) var isDirectGlobalActionPending = false
     @Published private(set) var activeInteractiveEditCount = 0
     @Published private(set) var foregroundSessionState: ForegroundSessionState = .active
+    @Published private(set) var operationSuspensionCount = 0
+    private var operationSuspensions: Set<UUID> = []
 
     private enum ApplySequencePurpose: Equatable {
         case pendingChanges
@@ -727,8 +729,26 @@ final class GodoxSessionController: NSObject, ObservableObject {
     }
 
     var isSceneActive: Bool {
+        isForegroundSceneActive && operationSuspensions.isEmpty
+    }
+
+    private var isForegroundSceneActive: Bool {
         if case .inactive = foregroundSessionState { return false }
         return true
+    }
+
+    /// Suspends new commands without disconnecting, mutating drafts or changing
+    /// foreground/recovery state. Each owner can release only its own token.
+    func suspendOperations() -> UUID {
+        let token = UUID()
+        operationSuspensions.insert(token)
+        operationSuspensionCount = operationSuspensions.count
+        return token
+    }
+
+    func resumeOperations(_ token: UUID) {
+        operationSuspensions.remove(token)
+        operationSuspensionCount = operationSuspensions.count
     }
 
     var foregroundSessionRequirement: ForegroundSessionRequirement? {
@@ -761,7 +781,7 @@ final class GodoxSessionController: NSObject, ObservableObject {
     /// existing restoration journal remain intact, but no deadline, gesture or
     /// transport callback may resume delivery after this point.
     func suspendForInactiveScene() {
-        guard isSceneActive else { return }
+        guard isForegroundSceneActive else { return }
         isDirectGlobalActionPending = false
 
         let interruptedDeviceID = sessionDeviceID
@@ -1200,9 +1220,15 @@ final class GodoxSessionController: NSObject, ObservableObject {
     }
 
     var canApply: Bool {
+        operationSuspensions.isEmpty && canApplyIgnoringOperationSuspension
+    }
+
+    /// Close safety must not mistake a temporary command suspension for a
+    /// persisted draft that has no legal resolution path.
+    var canApplyIgnoringOperationSuspension: Bool {
         let eligibleGroups = groupsEligibleForApply
         let canApplyMultiFlashOnly = restorationPoints.isEmpty && hasPendingMultiFlashChange
-        guard isSceneActive,
+        guard isForegroundSceneActive,
               recoveryBlockReason == nil, isSessionReady, !isReconfiguringWorkspace,
               !isInteractiveEditActive,
               !isGlobalStandbyEnabled,
@@ -1221,7 +1247,8 @@ final class GodoxSessionController: NSObject, ObservableObject {
             canTransmit(
                 $0,
                 snapshot: groupDraft($0).draft,
-                forceWrite: needsModelingGroupSynchronization
+                forceWrite: needsModelingGroupSynchronization,
+                ignoringOperationSuspension: true
             )
         }
     }
@@ -4177,9 +4204,10 @@ final class GodoxSessionController: NSObject, ObservableObject {
         _ group: GodoxGroup,
         snapshot: ManualGroupSnapshot,
         forceWrite: Bool = false,
-        permitsJournaledForwardWrite: Bool = false
+        permitsJournaledForwardWrite: Bool = false,
+        ignoringOperationSuspension: Bool = false
     ) -> Bool {
-        guard isSceneActive,
+        guard (ignoringOperationSuspension ? isForegroundSceneActive : isSceneActive),
               recoveryBlockReason == nil,
               let sessionDeviceID, let state = groups[group] else { return false }
         if !restorationPoints.isEmpty {
@@ -4264,7 +4292,10 @@ final class GodoxSessionController: NSObject, ObservableObject {
 
     private func handleTransportEvent(_ event: TransportEvent) {
         guard acceptsTransportEvents else { return }
-        guard isSceneActive else {
+        // Operation suspension blocks commands, not safety observations. A new
+        // transport state must still invalidate an external commitment. Only
+        // actual foreground inactivity uses the retained-connection path.
+        guard isForegroundSceneActive else {
             captureTransportEventWhileInactive(event)
             return
         }
