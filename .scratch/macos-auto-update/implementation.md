@@ -6,7 +6,7 @@ Integration branch: codex/macos-auto-update
 Base: origin/main 68ea6fc (mismo árbol que spec baseline 91eeeb9)
 Spec: spec.md
 
-Los tickets 01-09 del checkout original son historial del mapa superseded. Tickets activos 10-16; dependencias en cada archivo. La autoridad AFK del usuario permite decidir las fronteras de prueba ya propuestas en spec.md sin otra entrevista. No autoriza publicación irreversible de releases.
+Los tickets 01-09 del checkout original son historial del mapa superseded. Tickets activos 10-17; dependencias en cada archivo. La autoridad AFK del usuario permite decidir las fronteras de prueba ya propuestas en spec.md sin otra entrevista. No autoriza publicación irreversible de releases.
 
 ## Tickets
 
@@ -15,8 +15,9 @@ Los tickets 01-09 del checkout original son historial del mapa superseded. Ticke
 - [Adaptador Sparkle y política de red/confianza](issues/12-sparkle-adapter.md)
 - [Menú y Ajustes localizados y accesibles](issues/13-ui.md)
 - [Empaquetado, firma y catálogo aprobado](issues/14-packaging.md)
-- [Documentación, validación y revisión final](issues/15-acceptance.md)
+- [Documentación pública y de mantenimiento](issues/15-acceptance.md)
 - [Composición productiva y recorrido integrado](issues/16-composition.md)
+- [Validación integrada y reporte final](issues/17-acceptance.md)
 
 ## Disposición de implementación
 
@@ -33,3 +34,7 @@ Decisión técnica de reintentos: el puerto conserva Retry-After/status cuando e
 ## Partición por puerto estable — 2026-10-18
 
 Tickets 10 y 11 resueltos estabilizan el mecanismo y el puerto del coordinador. 13 implementa componentes/presentación nativa, localización y pruebas de menú/Ajustes sobre ese puerto; depende de 11 y puede avanzar en paralelo con 12. La composición productiva de EstroboApp, AppDelegate, factory y bridge se extrae a 16, dependiente de 12 y 13. 15 depende ahora de 14 y 16. Esta partición conserva una sola instancia y el recorrido final original; evita acoplar el trabajo de presentación a detalles todavía en implementación del adaptador y mantiene toda la validación integrada al final.
+
+## Partición de documentación y aceptación — 2026-10-18
+
+Con 12, 13 y 14 resueltos, 15 pasa a documentación pública/de mantenimiento ES/EN y depende de esos contratos estables. Puede avanzar mientras 16 termina la composición productiva. La validación integrada y el reporte final se extraen a 17, dependiente de 15 y 16, conservando toda la aceptación original y los gates pendientes explícitos. Después de resolver todos los tickets se ejecuta el skill code-review de la rama de integración y se corrigen sus hallazgos, como requiere implement-spec; esta partición no adelanta ni elimina esa revisión final.
