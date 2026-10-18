@@ -1,0 +1,23 @@
+{
+  "execution_date": "2026-10-18",
+  "scope": "real Sparkle 2.10.0, compiled production service sources, ad hoc non-sandbox loopback fixture",
+  "swift": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0",
+  "sdk": "27.0",
+  "architecture": "arm64",
+  "deployment_target": "macOS 13.0 (compile target only)",
+  "testing_condition": "ESTROBO_UPDATER_TESTING",
+  "selected_native_control_snapshots": [
+    "pid71460-007.json",
+    "pid71696-008.json",
+    "pid71460-009.json",
+    "pid71818-002.json"
+  ],
+  "visual_capture_limit": "NSView bitmap captures were black on this host and are excluded. JSON and NSEvent/AppKit logs prove functional control interactions, not rendered appearance or VoiceOver.",
+  "distribution_limits": [
+    "No Developer ID or notarized update pair",
+    "No final App Sandbox/Installer XPC runtime validation",
+    "No Intel/macOS13 runtime",
+    "No production public root/feed/assets",
+    "No BLE/optical or physical radio operation"
+  ]
+}

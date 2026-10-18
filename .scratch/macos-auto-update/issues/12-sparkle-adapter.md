@@ -2,8 +2,8 @@
 
 Parent: ../spec.md
 Type: task
-Status: open
-Assignee: none
+Status: in-progress
+Assignee: sparkle_adapter
 Blocked by: 10, 11
 
 ## Acceptance

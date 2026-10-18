@@ -60,7 +60,7 @@ struct UpdateOffer: Equatable, Sendable {
     }
 }
 
-struct DownloadedUpdate: Equatable, Sendable {
+struct DownloadedUpdate: Equatable, Codable, Sendable {
     let offerIdentity: UpdateOfferIdentity
     let localFile: URL
     let length: UInt64
@@ -82,6 +82,7 @@ struct UpdateServiceFailure: Error, Equatable, Sendable {
     enum Kind: String, Sendable {
         case configuration, network, rateLimit, signature, invalidOffer
         case archive, installation, cancelled, unsafeSession
+        case readOnlyLocation, authorizationCancelled, diskSpace
     }
     let kind: Kind
     let retryAfter: Date?

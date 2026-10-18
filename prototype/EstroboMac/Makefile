@@ -730,3 +730,8 @@ test-updates:
 	@/bin/mkdir -p "$(BUILD_DIR)"
 	"$(SWIFTC)" -warnings-as-errors -sdk "$(MACOS_SDK)" -target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" -framework Combine -framework CoreBluetooth -framework Security Sources/AppLocalization.swift Sources/AppTerminationSafety.swift Sources/MockRadioRuntime.swift Sources/UpdateClock.swift Sources/UpdateCoordinator.swift Sources/UpdatePreferences.swift Sources/UpdateService.swift $(SHARED_SOURCES) Tests/UpdateCoordinatorCheck.swift -o "$(BUILD_DIR)/UpdateCoordinatorCheck"
 	@"$(BUILD_DIR)/UpdateCoordinatorCheck"
+
+# Real native service/installer gate; requires a logged-in macOS desktop.
+.PHONY: test-updater-adapter
+test-updater-adapter: sparkle-dependency
+	@python3 ../MacUpdaterAdapterCheck/run.py --sparkle "$(SPARKLE_DIR)" $(if $(SPARKLE_ARCHIVE),--sparkle-archive "$(SPARKLE_ARCHIVE)",) --output "$(BUILD_DIR)/UpdaterAdapterEvidence"

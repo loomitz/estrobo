@@ -1,0 +1,144 @@
+{
+  "passed": true,
+  "failure": null,
+  "cleanup_errors": [],
+  "cases": [
+    {
+      "case": "missing-public-root-is-unavailable-without-network",
+      "passed": true,
+      "update_requests": 0
+    },
+    {
+      "case": "real-service-discovery-without-preparation",
+      "passed": true,
+      "installed_build": "1",
+      "archive_requests": 0
+    },
+    {
+      "case": "cancel-delayed-sparkle-feed-and-retry",
+      "passed": true,
+      "archive_requests": 0
+    },
+    {
+      "case": "invalid-signed-feed-rejected",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "signed-production-url-metadata-discrepancy-rejected",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "own-preflight-429-preserves-retry-after",
+      "passed": true,
+      "sparkle_feed_requests": 0
+    },
+    {
+      "case": "own-preflight-http-date-retry-after",
+      "passed": true,
+      "sparkle_feed_requests": 0
+    },
+    {
+      "case": "signed-channel-and-compatible-build-selection",
+      "passed": true,
+      "beta_selected": "4",
+      "stable_selected": "2",
+      "excluded_incompatible": "5"
+    },
+    {
+      "case": "two-offers-bound-durable-cache-retention",
+      "passed": true,
+      "retained_archives": 1
+    },
+    {
+      "case": "cancel-new-transfer-preserves-last-valid-cache",
+      "passed": true,
+      "retained_archives": 1,
+      "reuse_archive_requests": 0
+    },
+    {
+      "case": "completed-download-ordinary-quit-and-process-restart",
+      "passed": true,
+      "installed_build": "1",
+      "cache_sha256": "73382f656f4a08170e9083262468f840aa02f69325f1c51622fe5ded86c4376e"
+    },
+    {
+      "case": "cached-file-tampering-rejected-before-preparation",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "fresh-signed-offer-change-rejects-old-consent",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "fresh-signed-withdrawal-rejects-cached-offer",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "initial-appkit-veto-prevents-preparation",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "visible-prepared-cancellation-and-final-appkit-veto",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "ordinary-command-q-cancels-prepared-installer",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "ordinary-quit-in-queued-preflight-interval",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "last-window-close-in-queued-final-commit-interval",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "cache-eviction-fails-without-archive-refetch",
+      "passed": true,
+      "additional_archive_requests": 0
+    },
+    {
+      "case": "archive-http-403-large-body-keeps-metadata",
+      "passed": true,
+      "http_status": 403
+    },
+    {
+      "case": "archive-http-429-large-body-keeps-metadata",
+      "passed": true,
+      "http_status": 429
+    },
+    {
+      "case": "unexpected-archive-redirect-rejected",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "truncated-download-never-becomes-ready",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "adulterated-download-rejected-by-real-sparkle-eddsa",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "confirmed-exact-cache-installs-and-relaunches-stable",
+      "passed": true,
+      "installed_build": "2",
+      "additional_archive_requests": 0,
+      "sha256": "73382f656f4a08170e9083262468f840aa02f69325f1c51622fe5ded86c4376e"
+    }
+  ]
+}

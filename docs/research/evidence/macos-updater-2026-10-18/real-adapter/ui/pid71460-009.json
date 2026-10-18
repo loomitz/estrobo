@@ -1,0 +1,63 @@
+{
+  "build" : "1",
+  "buttons" : {
+    "block" : {
+      "enabled" : true,
+      "title" : "Unsafe work"
+    },
+    "cancel" : {
+      "enabled" : true,
+      "title" : "Cancel"
+    },
+    "check" : {
+      "enabled" : true,
+      "title" : "Check"
+    },
+    "continue" : {
+      "enabled" : true,
+      "title" : "Continue"
+    },
+    "download" : {
+      "enabled" : true,
+      "title" : "Download"
+    },
+    "evict" : {
+      "enabled" : true,
+      "title" : "Evict cache"
+    },
+    "install" : {
+      "enabled" : true,
+      "title" : "Install and restart"
+    },
+    "install-evict" : {
+      "enabled" : true,
+      "title" : "Install (evict)"
+    },
+    "install-queued" : {
+      "enabled" : true,
+      "title" : "Queue preflight"
+    },
+    "pause" : {
+      "enabled" : true,
+      "title" : "Install (pause)"
+    },
+    "queue-commit" : {
+      "enabled" : true,
+      "title" : "Queue final commit"
+    },
+    "quit" : {
+      "enabled" : true,
+      "title" : "Quit"
+    },
+    "unblock" : {
+      "enabled" : true,
+      "title" : "Resolve"
+    },
+    "veto" : {
+      "enabled" : true,
+      "title" : "Veto close"
+    }
+  },
+  "pid" : 71460,
+  "status" : "install-failed kind=cancelled status=0 retry=0.0"
+}
