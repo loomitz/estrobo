@@ -2,8 +2,8 @@
 
 Parent: ../spec.md
 Type: task
-Status: open
-Assignee: none
+Status: resolved
+Assignee: update_ui
 Blocked by: 12, 13
 
 ## Acceptance
@@ -21,3 +21,7 @@ Seams autorizados por Testing Decisions de spec.md: coordinador mediante puerto 
 ## Graph refinement
 
 2026-10-18: composición extraída de 13 después de estabilizar el puerto 11. Se conserva el comportamiento final original; 13 puede implementar presentación y pruebas mientras 12 implementa el adaptador. 16 depende de ambos y 15 requiere 14 y 16.
+
+## Resolution
+
+2026-10-18: Composición productiva integrada con un único coordinador, servicio y lifecycle compartidos por AppDelegate, menú, ventana y Ajustes. Constructor y escenas nativas verifican preferencias, deduplicación, veto/reapertura, cancelación con acknowledgement y estado desconectado. Factory real sin clave devuelve configuración no disponible. Build/check/universal y todos los targets del aggregate quedaron verdes en dos segmentos documentados tras corregir la firma ad hoc de desarrollo; distribución conserva Hardened Runtime y verificación estricta. Informe y límites: [macos-updater-composition-2026-10-18.md](../../../docs/research/macos-updater-composition-2026-10-18.md). Aceptación integrada y gates pendientes continúan en 17; sin publicación ni credenciales.

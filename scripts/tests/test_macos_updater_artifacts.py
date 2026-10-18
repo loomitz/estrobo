@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Public artifact CLI contracts, using the official pinned Sparkle distribution."""
 import json
+import base64
 import os
 import pathlib
+import plistlib
+import runpy
 import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 TOOL = ROOT / 'scripts/macos-updater-artifacts.py'
@@ -72,8 +76,41 @@ class ArtifactTests(unittest.TestCase):
             self.assertEqual(invoke('embed', '--app', app, '--directory', dependency, '--archive', ARCHIVE).returncode, 0)
             result = invoke('sign', '--app', app, '--identity', '-', '--entitlements', ROOT / 'prototype/EstroboMac/EstroboMac.entitlements')
             self.assertEqual(result.returncode, 0, result.stderr)
+            framework = app / 'Contents/Frameworks/Sparkle.framework'
+            signed_components = [framework / 'Versions/B/Autoupdate', framework / 'Versions/B/Updater.app',
+                                 framework / 'Versions/B/XPCServices/Installer.xpc', framework, app]
+            for component in signed_components:
+                details = subprocess.run(['/usr/bin/codesign', '-dvvv', str(component)], capture_output=True, text=True, check=True).stderr
+                self.assertIn('Signature=adhoc', details)
+                self.assertNotIn('runtime', details, 'An ad hoc development component has no Team ID for library validation')
             result = invoke('verify-signatures', '--app', app)
             self.assertEqual(result.returncode, 0, result.stderr)
+            # A fixture-only public key permits the release metadata check. It is
+            # never accepted as proof of Developer ID, timestamp or notarization.
+            fixture_key = base64.b64encode(bytes(range(32))).decode()
+            self.assertEqual(invoke('configure', '--app', app, '--version', '0.1.0', '--build', '5', '--channel', 'beta',
+                                    '--tag', 'v0.1.0-beta.5', '--public-key', fixture_key, '--distribution').returncode, 0)
+            environment = dict(os.environ, SPARKLE_PUBLIC_ED_KEY=fixture_key)
+            rejected = subprocess.run(['python3', str(TOOL), 'verify-signatures', '--app', str(app), '--distribution'],
+                                      capture_output=True, text=True, env=environment)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn('Hardened Runtime missing', rejected.stderr)
+            # Exercise the public command parser and real bundle validation, and
+            # record only the external signer boundary without using a credential.
+            calls = []
+            def record_signer(command, **kwargs):
+                self.assertEqual(command[0], '/usr/bin/codesign')
+                calls.append((command, plistlib.loads(pathlib.Path(command[command.index('--entitlements') + 1]).read_bytes())))
+                return subprocess.CompletedProcess(command, 0)
+            arguments = [str(TOOL), 'sign', '--app', str(app), '--identity', 'Developer ID Application: fixture (TESTTEAM)',
+                         '--entitlements', str(ROOT / 'prototype/EstroboMac/EstroboMac.entitlements')]
+            with mock.patch.dict(os.environ, environment), mock.patch('sys.argv', arguments), mock.patch('subprocess.run', side_effect=record_signer):
+                runpy.run_path(str(TOOL), run_name='__main__')
+            self.assertEqual([pathlib.Path(command[-1]) for command, _ in calls], signed_components)
+            for command, entitlements in calls:
+                self.assertEqual(command[command.index('--options') + 1], 'runtime')
+                self.assertIn('--timestamp', command)
+                self.assertEqual(entitlements, plistlib.loads((ROOT / 'prototype/EstroboMac/EstroboMac.entitlements').read_bytes()) if pathlib.Path(command[-1]) == app else {})
             installed = app / 'Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate'
             with installed.open('ab') as stream:
                 stream.write(b'altered')

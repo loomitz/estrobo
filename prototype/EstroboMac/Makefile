@@ -336,7 +336,7 @@ signing-certificate-check:
 		"$(SIGNING_CERTIFICATE)" \
 		"$(SIGNING_CERTIFICATE_SHA256)"
 
-$(EXECUTABLE): $(SOURCES) $(INFO_PLIST) $(ENTITLEMENTS) $(RESOURCE_FILES) | sparkle-dependency
+$(EXECUTABLE): $(SOURCES) $(INFO_PLIST) $(ENTITLEMENTS) $(RESOURCE_FILES) $(UPDATER_ARTIFACT_TOOL) | sparkle-dependency
 	@/bin/rm -rf -- "$(APP_BUNDLE)"
 	@/bin/mkdir -p "$(MACOS_DIR)" "$(RESOURCES_DIR)"
 	@/bin/cp "$(INFO_PLIST)" "$(CONTENTS_DIR)/Info.plist"
@@ -743,3 +743,23 @@ test-update-presentation: sparkle-dependency
 	@/usr/bin/ditto "$(RESOURCE_SOURCE_DIR)" "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/Resources"
 	"$(SWIFTC)" -whole-module-optimization -parse-as-library -warnings-as-errors -sdk "$(MACOS_SDK)" -target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" -framework SwiftUI -framework AppKit -framework CoreBluetooth -framework Security $(SPARKLE_FLAGS) $(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) $(SHARED_SOURCES) Tests/UpdatePresentationCheck.swift -o "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/MacOS/UpdatePresentationCheck"
 	@DYLD_FRAMEWORK_PATH="$(SPARKLE_DIR)" ESTROBO_UPDATE_UI_EVIDENCE_DIR="$(BUILD_DIR)/UpdatePresentationEvidence" "$(BUILD_DIR)/UpdatePresentationCheck.app/Contents/MacOS/UpdatePresentationCheck"
+
+.PHONY: test-update-composition
+test-update-composition: build
+	@/bin/mkdir -p "$(BUILD_DIR)"
+	"$(SWIFTC)" -whole-module-optimization -parse-as-library -warnings-as-errors -sdk "$(MACOS_SDK)" -target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" -framework SwiftUI -framework AppKit -framework CoreBluetooth -framework Security $(SPARKLE_FLAGS) $(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) $(SHARED_SOURCES) Tests/UpdateCompositionCheck.swift -o "$(BUILD_DIR)/UpdateCompositionCheck"
+	@DYLD_FRAMEWORK_PATH="$(SPARKLE_DIR)" ESTROBO_TEST_APP_BUNDLE="$(APP_BUNDLE)" "$(BUILD_DIR)/UpdateCompositionCheck"
+
+.PHONY: test-update-scenes
+test-update-scenes: sparkle-dependency
+	@/bin/rm -f -- "$(BUILD_DIR)/UpdateCompositionEvidence/results.json"
+	@/bin/mkdir -p "$(BUILD_DIR)/UpdateSceneCompositionCheck.app/Contents/MacOS" "$(BUILD_DIR)/UpdateSceneCompositionCheck.app/Contents/Resources"
+	@/bin/cp Tests/UpdateSceneCompositionCheck-Info.plist "$(BUILD_DIR)/UpdateSceneCompositionCheck.app/Contents/Info.plist"
+	@/usr/bin/ditto "$(RESOURCE_SOURCE_DIR)" "$(BUILD_DIR)/UpdateSceneCompositionCheck.app/Contents/Resources"
+	"$(SWIFTC)" -whole-module-optimization -parse-as-library -warnings-as-errors -sdk "$(MACOS_SDK)" -target "$(TARGET_ARCH)-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)" -framework SwiftUI -framework AppKit -framework CoreBluetooth -framework Security $(SPARKLE_FLAGS) $(filter-out Sources/EstroboApp.swift,$(LOCAL_SOURCES)) $(SHARED_SOURCES) Tests/UpdateSceneCompositionCheck.swift -o "$(BUILD_DIR)/UpdateSceneCompositionCheck.app/Contents/MacOS/UpdateSceneCompositionCheck"
+	@DYLD_FRAMEWORK_PATH="$(SPARKLE_DIR)" ESTROBO_UPDATE_COMPOSITION_EVIDENCE_DIR="$(BUILD_DIR)/UpdateCompositionEvidence" "$(BUILD_DIR)/UpdateSceneCompositionCheck.app/Contents/MacOS/UpdateSceneCompositionCheck"
+
+# Native presentation/composition use the same GUI session already required by
+# menu accessibility and launch checks. The real signed-DMG adapter fixture is
+# deliberately opt-in via test-updater-adapter; it is not part of this suite.
+test: test-update-presentation test-update-composition test-update-scenes

@@ -1,0 +1,61 @@
+/Users/loomitz/Dev/estrobo-macos-auto-update/.build/Sparkle/2.10.0
+Building for debugging...
+[Planning deferred tasks]
+[18 / 26]
+[19 / 27] EstroboCore
+[29 / 72]
+[36 / 72]
+[38 / 72]
+[43 / 72]
+[47 / 72]
+[50 / 72]
+[52 / 72]
+[53 / 72]
+[64 / 72] EstroboCore
+[65 / 72] EstroboCore
+[70 / 72] EstroboCore
+Build complete! (5.28 sec)
+Building for debugging...
+[Planning deferred tasks]
+[7 / 19]
+[8 / 16] EstroboBluetooth
+[14 / 22] EstroboBluetooth
+[20 / 22] EstroboBluetooth
+Build complete! (1.09 sec)
+Building for debugging...
+[Planning deferred tasks]
+[8 / 16] EstroboPersistence
+[19 / 27] EstroboPersistence
+[22 / 27] EstroboPersistence
+[25 / 27] EstroboPersistence
+Build complete! (0.89 sec)
+"/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
+		-parse-as-library \
+		-warnings-as-errors \
+		-typecheck \
+		-sdk "/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk" \
+		-target "arm64-apple-macosx13.0" \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework CoreBluetooth \
+		-framework Security \
+		-F"/Users/loomitz/Dev/estrobo-macos-auto-update/.build/Sparkle/2.10.0" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
+		Sources/AppAppearance.swift Sources/AppLocalization.swift Sources/AppTerminationSafety.swift Sources/EstroboApp.swift Sources/EstroboBrandAssets.swift Sources/GroupVisualColor.swift Sources/GroupVisualIdentity.swift Sources/InteractivePointerEditMonitor.swift Sources/MacAppScenes.swift Sources/MacUpdateRuntime.swift Sources/MenuBarControlView.swift Sources/MenuBarVisibilityPreferences.swift Sources/MockRadioRuntime.swift Sources/PrototypeAppDelegate.swift Sources/PrototypeViews.swift Sources/SparkleUpdateService.swift Sources/UpdateClock.swift Sources/UpdateCoordinator.swift Sources/UpdateHTTPClient.swift Sources/UpdateInstallationLifecycle.swift Sources/UpdatePreferences.swift Sources/UpdateService.swift Sources/UpdateViews.swift Sources/WorkspaceViewPreferences.swift ../../Sources/EstroboCore/ControlModel.swift ../../Sources/EstroboCore/GodoxBluetoothDeviceName.swift ../../Sources/EstroboCore/GodoxCapabilities.swift ../../Sources/EstroboCore/GodoxSessionController.swift ../../Sources/EstroboCore/GroupVisibilityPolicy.swift ../../Sources/EstroboCore/PersistencePorts.swift ../../Sources/EstroboCore/RadioTransport.swift ../../Sources/EstroboCore/SafeGodoxProtocol.swift ../../Sources/EstroboCore/SavedRadio.swift ../../Sources/EstroboCore/SessionDeadlineScheduler.swift ../../Sources/EstroboCore/StudioLibrary.swift ../../Sources/EstroboPersistence/ChangeDeliveryPreferences.swift ../../Sources/EstroboPersistence/LocalGroupPreferences.swift ../../Sources/EstroboPersistence/PendingRestorationStore.swift ../../Sources/EstroboPersistence/PersistenceServicesFactory.swift ../../Sources/EstroboPersistence/RadioCodeVault.swift ../../Sources/EstroboPersistence/RadioConnectionPreferences.swift ../../Sources/EstroboPersistence/RestorationJournal.swift ../../Sources/EstroboPersistence/SavedRadioStore.swift ../../Sources/EstroboPersistence/StudioLibraryStore.swift ../../Sources/EstroboPersistence/TransmitterProfilePreferences.swift ../../Sources/EstroboBluetooth/CoreBluetoothRadioTransport.swift ../../Sources/EstroboBluetooth/CoreBluetoothWriteCoordinator.swift ../../Sources/EstroboBluetooth/RadioTransportFactory.swift ../../Sources/EstroboBluetooth/SimulatedRadioTransport.swift
+"/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
+		-parse-as-library \
+		-sdk "/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk" \
+		-target "arm64-apple-macosx13.0" \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework CoreBluetooth \
+		-framework Security \
+		-F"/Users/loomitz/Dev/estrobo-macos-auto-update/.build/Sparkle/2.10.0" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
+		-o "Build/estrobo.app/Contents/MacOS/estrobo" \
+		Sources/AppAppearance.swift Sources/AppLocalization.swift Sources/AppTerminationSafety.swift Sources/EstroboApp.swift Sources/EstroboBrandAssets.swift Sources/GroupVisualColor.swift Sources/GroupVisualIdentity.swift Sources/InteractivePointerEditMonitor.swift Sources/MacAppScenes.swift Sources/MacUpdateRuntime.swift Sources/MenuBarControlView.swift Sources/MenuBarVisibilityPreferences.swift Sources/MockRadioRuntime.swift Sources/PrototypeAppDelegate.swift Sources/PrototypeViews.swift Sources/SparkleUpdateService.swift Sources/UpdateClock.swift Sources/UpdateCoordinator.swift Sources/UpdateHTTPClient.swift Sources/UpdateInstallationLifecycle.swift Sources/UpdatePreferences.swift Sources/UpdateService.swift Sources/UpdateViews.swift Sources/WorkspaceViewPreferences.swift ../../Sources/EstroboCore/ControlModel.swift ../../Sources/EstroboCore/GodoxBluetoothDeviceName.swift ../../Sources/EstroboCore/GodoxCapabilities.swift ../../Sources/EstroboCore/GodoxSessionController.swift ../../Sources/EstroboCore/GroupVisibilityPolicy.swift ../../Sources/EstroboCore/PersistencePorts.swift ../../Sources/EstroboCore/RadioTransport.swift ../../Sources/EstroboCore/SafeGodoxProtocol.swift ../../Sources/EstroboCore/SavedRadio.swift ../../Sources/EstroboCore/SessionDeadlineScheduler.swift ../../Sources/EstroboCore/StudioLibrary.swift ../../Sources/EstroboPersistence/ChangeDeliveryPreferences.swift ../../Sources/EstroboPersistence/LocalGroupPreferences.swift ../../Sources/EstroboPersistence/PendingRestorationStore.swift ../../Sources/EstroboPersistence/PersistenceServicesFactory.swift ../../Sources/EstroboPersistence/RadioCodeVault.swift ../../Sources/EstroboPersistence/RadioConnectionPreferences.swift ../../Sources/EstroboPersistence/RestorationJournal.swift ../../Sources/EstroboPersistence/SavedRadioStore.swift ../../Sources/EstroboPersistence/StudioLibraryStore.swift ../../Sources/EstroboPersistence/TransmitterProfilePreferences.swift ../../Sources/EstroboBluetooth/CoreBluetoothRadioTransport.swift ../../Sources/EstroboBluetooth/CoreBluetoothWriteCoordinator.swift ../../Sources/EstroboBluetooth/RadioTransportFactory.swift ../../Sources/EstroboBluetooth/SimulatedRadioTransport.swift
+Build/estrobo.app/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate: replacing existing signature
+Build/estrobo.app/Contents/Frameworks/Sparkle.framework/Versions/B/Updater.app: replacing existing signature
+Build/estrobo.app/Contents/Frameworks/Sparkle.framework/Versions/B/XPCServices/Installer.xpc: replacing existing signature
+Build/estrobo.app/Contents/Frameworks/Sparkle.framework: replacing existing signature
+Build/estrobo.app: replacing existing signature
+Construida: Build/estrobo.app
+Construido sin firmar: Build/Universal/estrobo.app

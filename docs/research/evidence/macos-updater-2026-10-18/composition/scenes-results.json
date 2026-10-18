@@ -1,0 +1,12 @@
+{
+  "disconnected" : true,
+  "fixture" : "Product MacAppScenes, PrototypeAppDelegate, coordinator and controlled service; simulated radio; isolated defaults",
+  "mainContentHeight" : 792,
+  "mainContentWidth" : 1180,
+  "manualRequests" : 1,
+  "passed" : true,
+  "selectedLanguage" : "es",
+  "systemLocale" : "en_MX",
+  "updatesWindows" : 1,
+  "zeroProgressLocalized" : true
+}
