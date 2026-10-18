@@ -48,3 +48,9 @@ A focused contrast measurement found that the incumbent calibrated RGB secondary
 ## Limits
 
 These checks establish presentation behavior through the agreed coordinator/UI seams. The reusable app command compiles, but its productive scene/menu route and the shared app-owned factory are verified in ticket 16. Signed/notarized replacement, sandboxed distribution, Intel/minimum-macOS execution and physical Bluetooth permission continuity require their separate evidence; this controlled UI fixture does not establish them.
+
+## Focused finish-review correction — progress capture
+
+The fresh finish review found a determinate track near zero beside 35% in the initial batch. This was the native insertion animation captured after only 100 ms, not an incorrect progress fraction or a missing fill at rest. Holding the real hosted AppKit window at the same service value for 750 ms produced a 35% track in all EN/ES light/dark variants; a separate 30-second hold retained that same settled value. The current fixture waits that bounded 750 ms before its progress capture. `ProgressView`, the production state and its visual design remain unchanged. No bitmap was edited.
+
+The same 40-state batch and native action checks passed again. Its raw native captures replace the earlier evidence. Computer Use could not bind the command-line fixture as a selectable app; this verification uses the actual hosted native view and its direct rendering path, not a claimed desktop-compositor screenshot.

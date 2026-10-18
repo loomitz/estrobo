@@ -168,6 +168,9 @@ enum UpdatePresentationCheck {
                 coordinator.download()
                 await settle()
                 expect(coordinator.snapshot.progress?.completedBytes == 35, "The native progress surface must receive the service's byte progress")
+                // NSProgressIndicator animates a newly inserted determinate bar.
+                // Wait for its bounded native presentation before snapshotting.
+                try? await Task.sleep(for: .milliseconds(750))
                 capture(window, name: "\(prefix)-progress", output: output)
                 service.completeDownload()
                 await settle()
