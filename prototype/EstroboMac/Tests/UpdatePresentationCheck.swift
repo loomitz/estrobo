@@ -55,7 +55,8 @@ enum UpdatePresentationCheck {
         expect(press("updates.install", in: window), "Downloaded update must expose Install and Restart")
         await settle()
         expect(service.installations == 0, "Opening confirmation must not authorize installation")
-        expect(press("updates.confirm", in: window), "Confirmation must identify an explicit accessible acceptance action")
+        let firstConfirmationPressed = await pressConfirmation(in: window)
+        expect(firstConfirmationPressed, "Confirmation must identify an explicit accessible acceptance action")
         await settle()
         expect(service.installations == 1 && coordinator.snapshot.stage == .installing, "Accepting this offer must reach one installation")
         expect(press("updates.cancelInstall", in: window), "Preparation must remain cancellable")
@@ -70,7 +71,8 @@ enum UpdatePresentationCheck {
         await settle()
         service.completeDownload()
         await settle()
-        expect(press("updates.confirm", in: window), "The original displayed confirmation must remain actionable")
+        let staleConfirmationPressed = await pressConfirmation(in: window)
+        expect(staleConfirmationPressed, "The original displayed confirmation must remain actionable")
         await settle()
         expect(coordinator.snapshot.failure?.kind == .invalidOffer && service.installations == 1,
                "An older dialog must not approve a different downloaded offer")
@@ -254,6 +256,24 @@ enum UpdatePresentationCheck {
         var value: CFTypeRef?
         AXUIElementCopyAttributeValue(element, key as CFString, &value)
         return value as? String
+    }
+    static func pressConfirmation(in window: NSWindow) async -> Bool {
+        guard let sheet = window.attachedSheet,
+              let button = windowElements(window).first(where: {
+                  attribute($0, kAXIdentifierAttribute) == "updates.confirm" && attribute($0, kAXRoleAttribute) == kAXButtonRole
+              }) else { return false }
+        var actions: CFArray?
+        guard AXUIElementCopyActionNames(button, &actions) == .success,
+              (actions as? [String])?.contains(kAXPressAction) == true else { return false }
+        let result = AXUIElementPerformAction(button, kAXPressAction as CFString)
+        if result == .success { return true }
+        // macOS 15 may return attributeUnsupported after NSAlert's action has
+        // already dismissed its button. Accept only that completed modal press;
+        // callers must still verify the exact installation/offer postcondition.
+        guard result == .attributeUnsupported else { return false }
+        let deadline = Date().addingTimeInterval(2)
+        while window.attachedSheet === sheet, Date() < deadline { await settle() }
+        return window.attachedSheet !== sheet
     }
     static func press(_ identifier: String, in window: NSWindow) -> Bool {
         guard let element = windowElements(window).first(where: { attribute($0, kAXIdentifierAttribute) == identifier }) else {
