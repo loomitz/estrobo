@@ -1,0 +1,14 @@
+F
+======================================================================
+FAIL: test_bundle_includes_exact_official_notices_and_rejects_omission_or_tampering (__main__.ArtifactTests.test_bundle_includes_exact_official_notices_and_rejects_omission_or_tampering)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/tmp/estrobo-macos-updater-final-fixes/scripts/tests/test_macos_updater_artifacts.py", line 136, in test_bundle_includes_exact_official_notices_and_rejects_omission_or_tampering
+    self.assertTrue(notice.is_file(), 'Pinned Sparkle and external licenses must ship with the app')
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: False is not true : Pinned Sparkle and external licenses must ship with the app
+
+----------------------------------------------------------------------
+Ran 1 test in 3.066s
+
+FAILED (failures=1)

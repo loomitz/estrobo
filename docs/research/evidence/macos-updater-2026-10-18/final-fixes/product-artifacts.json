@@ -1,0 +1,24 @@
+[
+  {
+    "path": "prototype/EstroboMac/Build/estrobo.app",
+    "rootAbsent": true,
+    "bundleIdentifier": "mx.loo.estrobo",
+    "version": "0.1.0",
+    "build": "5",
+    "architecture": "arm64",
+    "binarySHA256": "971db0ec9dba24a190f72b8b6ceb877c9cac2af69e2ce743d86eda6d259237b5",
+    "noticeSHA256": "389a4e4e9a32f059775b13a06e25a591445ba229d2838d26dd3e7c0c45127cfe",
+    "signature": "local ad hoc development; no distribution trust"
+  },
+  {
+    "path": "prototype/EstroboMac/Build/Universal/estrobo.app",
+    "rootAbsent": true,
+    "bundleIdentifier": "mx.loo.estrobo",
+    "version": "0.1.0",
+    "build": "5",
+    "architecture": "x86_64 arm64",
+    "binarySHA256": "e0963236f6df8e84269b6eb6f2ad5f581365b401e641572c83f820c00c68cb70",
+    "noticeSHA256": "389a4e4e9a32f059775b13a06e25a591445ba229d2838d26dd3e7c0c45127cfe",
+    "signature": "local ad hoc development; no distribution trust"
+  }
+]

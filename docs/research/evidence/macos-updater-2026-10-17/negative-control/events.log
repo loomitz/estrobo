@@ -1,0 +1,11 @@
+CASE negative-control-held-ready-normal-quit
+2026-10-17 09:40:32 +0000 pid=79884 build=1 launched
+2026-10-17 09:40:32 +0000 pid=79884 build=1 command download
+2026-10-17 09:40:32 +0000 pid=79884 build=1 checking
+2026-10-17 09:40:32 +0000 pid=79884 build=1 fresh-signed-offer-matches
+2026-10-17 09:40:32 +0000 pid=79884 build=1 offer-found
+2026-10-17 09:40:32 +0000 pid=79884 build=1 sparkle-cache-copy-started
+2026-10-17 09:40:32 +0000 pid=79884 build=1 extracting-after-consent
+2026-10-17 09:40:33 +0000 pid=79884 build=1 prepared-without-consent
+2026-10-17 09:40:33 +0000 pid=79884 build=1 command quit
+2026-10-17 09:40:33 +0000 pid=79884 build=1 ordinary-termination-allowed

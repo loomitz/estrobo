@@ -1,0 +1,276 @@
+CASE visible-download-ordinary-command-q
+2026-10-18 10:48:51 +0000 pid=25755 build=1 ui-controls-ready
+2026-10-18 10:48:51 +0000 pid=25755 build=1 launched
+2026-10-18 10:48:51 +0000 pid=25755 build=1 command mouse:download
+2026-10-18 10:48:51 +0000 pid=25755 build=1 ui-mouse-events-queued download
+2026-10-18 10:48:51 +0000 pid=25755 build=1 ui-action download
+2026-10-18 10:48:51 +0000 pid=25755 build=1 cache-download-started
+2026-10-18 10:48:51 +0000 pid=25755 build=1 cache-complete-without-consent
+2026-10-18 10:48:51 +0000 pid=25755 build=1 command key:quit
+2026-10-18 10:48:51 +0000 pid=25755 build=1 ui-command-q-event-queued
+2026-10-18 10:48:51 +0000 pid=25755 build=1 ordinary-termination-allowed
+CASE visible-process-restart-close-window-button
+2026-10-18 10:48:53 +0000 pid=25765 build=1 ui-controls-ready
+2026-10-18 10:48:53 +0000 pid=25765 build=1 launched
+2026-10-18 10:48:53 +0000 pid=25765 build=1 command mouse:window-close
+2026-10-18 10:48:53 +0000 pid=25765 build=1 ui-mouse-events-queued window-close
+2026-10-18 10:48:53 +0000 pid=25765 build=1 last-window-closed
+2026-10-18 10:48:53 +0000 pid=25765 build=1 ordinary-termination-allowed
+CASE visible-cancel-transfer-and-retry
+2026-10-18 10:48:55 +0000 pid=25777 build=1 ui-controls-ready
+2026-10-18 10:48:55 +0000 pid=25777 build=1 launched
+2026-10-18 10:48:55 +0000 pid=25777 build=1 command mouse:download
+2026-10-18 10:48:55 +0000 pid=25777 build=1 ui-mouse-events-queued download
+2026-10-18 10:48:55 +0000 pid=25777 build=1 ui-action download
+2026-10-18 10:48:55 +0000 pid=25777 build=1 cache-download-started
+2026-10-18 10:48:56 +0000 pid=25777 build=1 command mouse:cancel
+2026-10-18 10:48:56 +0000 pid=25777 build=1 ui-mouse-events-queued cancel
+2026-10-18 10:48:56 +0000 pid=25777 build=1 ui-action cancel
+2026-10-18 10:48:56 +0000 pid=25777 build=1 consent-cancelled
+2026-10-18 10:48:56 +0000 pid=25777 build=1 cache-download-cancelled-or-failed
+2026-10-18 10:48:56 +0000 pid=25777 build=1 command mouse:download
+2026-10-18 10:48:56 +0000 pid=25777 build=1 ui-mouse-events-queued download
+2026-10-18 10:48:56 +0000 pid=25777 build=1 ui-action download
+2026-10-18 10:48:56 +0000 pid=25777 build=1 cache-download-started
+2026-10-18 10:48:56 +0000 pid=25777 build=1 cache-complete-without-consent
+2026-10-18 10:48:56 +0000 pid=25777 build=1 command key:quit
+2026-10-18 10:48:56 +0000 pid=25777 build=1 ui-command-q-event-queued
+2026-10-18 10:48:56 +0000 pid=25777 build=1 ordinary-termination-allowed
+CASE visible-cancel-remains-usable-during-preparation
+2026-10-18 10:48:58 +0000 pid=25782 build=1 ui-controls-ready
+2026-10-18 10:48:58 +0000 pid=25782 build=1 launched
+2026-10-18 10:48:58 +0000 pid=25782 build=1 command mouse:confirm-hold
+2026-10-18 10:48:58 +0000 pid=25782 build=1 ui-mouse-events-queued confirm-hold
+2026-10-18 10:48:58 +0000 pid=25782 build=1 ui-action confirm-hold
+2026-10-18 10:48:58 +0000 pid=25782 build=1 cache-primed bytes=1231566 lookup=YES
+2026-10-18 10:48:58 +0000 pid=25782 build=1 confirmed-specific-offer
+2026-10-18 10:48:58 +0000 pid=25782 build=1 appkit-preflight-accepted-termination-cancelled
+2026-10-18 10:48:58 +0000 pid=25782 build=1 checking
+2026-10-18 10:48:58 +0000 pid=25782 build=1 fresh-signed-offer-matches
+2026-10-18 10:48:58 +0000 pid=25782 build=1 offer-found
+2026-10-18 10:48:58 +0000 pid=25782 build=1 strict-cache-only lookup=YES
+2026-10-18 10:48:58 +0000 pid=25782 build=1 sparkle-cache-copy-started
+2026-10-18 10:48:58 +0000 pid=25782 build=1 extracting-after-consent
+2026-10-18 10:48:59 +0000 pid=25782 build=1 ready-held-after-consent
+2026-10-18 10:48:59 +0000 pid=25782 build=1 command mouse:cancel
+2026-10-18 10:48:59 +0000 pid=25782 build=1 ui-mouse-events-queued cancel
+2026-10-18 10:48:59 +0000 pid=25782 build=1 ui-action cancel
+2026-10-18 10:48:59 +0000 pid=25782 build=1 consent-cancelled
+2026-10-18 10:48:59 +0000 pid=25782 build=1 attempt-dismissed-window-restored
+2026-10-18 10:48:59 +0000 pid=25782 build=1 ui-cycle-finished
+2026-10-18 10:48:59 +0000 pid=25782 build=1 command key:quit
+2026-10-18 10:48:59 +0000 pid=25782 build=1 ui-command-q-event-queued
+2026-10-18 10:48:59 +0000 pid=25782 build=1 ordinary-termination-allowed
+CASE visible-appkit-veto-before-preparation
+2026-10-18 10:49:01 +0000 pid=25815 build=1 ui-controls-ready
+2026-10-18 10:49:01 +0000 pid=25815 build=1 launched
+2026-10-18 10:49:01 +0000 pid=25815 build=1 command mouse:block
+2026-10-18 10:49:01 +0000 pid=25815 build=1 ui-mouse-events-queued block
+2026-10-18 10:49:01 +0000 pid=25815 build=1 ui-action block
+2026-10-18 10:49:01 +0000 pid=25815 build=1 blocked
+2026-10-18 10:49:01 +0000 pid=25815 build=1 command mouse:confirm-hold
+2026-10-18 10:49:01 +0000 pid=25815 build=1 ui-mouse-events-queued confirm-hold
+2026-10-18 10:49:01 +0000 pid=25815 build=1 ui-action confirm-hold
+2026-10-18 10:49:01 +0000 pid=25815 build=1 cache-primed bytes=1231566 lookup=YES
+2026-10-18 10:49:01 +0000 pid=25815 build=1 confirmed-specific-offer
+2026-10-18 10:49:01 +0000 pid=25815 build=1 consent-cancelled
+2026-10-18 10:49:01 +0000 pid=25815 build=1 appkit-veto-consent-invalidated
+2026-10-18 10:49:01 +0000 pid=25815 build=1 command mouse:unblock
+2026-10-18 10:49:01 +0000 pid=25815 build=1 ui-mouse-events-queued unblock
+2026-10-18 10:49:01 +0000 pid=25815 build=1 ui-action unblock
+2026-10-18 10:49:01 +0000 pid=25815 build=1 unblocked
+2026-10-18 10:49:01 +0000 pid=25815 build=1 command key:quit
+2026-10-18 10:49:01 +0000 pid=25815 build=1 ui-command-q-event-queued
+2026-10-18 10:49:01 +0000 pid=25815 build=1 ordinary-termination-allowed
+CASE visible-final-appkit-veto-cancels-prepared-installer
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ui-controls-ready
+2026-10-18 10:49:04 +0000 pid=25817 build=1 launched
+2026-10-18 10:49:04 +0000 pid=25817 build=1 command mouse:confirm-hold
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ui-mouse-events-queued confirm-hold
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ui-action confirm-hold
+2026-10-18 10:49:04 +0000 pid=25817 build=1 cache-primed bytes=1231566 lookup=YES
+2026-10-18 10:49:04 +0000 pid=25817 build=1 confirmed-specific-offer
+2026-10-18 10:49:04 +0000 pid=25817 build=1 appkit-preflight-accepted-termination-cancelled
+2026-10-18 10:49:04 +0000 pid=25817 build=1 checking
+2026-10-18 10:49:04 +0000 pid=25817 build=1 fresh-signed-offer-matches
+2026-10-18 10:49:04 +0000 pid=25817 build=1 offer-found
+2026-10-18 10:49:04 +0000 pid=25817 build=1 strict-cache-only lookup=YES
+2026-10-18 10:49:04 +0000 pid=25817 build=1 sparkle-cache-copy-started
+2026-10-18 10:49:04 +0000 pid=25817 build=1 extracting-after-consent
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ready-held-after-consent
+2026-10-18 10:49:04 +0000 pid=25817 build=1 command mouse:veto
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ui-mouse-events-queued veto
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ui-action veto
+2026-10-18 10:49:04 +0000 pid=25817 build=1 appkit-veto-armed
+2026-10-18 10:49:04 +0000 pid=25817 build=1 command mouse:continue
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ui-mouse-events-queued continue
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ui-action continue
+2026-10-18 10:49:04 +0000 pid=25817 build=1 consent-cancelled
+2026-10-18 10:49:04 +0000 pid=25817 build=1 appkit-veto-consent-invalidated
+2026-10-18 10:49:04 +0000 pid=25817 build=1 attempt-dismissed-window-restored
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ui-cycle-finished
+2026-10-18 10:49:04 +0000 pid=25817 build=1 command mouse:unblock
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ui-mouse-events-queued unblock
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ui-action unblock
+2026-10-18 10:49:04 +0000 pid=25817 build=1 unblocked
+2026-10-18 10:49:04 +0000 pid=25817 build=1 command key:quit
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ui-command-q-event-queued
+2026-10-18 10:49:04 +0000 pid=25817 build=1 ordinary-termination-allowed
+CASE visible-command-q-cancels-prepared-attempt
+2026-10-18 10:49:07 +0000 pid=25846 build=1 ui-controls-ready
+2026-10-18 10:49:07 +0000 pid=25846 build=1 launched
+2026-10-18 10:49:07 +0000 pid=25846 build=1 command mouse:confirm-hold
+2026-10-18 10:49:07 +0000 pid=25846 build=1 ui-mouse-events-queued confirm-hold
+2026-10-18 10:49:07 +0000 pid=25846 build=1 ui-action confirm-hold
+2026-10-18 10:49:07 +0000 pid=25846 build=1 cache-primed bytes=1231566 lookup=YES
+2026-10-18 10:49:07 +0000 pid=25846 build=1 confirmed-specific-offer
+2026-10-18 10:49:07 +0000 pid=25846 build=1 appkit-preflight-accepted-termination-cancelled
+2026-10-18 10:49:07 +0000 pid=25846 build=1 checking
+2026-10-18 10:49:07 +0000 pid=25846 build=1 fresh-signed-offer-matches
+2026-10-18 10:49:07 +0000 pid=25846 build=1 offer-found
+2026-10-18 10:49:07 +0000 pid=25846 build=1 strict-cache-only lookup=YES
+2026-10-18 10:49:07 +0000 pid=25846 build=1 sparkle-cache-copy-started
+2026-10-18 10:49:07 +0000 pid=25846 build=1 extracting-after-consent
+2026-10-18 10:49:07 +0000 pid=25846 build=1 ready-held-after-consent
+2026-10-18 10:49:07 +0000 pid=25846 build=1 command key:quit
+2026-10-18 10:49:07 +0000 pid=25846 build=1 ui-command-q-event-queued
+2026-10-18 10:49:07 +0000 pid=25846 build=1 consent-cancelled
+2026-10-18 10:49:07 +0000 pid=25846 build=1 ordinary-quit-awaits-installer-cancellation
+2026-10-18 10:49:07 +0000 pid=25846 build=1 attempt-dismissed-window-restored
+2026-10-18 10:49:07 +0000 pid=25846 build=1 ui-cycle-finished
+2026-10-18 10:49:07 +0000 pid=25846 build=1 ordinary-termination-allowed
+CASE visible-new-unsafe-work-invalidates-consent
+2026-10-18 10:49:10 +0000 pid=25868 build=1 ui-controls-ready
+2026-10-18 10:49:10 +0000 pid=25868 build=1 launched
+2026-10-18 10:49:10 +0000 pid=25868 build=1 command mouse:confirm-hold
+2026-10-18 10:49:10 +0000 pid=25868 build=1 ui-mouse-events-queued confirm-hold
+2026-10-18 10:49:10 +0000 pid=25868 build=1 ui-action confirm-hold
+2026-10-18 10:49:10 +0000 pid=25868 build=1 cache-primed bytes=1231566 lookup=YES
+2026-10-18 10:49:10 +0000 pid=25868 build=1 confirmed-specific-offer
+2026-10-18 10:49:10 +0000 pid=25868 build=1 appkit-preflight-accepted-termination-cancelled
+2026-10-18 10:49:10 +0000 pid=25868 build=1 checking
+2026-10-18 10:49:10 +0000 pid=25868 build=1 fresh-signed-offer-matches
+2026-10-18 10:49:10 +0000 pid=25868 build=1 offer-found
+2026-10-18 10:49:10 +0000 pid=25868 build=1 strict-cache-only lookup=YES
+2026-10-18 10:49:10 +0000 pid=25868 build=1 sparkle-cache-copy-started
+2026-10-18 10:49:10 +0000 pid=25868 build=1 extracting-after-consent
+2026-10-18 10:49:10 +0000 pid=25868 build=1 ready-held-after-consent
+2026-10-18 10:49:10 +0000 pid=25868 build=1 command mouse:block
+2026-10-18 10:49:10 +0000 pid=25868 build=1 ui-mouse-events-queued block
+2026-10-18 10:49:10 +0000 pid=25868 build=1 ui-action block
+2026-10-18 10:49:10 +0000 pid=25868 build=1 consent-cancelled
+2026-10-18 10:49:10 +0000 pid=25868 build=1 blocked
+2026-10-18 10:49:10 +0000 pid=25868 build=1 attempt-dismissed-window-restored
+2026-10-18 10:49:10 +0000 pid=25868 build=1 ui-cycle-finished
+2026-10-18 10:49:11 +0000 pid=25868 build=1 command mouse:unblock
+2026-10-18 10:49:11 +0000 pid=25868 build=1 ui-mouse-events-queued unblock
+2026-10-18 10:49:11 +0000 pid=25868 build=1 ui-action unblock
+2026-10-18 10:49:11 +0000 pid=25868 build=1 unblocked
+2026-10-18 10:49:11 +0000 pid=25868 build=1 command key:quit
+2026-10-18 10:49:11 +0000 pid=25868 build=1 ui-command-q-event-queued
+2026-10-18 10:49:11 +0000 pid=25868 build=1 ordinary-termination-allowed
+CASE visible-fresh-signed-offer-change-rejected
+2026-10-18 10:49:13 +0000 pid=25897 build=1 ui-controls-ready
+2026-10-18 10:49:13 +0000 pid=25897 build=1 launched
+2026-10-18 10:49:13 +0000 pid=25897 build=1 command mouse:confirm
+2026-10-18 10:49:13 +0000 pid=25897 build=1 ui-mouse-events-queued confirm
+2026-10-18 10:49:13 +0000 pid=25897 build=1 ui-action confirm
+2026-10-18 10:49:13 +0000 pid=25897 build=1 cache-primed bytes=1231566 lookup=YES
+2026-10-18 10:49:13 +0000 pid=25897 build=1 confirmed-specific-offer
+2026-10-18 10:49:13 +0000 pid=25897 build=1 appkit-preflight-accepted-termination-cancelled
+2026-10-18 10:49:13 +0000 pid=25897 build=1 checking
+2026-10-18 10:49:13 +0000 pid=25897 build=1 fresh-offer-rejected
+2026-10-18 10:49:13 +0000 pid=25897 build=1 error Error Domain=ConsentSpike Code=1 "Confirmed signed offer changed or consent became invalid." UserInfo={NSLocalizedDescription=Confirmed signed offer changed or consent became invalid.}
+2026-10-18 10:49:13 +0000 pid=25897 build=1 attempt-dismissed-window-restored
+2026-10-18 10:49:13 +0000 pid=25897 build=1 ui-cycle-finished
+2026-10-18 10:49:13 +0000 pid=25897 build=1 command key:quit
+2026-10-18 10:49:13 +0000 pid=25897 build=1 ui-command-q-event-queued
+2026-10-18 10:49:13 +0000 pid=25897 build=1 ordinary-termination-allowed
+CASE visible-cache-eviction-fails-closed
+2026-10-18 10:49:15 +0000 pid=25910 build=1 ui-controls-ready
+2026-10-18 10:49:15 +0000 pid=25910 build=1 launched
+2026-10-18 10:49:15 +0000 pid=25910 build=1 command mouse:confirm-evict
+2026-10-18 10:49:15 +0000 pid=25910 build=1 ui-mouse-events-queued confirm-evict
+2026-10-18 10:49:15 +0000 pid=25910 build=1 ui-action confirm-evict
+2026-10-18 10:49:15 +0000 pid=25910 build=1 cache-primed bytes=1231566 lookup=YES
+2026-10-18 10:49:15 +0000 pid=25910 build=1 confirmed-specific-offer
+2026-10-18 10:49:15 +0000 pid=25910 build=1 appkit-preflight-accepted-termination-cancelled
+2026-10-18 10:49:15 +0000 pid=25910 build=1 checking
+2026-10-18 10:49:15 +0000 pid=25910 build=1 fresh-signed-offer-matches
+2026-10-18 10:49:15 +0000 pid=25910 build=1 offer-found
+2026-10-18 10:49:15 +0000 pid=25910 build=1 strict-cache-only lookup=NO
+2026-10-18 10:49:15 +0000 pid=25910 build=1 sparkle-cache-copy-started
+2026-10-18 10:49:15 +0000 pid=25910 build=1 error Error Domain=SUSparkleErrorDomain Code=2001 "An error occurred while downloading the update. Please try again later." UserInfo={NSErrorFailingURLKey=http://127.0.0.1:65236/update.dmg, NSLocalizedDescription=An error occurred while downloading the update. Please try again later., NSUnderlyingError=0x7af8014060 {Error Domain=NSURLErrorDomain Code=-1008 "resource unavailable" UserInfo={NSLocalizedDescription=resource unavailable, NSErrorFailingURLStringKey=http://127.0.0.1:65236/update.dmg, NSErrorFailingURLKey=http://127.0.0.1:65236/update.dmg, _NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDownloadTask <31F87DE9-280F-49CD-A3EA-1F2C53880BA1>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDownloadTask <31F87DE9-280F-49CD-A3EA-1F2C53880BA1>.<1>, NSUnderlyingError=0x7af8eb9680 {Error Domain=kCFErrorDomainCFNetwork Code=-1008 "(null)"}}}}
+2026-10-18 10:49:15 +0000 pid=25910 build=1 attempt-dismissed-window-restored
+2026-10-18 10:49:16 +0000 pid=25910 build=1 ui-cycle-finished
+2026-10-18 10:49:16 +0000 pid=25910 build=1 command key:quit
+2026-10-18 10:49:16 +0000 pid=25910 build=1 ui-command-q-event-queued
+2026-10-18 10:49:16 +0000 pid=25910 build=1 ordinary-termination-allowed
+CASE visible-tampered-cache-rejected-by-sparkle
+2026-10-18 10:49:18 +0000 pid=25928 build=1 ui-controls-ready
+2026-10-18 10:49:18 +0000 pid=25928 build=1 launched
+2026-10-18 10:49:18 +0000 pid=25928 build=1 command mouse:confirm
+2026-10-18 10:49:18 +0000 pid=25928 build=1 ui-mouse-events-queued confirm
+2026-10-18 10:49:18 +0000 pid=25928 build=1 ui-action confirm
+2026-10-18 10:49:18 +0000 pid=25928 build=1 cache-primed bytes=1231566 lookup=YES
+2026-10-18 10:49:18 +0000 pid=25928 build=1 confirmed-specific-offer
+2026-10-18 10:49:18 +0000 pid=25928 build=1 appkit-preflight-accepted-termination-cancelled
+2026-10-18 10:49:18 +0000 pid=25928 build=1 checking
+2026-10-18 10:49:18 +0000 pid=25928 build=1 fresh-signed-offer-matches
+2026-10-18 10:49:18 +0000 pid=25928 build=1 offer-found
+2026-10-18 10:49:18 +0000 pid=25928 build=1 strict-cache-only lookup=YES
+2026-10-18 10:49:18 +0000 pid=25928 build=1 sparkle-cache-copy-started
+2026-10-18 10:49:18 +0000 pid=25928 build=1 extracting-after-consent
+2026-10-18 10:49:18 +0000 pid=25928 build=1 error Error Domain=SUSparkleErrorDomain Code=4005 "The update is improperly signed and could not be validated. Please try again later or contact the app developer." UserInfo={NSLocalizedDescription=The update is improperly signed and could not be validated. Please try again later or contact the app developer., NSUnderlyingError=0x75bc541a10 {Error Domain=SUSparkleErrorDomain Code=4005 "(Ed)DSA signature validation before unarchiving failed for update /Users/loomitz/Library/Caches/mx.loo.estrobo.consent-spike.1lzqgtmb/org.sparkle-project.Sparkle/Installation/cvb4yBsE0/DF87674F-3A1B-4187-B1D0-E64ABA24E443.dmg" UserInfo={NSMultipleUnderlyingErrorsKey=(
+    "Error Domain=SUSparkleErrorDomain Code=3002 \"EdDSA signature does not match. Data of the update being checked is different than data that has been signed, or the public key and the private key are not from the same set. The downloaded update (DF87674F-3A1B-4187-B1D0-E64ABA24E443.dmg) is likely not signed correctly because the file has the expected content length (1231566 bytes) which matches the appcast item.\" UserInfo={NSLocalizedDescription=EdDSA signature does not match. Data of the update being checked is different than data that has been signed, or the public key and the private key are not from the same set. The downloaded update (DF87674F-3A1B-4187-B1D0-E64ABA24E443.dmg) is likely not signed correctly because the file has the expected content length (1231566 bytes) which matches the appcast item.}",
+    "Error Domain=SUSparkleErrorDomain Code=2 \"The download archive cannot be validated with Apple Developer ID code signing as fallback (after (Ed)DSA verification has failed). The team identifier could not be retrieved from the original app: /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T/estrobo-consent-spike-1lzqgtmb/installed/ConsentSpike.app\" UserInfo={NSLocalizedDescription=The download archive cannot be validated with Apple Developer ID code signing as fallback (after (Ed)DSA verification has failed). The team identifier could not be retrieved from the original app: /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T/estrobo-consent-spike-1lzqgtmb/installed/ConsentSpike.app}"
+), NSLocalizedDescription=(Ed)DSA signature validation before unarchiving failed for update /Users/loomitz/Library/Caches/mx.loo.estrobo.consent-spike.1lzqgtmb/org.sparkle-project.Sparkle/Installation/cvb4yBsE0/DF87674F-3A1B-4187-B1D0-E64ABA24E443.dmg, NSUnderlyingError=0x75bc541aa0 {Error Domain=SUSparkleErrorDomain Code=3002 "EdDSA signature does not match. Data of the update being checked is different than data that has been signed, or the public key and the private key are not from the same set. The downloaded update (DF87674F-3A1B-4187-B1D0-E64ABA24E443.dmg) is likely not signed correctly because the file has the expected content length (1231566 bytes) which matches the appcast item." UserInfo={NSLocalizedDescription=EdDSA signature does not match. Data of the update being checked is different than data that has been signed, or the public key and the private key are not from the same set. The downloaded update (DF87674F-3A1B-4187-B1D0-E64ABA24E443.dmg) is likely not signed correctly because the file has the expected content length (1231566 bytes) which matches the appcast item.}}}}}
+2026-10-18 10:49:18 +0000 pid=25928 build=1 attempt-dismissed-window-restored
+2026-10-18 10:49:18 +0000 pid=25928 build=1 ui-cycle-finished
+2026-10-18 10:49:18 +0000 pid=25928 build=1 command key:quit
+2026-10-18 10:49:18 +0000 pid=25928 build=1 ui-command-q-event-queued
+2026-10-18 10:49:18 +0000 pid=25928 build=1 ordinary-termination-allowed
+CASE visible-cancel-and-retry-installs-exact-cache-and-relaunches
+2026-10-18 10:49:20 +0000 pid=25932 build=1 ui-controls-ready
+2026-10-18 10:49:20 +0000 pid=25932 build=1 launched
+2026-10-18 10:49:20 +0000 pid=25932 build=1 command mouse:confirm-hold
+2026-10-18 10:49:20 +0000 pid=25932 build=1 ui-mouse-events-queued confirm-hold
+2026-10-18 10:49:20 +0000 pid=25932 build=1 ui-action confirm-hold
+2026-10-18 10:49:20 +0000 pid=25932 build=1 cache-primed bytes=1231566 lookup=YES
+2026-10-18 10:49:20 +0000 pid=25932 build=1 confirmed-specific-offer
+2026-10-18 10:49:20 +0000 pid=25932 build=1 appkit-preflight-accepted-termination-cancelled
+2026-10-18 10:49:20 +0000 pid=25932 build=1 checking
+2026-10-18 10:49:21 +0000 pid=25932 build=1 fresh-signed-offer-matches
+2026-10-18 10:49:21 +0000 pid=25932 build=1 offer-found
+2026-10-18 10:49:21 +0000 pid=25932 build=1 strict-cache-only lookup=YES
+2026-10-18 10:49:21 +0000 pid=25932 build=1 sparkle-cache-copy-started
+2026-10-18 10:49:21 +0000 pid=25932 build=1 extracting-after-consent
+2026-10-18 10:49:21 +0000 pid=25932 build=1 ready-held-after-consent
+2026-10-18 10:49:21 +0000 pid=25932 build=1 command mouse:cancel
+2026-10-18 10:49:21 +0000 pid=25932 build=1 ui-mouse-events-queued cancel
+2026-10-18 10:49:21 +0000 pid=25932 build=1 ui-action cancel
+2026-10-18 10:49:21 +0000 pid=25932 build=1 consent-cancelled
+2026-10-18 10:49:21 +0000 pid=25932 build=1 attempt-dismissed-window-restored
+2026-10-18 10:49:21 +0000 pid=25932 build=1 ui-cycle-finished
+2026-10-18 10:49:21 +0000 pid=25932 build=1 command mouse:confirm
+2026-10-18 10:49:21 +0000 pid=25932 build=1 ui-mouse-events-queued confirm
+2026-10-18 10:49:21 +0000 pid=25932 build=1 ui-action confirm
+2026-10-18 10:49:21 +0000 pid=25932 build=1 cache-primed bytes=1231566 lookup=YES
+2026-10-18 10:49:21 +0000 pid=25932 build=1 confirmed-specific-offer
+2026-10-18 10:49:21 +0000 pid=25932 build=1 appkit-preflight-accepted-termination-cancelled
+2026-10-18 10:49:21 +0000 pid=25932 build=1 checking
+2026-10-18 10:49:21 +0000 pid=25932 build=1 fresh-signed-offer-matches
+2026-10-18 10:49:21 +0000 pid=25932 build=1 offer-found
+2026-10-18 10:49:21 +0000 pid=25932 build=1 strict-cache-only lookup=YES
+2026-10-18 10:49:21 +0000 pid=25932 build=1 sparkle-cache-copy-started
+2026-10-18 10:49:21 +0000 pid=25932 build=1 extracting-after-consent
+2026-10-18 10:49:22 +0000 pid=25932 build=1 ready-after-consent
+2026-10-18 10:49:22 +0000 pid=25932 build=1 appkit-final-commit-accepted
+2026-10-18 10:49:22 +0000 pid=25932 build=1 installing-approved-offer
+2026-10-18 10:49:22 +0000 pid=25977 build=2 ui-controls-ready
+2026-10-18 10:49:22 +0000 pid=25977 build=2 launched
+2026-10-18 10:49:22 +0000 pid=25977 build=2 command key:quit
+2026-10-18 10:49:22 +0000 pid=25977 build=2 ui-command-q-event-queued
+2026-10-18 10:49:22 +0000 pid=25977 build=2 ordinary-termination-allowed

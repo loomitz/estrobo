@@ -160,8 +160,15 @@ verify_protected_context() {
 [[ "$VERSION" =~ '^[0-9]+\.[0-9]+\.[0-9]+$' ]] || \
   fail "VERSION must use numeric major.minor.patch format"
 [[ "$BUILD_NUMBER" =~ '^[1-9][0-9]*$' ]] || fail "BUILD_NUMBER must be a positive integer"
+if (( 10#$BUILD_NUMBER >= 5 )); then
+  python3 "$script_dir/macos-updater-artifacts.py" metadata --version "$VERSION" --build "$BUILD_NUMBER" --channel "${UPDATE_CHANNEL:-}" --tag "$TAG" --distribution
+  [[ "$(/usr/bin/plutil -extract EstroboUpdateChannel raw -o - "$plist")" == "$UPDATE_CHANNEL" ]] || fail "UPDATE_CHANNEL does not match Info.plist"
+  [[ "$(/usr/bin/plutil -extract EstroboReleaseTag raw -o - "$plist")" == "$TAG" ]] || fail "TAG does not match Info.plist"
+else
 expected_tag="v${VERSION}-beta.${BUILD_NUMBER}"
 [[ "$TAG" == "$expected_tag" ]] || fail "TAG does not match VERSION and BUILD_NUMBER"
+
+fi
 
 plist_version="$(/usr/bin/plutil -extract CFBundleShortVersionString raw -o - "$plist" 2>/dev/null)" || \
   fail "could not read CFBundleShortVersionString"
@@ -176,8 +183,10 @@ make_tag_template="$(read_make_default TAG)"
 [[ "$make_version" == "$VERSION" ]] || fail "VERSION does not match the prototype Makefile"
 [[ "$make_build_number" == "$BUILD_NUMBER" ]] || \
   fail "BUILD_NUMBER does not match the prototype Makefile"
+if (( 10#$BUILD_NUMBER < 5 )); then
 [[ "$make_tag_template" == 'v$(VERSION)-beta.$(BUILD_NUMBER)' ]] || \
   fail "prototype Makefile TAG no longer derives from VERSION and BUILD_NUMBER"
+fi
 
 verify_clean_worktree
 verify_no_ignored_build_inputs

@@ -1,0 +1,16 @@
+{
+  "sparkle_version": "2.10.0",
+  "sparkle_sha256": "c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c",
+  "source_commit": "b3bfd7188dcc0ceacdde558cba544d962e1a223d",
+  "dmg_sha256": "73382f656f4a08170e9083262468f840aa02f69325f1c51622fe5ded86c4376e",
+  "source_sha256": {
+    "prototype/EstroboMac/Sources/UpdateService.swift": "9eead77093ecff8b563962b6ab9dcaf8a2c872f049efcddb6b425a429055156e",
+    "prototype/EstroboMac/Sources/UpdateHTTPClient.swift": "9b3bb0aec0709cb6e479b8caa2949afbe928a4ee4816dd56355966d1ce46fbcc",
+    "prototype/EstroboMac/Sources/UpdateInstallationLifecycle.swift": "86e3a8786f3edc83a73f6c728e09e36974e5207d484ed0a1728f5338d73836ad",
+    "prototype/EstroboMac/Sources/SparkleUpdateService.swift": "65fc3dad0983ef8b5dc03dcbdd1da0deefd9a79884f51b755cfd21eefcc4e1fc",
+    "prototype/MacUpdaterAdapterCheck/Host.swift": "11e30e430348bb6fd9da58e6c10219e86b76faaff5a4af1fd34de80d109dd5b8"
+  },
+  "dmg_length": 1536821,
+  "eddsa_signature": "MUbpyw6BMh+KGH55jrIZn24f1LomUutRYQ66yr5kTxsuiPN36NoAk3k3OKwUvxj1aOfGRG9bk6V3tD0LHD9JAw==",
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434"
+}

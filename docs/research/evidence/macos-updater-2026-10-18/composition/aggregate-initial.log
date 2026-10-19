@@ -1,0 +1,126 @@
+/Applications/Xcode-beta.app/Contents/Developer/usr/bin/make -C "/private/tmp/estrobo-macos-updater-composition/prototype/EstroboMac" test BUILD_DIR="/private/tmp/estrobo-macos-updater-composition/prototype/EstroboMac/Build"
+"/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
+		-warnings-as-errors \
+		-sdk "/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk" \
+		-target "arm64-apple-macosx13.0" \
+		-framework Combine \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework Security \
+		Sources/AppLocalization.swift \
+		Sources/WorkspaceViewPreferences.swift \
+		Sources/GroupVisualIdentity.swift \
+		Sources/GroupVisualColor.swift \
+		../../Sources/EstroboCore/ControlModel.swift ../../Sources/EstroboCore/GodoxBluetoothDeviceName.swift ../../Sources/EstroboCore/GodoxCapabilities.swift ../../Sources/EstroboCore/GroupVisibilityPolicy.swift ../../Sources/EstroboCore/PersistencePorts.swift ../../Sources/EstroboCore/RadioTransport.swift ../../Sources/EstroboCore/SafeGodoxProtocol.swift ../../Sources/EstroboCore/SavedRadio.swift ../../Sources/EstroboCore/SessionDeadlineScheduler.swift ../../Sources/EstroboCore/StudioLibrary.swift \
+		../../Sources/EstroboPersistence/ChangeDeliveryPreferences.swift ../../Sources/EstroboPersistence/LocalGroupPreferences.swift ../../Sources/EstroboPersistence/PendingRestorationStore.swift ../../Sources/EstroboPersistence/PersistenceServicesFactory.swift ../../Sources/EstroboPersistence/RadioCodeVault.swift ../../Sources/EstroboPersistence/RadioConnectionPreferences.swift ../../Sources/EstroboPersistence/RestorationJournal.swift ../../Sources/EstroboPersistence/SavedRadioStore.swift ../../Sources/EstroboPersistence/StudioLibraryStore.swift ../../Sources/EstroboPersistence/TransmitterProfilePreferences.swift \
+		Tests/SafeGodoxProtocolFrameCheck.swift \
+		-o "/private/tmp/estrobo-macos-updater-composition/prototype/EstroboMac/Build/SafeGodoxProtocolFrameCheck"
+Perfiles, colores de grupo, borradores, preferencias, tramas A0/A1 y CRC verificados
+"/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
+		-warnings-as-errors \
+		-sdk "/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk" \
+		-target "arm64-apple-macosx13.0" \
+		-framework Combine \
+		-framework CoreBluetooth \
+		-framework Security \
+		Sources/AppLocalization.swift \
+		Sources/AppTerminationSafety.swift \
+		../../Sources/EstroboCore/ControlModel.swift ../../Sources/EstroboCore/GodoxBluetoothDeviceName.swift ../../Sources/EstroboCore/GodoxCapabilities.swift ../../Sources/EstroboCore/GroupVisibilityPolicy.swift ../../Sources/EstroboCore/PersistencePorts.swift ../../Sources/EstroboCore/RadioTransport.swift ../../Sources/EstroboCore/SafeGodoxProtocol.swift ../../Sources/EstroboCore/SavedRadio.swift ../../Sources/EstroboCore/SessionDeadlineScheduler.swift ../../Sources/EstroboCore/StudioLibrary.swift \
+		../../Sources/EstroboPersistence/ChangeDeliveryPreferences.swift ../../Sources/EstroboPersistence/LocalGroupPreferences.swift ../../Sources/EstroboPersistence/PendingRestorationStore.swift ../../Sources/EstroboPersistence/PersistenceServicesFactory.swift ../../Sources/EstroboPersistence/RadioCodeVault.swift ../../Sources/EstroboPersistence/RadioConnectionPreferences.swift ../../Sources/EstroboPersistence/RestorationJournal.swift ../../Sources/EstroboPersistence/SavedRadioStore.swift ../../Sources/EstroboPersistence/StudioLibraryStore.swift ../../Sources/EstroboPersistence/TransmitterProfilePreferences.swift \
+		../../Sources/EstroboCore/GodoxSessionController.swift \
+		Tests/EstroboSessionRecoveryCheck.swift \
+		-o "/private/tmp/estrobo-macos-updater-composition/prototype/EstroboMac/Build/EstroboSessionRecoveryCheck"
+Conexión, debounce, cola de cambios y recuperación incierta verificadas sin Bluetooth
+"/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
+		-warnings-as-errors \
+		-sdk "/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk" \
+		-target "arm64-apple-macosx13.0" \
+		../../Sources/EstroboCore/ControlModel.swift ../../Sources/EstroboCore/GodoxBluetoothDeviceName.swift ../../Sources/EstroboCore/GodoxCapabilities.swift ../../Sources/EstroboCore/GroupVisibilityPolicy.swift ../../Sources/EstroboCore/PersistencePorts.swift ../../Sources/EstroboCore/RadioTransport.swift ../../Sources/EstroboCore/SafeGodoxProtocol.swift ../../Sources/EstroboCore/SavedRadio.swift ../../Sources/EstroboCore/SessionDeadlineScheduler.swift ../../Sources/EstroboCore/StudioLibrary.swift \
+		../../Sources/EstroboPersistence/StudioLibraryStore.swift \
+		Tests/StudioLibraryStoreCheck.swift \
+		-o "/private/tmp/estrobo-macos-updater-composition/prototype/EstroboMac/Build/StudioLibraryStoreCheck"
+Workspace y presets versionados verificados sin credenciales ni UserDefaults reales
+Resources/en.lproj/InfoPlist.strings: OK
+Resources/en.lproj/Localizable.strings: OK
+Resources/es.lproj/InfoPlist.strings: OK
+Resources/es.lproj/Localizable.strings: OK
+"/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
+		-warnings-as-errors \
+		-sdk "/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk" \
+		-target "arm64-apple-macosx13.0" \
+		-framework Combine \
+		Sources/AppLocalization.swift \
+		Tests/AppLocalizationCheck.swift \
+		-o "/private/tmp/estrobo-macos-updater-composition/prototype/EstroboMac/Build/AppLocalizationCheck"
+English/Spanish resources, runtime messages, and language preferences verified
+"/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
+		-warnings-as-errors \
+		-sdk "/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk" \
+		-target "arm64-apple-macosx13.0" \
+		-framework SwiftUI \
+		-framework AppKit \
+		Tests/ModelingMenuMouseOrderingCheck.swift \
+		-o "/private/tmp/estrobo-macos-updater-composition/prototype/EstroboMac/Build/ModelingMenuMouseOrderingCheck"
+detectedMonitor=leftMouseUp pointerSelection=1 directAction=1
+/Users/loomitz/Dev/estrobo-macos-auto-update/.build/Sparkle/2.10.0
+"/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
+		-parse-as-library \
+		-warnings-as-errors \
+		-sdk "/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk" \
+		-target "arm64-apple-macosx13.0" \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework CoreBluetooth \
+		-framework Security \
+		-F"/Users/loomitz/Dev/estrobo-macos-auto-update/.build/Sparkle/2.10.0" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
+		Sources/AppAppearance.swift Sources/AppLocalization.swift Sources/AppTerminationSafety.swift Sources/EstroboBrandAssets.swift Sources/GroupVisualColor.swift Sources/GroupVisualIdentity.swift Sources/InteractivePointerEditMonitor.swift Sources/MacAppScenes.swift Sources/MacUpdateRuntime.swift Sources/MenuBarControlView.swift Sources/MenuBarVisibilityPreferences.swift Sources/MockRadioRuntime.swift Sources/PrototypeAppDelegate.swift Sources/PrototypeViews.swift Sources/SparkleUpdateService.swift Sources/UpdateClock.swift Sources/UpdateCoordinator.swift Sources/UpdateHTTPClient.swift Sources/UpdateInstallationLifecycle.swift Sources/UpdatePreferences.swift Sources/UpdateService.swift Sources/UpdateViews.swift Sources/WorkspaceViewPreferences.swift \
+		../../Sources/EstroboCore/ControlModel.swift ../../Sources/EstroboCore/GodoxBluetoothDeviceName.swift ../../Sources/EstroboCore/GodoxCapabilities.swift ../../Sources/EstroboCore/GodoxSessionController.swift ../../Sources/EstroboCore/GroupVisibilityPolicy.swift ../../Sources/EstroboCore/PersistencePorts.swift ../../Sources/EstroboCore/RadioTransport.swift ../../Sources/EstroboCore/SafeGodoxProtocol.swift ../../Sources/EstroboCore/SavedRadio.swift ../../Sources/EstroboCore/SessionDeadlineScheduler.swift ../../Sources/EstroboCore/StudioLibrary.swift ../../Sources/EstroboPersistence/ChangeDeliveryPreferences.swift ../../Sources/EstroboPersistence/LocalGroupPreferences.swift ../../Sources/EstroboPersistence/PendingRestorationStore.swift ../../Sources/EstroboPersistence/PersistenceServicesFactory.swift ../../Sources/EstroboPersistence/RadioCodeVault.swift ../../Sources/EstroboPersistence/RadioConnectionPreferences.swift ../../Sources/EstroboPersistence/RestorationJournal.swift ../../Sources/EstroboPersistence/SavedRadioStore.swift ../../Sources/EstroboPersistence/StudioLibraryStore.swift ../../Sources/EstroboPersistence/TransmitterProfilePreferences.swift ../../Sources/EstroboBluetooth/CoreBluetoothRadioTransport.swift ../../Sources/EstroboBluetooth/CoreBluetoothWriteCoordinator.swift ../../Sources/EstroboBluetooth/RadioTransportFactory.swift ../../Sources/EstroboBluetooth/SimulatedRadioTransport.swift \
+		Tests/WorkspaceChromeInteractionCheck.swift \
+		-o "/private/tmp/estrobo-macos-updater-composition/prototype/EstroboMac/Build/WorkspaceChromeInteractionCheck"
+Settings-only view switching, shared Menu Bar controls, header, footer, and language hit targets verified
+"/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
+		-warnings-as-errors \
+		-sdk "/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk" \
+		-target "arm64-apple-macosx13.0" \
+		-framework AppKit \
+		Sources/EstroboBrandAssets.swift \
+		Tests/EstroboBrandAssetsCheck.swift \
+		-o "/private/tmp/estrobo-macos-updater-composition/prototype/EstroboMac/Build/EstroboBrandAssetsCheck"
+Estrobo lockup, colour mark, and solid Menu Bar template verified
+"/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
+		-parse-as-library \
+		-warnings-as-errors \
+		-sdk "/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk" \
+		-target "arm64-apple-macosx13.0" \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework CoreBluetooth \
+		-framework Security \
+		-F"/Users/loomitz/Dev/estrobo-macos-auto-update/.build/Sparkle/2.10.0" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
+		Sources/AppAppearance.swift Sources/AppLocalization.swift Sources/AppTerminationSafety.swift Sources/EstroboBrandAssets.swift Sources/GroupVisualColor.swift Sources/GroupVisualIdentity.swift Sources/InteractivePointerEditMonitor.swift Sources/MacAppScenes.swift Sources/MacUpdateRuntime.swift Sources/MenuBarControlView.swift Sources/MenuBarVisibilityPreferences.swift Sources/MockRadioRuntime.swift Sources/PrototypeAppDelegate.swift Sources/PrototypeViews.swift Sources/SparkleUpdateService.swift Sources/UpdateClock.swift Sources/UpdateCoordinator.swift Sources/UpdateHTTPClient.swift Sources/UpdateInstallationLifecycle.swift Sources/UpdatePreferences.swift Sources/UpdateService.swift Sources/UpdateViews.swift Sources/WorkspaceViewPreferences.swift \
+		../../Sources/EstroboCore/ControlModel.swift ../../Sources/EstroboCore/GodoxBluetoothDeviceName.swift ../../Sources/EstroboCore/GodoxCapabilities.swift ../../Sources/EstroboCore/GodoxSessionController.swift ../../Sources/EstroboCore/GroupVisibilityPolicy.swift ../../Sources/EstroboCore/PersistencePorts.swift ../../Sources/EstroboCore/RadioTransport.swift ../../Sources/EstroboCore/SafeGodoxProtocol.swift ../../Sources/EstroboCore/SavedRadio.swift ../../Sources/EstroboCore/SessionDeadlineScheduler.swift ../../Sources/EstroboCore/StudioLibrary.swift ../../Sources/EstroboPersistence/ChangeDeliveryPreferences.swift ../../Sources/EstroboPersistence/LocalGroupPreferences.swift ../../Sources/EstroboPersistence/PendingRestorationStore.swift ../../Sources/EstroboPersistence/PersistenceServicesFactory.swift ../../Sources/EstroboPersistence/RadioCodeVault.swift ../../Sources/EstroboPersistence/RadioConnectionPreferences.swift ../../Sources/EstroboPersistence/RestorationJournal.swift ../../Sources/EstroboPersistence/SavedRadioStore.swift ../../Sources/EstroboPersistence/StudioLibraryStore.swift ../../Sources/EstroboPersistence/TransmitterProfilePreferences.swift ../../Sources/EstroboBluetooth/CoreBluetoothRadioTransport.swift ../../Sources/EstroboBluetooth/CoreBluetoothWriteCoordinator.swift ../../Sources/EstroboBluetooth/RadioTransportFactory.swift ../../Sources/EstroboBluetooth/SimulatedRadioTransport.swift \
+		Tests/InteractiveEditingCheck.swift \
+		-o "/private/tmp/estrobo-macos-updater-composition/prototype/EstroboMac/Build/InteractiveEditingCheck"
+Interactive edit tokens, delivery gates, discard/manual behavior, accessibility, and real mouse lifecycle verified
+"/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc" \
+		-parse-as-library \
+		-warnings-as-errors \
+		-sdk "/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk" \
+		-target "arm64-apple-macosx13.0" \
+		-framework SwiftUI \
+		-framework AppKit \
+		-framework CoreBluetooth \
+		-framework Security \
+		-F"/Users/loomitz/Dev/estrobo-macos-auto-update/.build/Sparkle/2.10.0" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks \
+		Sources/AppAppearance.swift Sources/AppLocalization.swift Sources/AppTerminationSafety.swift Sources/EstroboBrandAssets.swift Sources/GroupVisualColor.swift Sources/GroupVisualIdentity.swift Sources/InteractivePointerEditMonitor.swift Sources/MacAppScenes.swift Sources/MacUpdateRuntime.swift Sources/MenuBarControlView.swift Sources/MenuBarVisibilityPreferences.swift Sources/MockRadioRuntime.swift Sources/PrototypeAppDelegate.swift Sources/PrototypeViews.swift Sources/SparkleUpdateService.swift Sources/UpdateClock.swift Sources/UpdateCoordinator.swift Sources/UpdateHTTPClient.swift Sources/UpdateInstallationLifecycle.swift Sources/UpdatePreferences.swift Sources/UpdateService.swift Sources/UpdateViews.swift Sources/WorkspaceViewPreferences.swift \
+		../../Sources/EstroboCore/ControlModel.swift ../../Sources/EstroboCore/GodoxBluetoothDeviceName.swift ../../Sources/EstroboCore/GodoxCapabilities.swift ../../Sources/EstroboCore/GodoxSessionController.swift ../../Sources/EstroboCore/GroupVisibilityPolicy.swift ../../Sources/EstroboCore/PersistencePorts.swift ../../Sources/EstroboCore/RadioTransport.swift ../../Sources/EstroboCore/SafeGodoxProtocol.swift ../../Sources/EstroboCore/SavedRadio.swift ../../Sources/EstroboCore/SessionDeadlineScheduler.swift ../../Sources/EstroboCore/StudioLibrary.swift ../../Sources/EstroboPersistence/ChangeDeliveryPreferences.swift ../../Sources/EstroboPersistence/LocalGroupPreferences.swift ../../Sources/EstroboPersistence/PendingRestorationStore.swift ../../Sources/EstroboPersistence/PersistenceServicesFactory.swift ../../Sources/EstroboPersistence/RadioCodeVault.swift ../../Sources/EstroboPersistence/RadioConnectionPreferences.swift ../../Sources/EstroboPersistence/RestorationJournal.swift ../../Sources/EstroboPersistence/SavedRadioStore.swift ../../Sources/EstroboPersistence/StudioLibraryStore.swift ../../Sources/EstroboPersistence/TransmitterProfilePreferences.swift ../../Sources/EstroboBluetooth/CoreBluetoothRadioTransport.swift ../../Sources/EstroboBluetooth/CoreBluetoothWriteCoordinator.swift ../../Sources/EstroboBluetooth/RadioTransportFactory.swift ../../Sources/EstroboBluetooth/SimulatedRadioTransport.swift \
+		Tests/MenuBarAccessibilityCheck.swift \
+		-o "/private/tmp/estrobo-macos-updater-composition/prototype/EstroboMac/Build/MenuBarAccessibilityCheck"
+Menu Bar accessibility descriptors, actions, rendering, and modifier contract verified
+/tmp/estrobo-launch-check.B1fefj/EstroboLaunchCheck.app: replacing existing signature
+Estrobo exited during launch responsiveness setup (status 134)
+dyld[79591]: Library not loaded: @rpath/Sparkle.framework/Versions/B/Sparkle
+  Referenced from: <FF4097E9-B35E-3F6C-B4DB-27EAB1088B31> /private/tmp/estrobo-launch-check.B1fefj/EstroboLaunchCheck.app/Contents/MacOS/estrobo
+  Reason: tried: '/usr/lib/swift/Sparkle.framework/Versions/B/Sparkle' (no such file, not in dyld cache), '/System/Volumes/Preboot/Cryptexes/OS/usr/lib/swift/Sparkle.framework/Versions/B/Sparkle' (no such file), '/private/tmp/estrobo-launch-check.B1fefj/EstroboLaunchCheck.app/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle' (code signature in <9E5E3434-F756-3739-9635-4C82FC263D55> '/private/tmp/estrobo-launch-check.B1fefj/EstroboLaunchCheck.app/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle' not valid for use in process: mapping process and mapped file (non-platform) have different Team IDs), '/usr/lib/swift/Sparkle.framework/Versions/B/Sparkle' (no such file, not in dyld cache), '/System/Volumes/Preboot/Cryptexes/OS/usr/lib/swift/Sparkle.framework/Versions/B/Sparkle' (no such file), '/private/tmp/estrobo-launch-check.B1fefj/EstroboLaunchCheck.app/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle' (code signature in <9E5E3434-F756-3739-9635-4C82FC263D55> '/private/tmp/estrobo-launch-check.B1fefj/EstroboLaunchCheck.app/Contents/Frameworks/Sparkle.framework/Versions/B/Sparkle' not valid for use in process: mapping process and mapped file (non-platform) have different Team IDs), '/System/Library/Frameworks/Sparkle.framework/Versions/B/Sparkle' (no such file, not in dyld cache)
+make[1]: *** [test-launch-responsiveness] Error 1
+make: *** [mac-prototype-test] Error 2

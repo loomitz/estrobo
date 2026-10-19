@@ -1,0 +1,55 @@
+/Applications/Xcode-beta.app/Contents/Developer/usr/bin/make -C "/private/tmp/estrobo-macos-updater-packaging/prototype/EstroboMac" sparkle-dependency SPARKLE_DIR="/private/tmp/estrobo-macos-updater-packaging/.build/Sparkle/2.10.0"
+/private/tmp/estrobo-macos-updater-packaging/.build/Sparkle/2.10.0
+SPARKLE_DIR="/private/tmp/estrobo-macos-updater-packaging/.build/Sparkle/2.10.0" python3 scripts/tests/test_macos_updater_artifacts.py
+......
+----------------------------------------------------------------------
+Ran 6 tests in 14.920s
+
+OK
+SPARKLE_DIR="/private/tmp/estrobo-macos-updater-packaging/.build/Sparkle/2.10.0" python3 scripts/tests/test_macos_update_catalog.py
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.531s
+
+OK
+./scripts/test-developer-id-release-tools.sh
+plain-candidate.tar.gz.enc: OK
+Developer ID notarization submitted once: abcdefab-cdef-abcd-efab-cdefabcdefab
+Synthetic staple succeeded
+Synthetic staple validation succeeded
+Developer ID notarization accepted and stapled: abcdefab-cdef-abcd-efab-cdefabcdefab
+Evidence: /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T//estrobo-developer-id-tools-test.tfW940/evidence-accepted/notarization-metadata.json
+Resuming Developer ID notarization submission: abcdefab-cdef-abcd-efab-cdefabcdefab
+Synthetic staple succeeded
+Synthetic staple validation succeeded
+Developer ID notarization accepted and stapled: abcdefab-cdef-abcd-efab-cdefabcdefab
+Evidence: /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T//estrobo-developer-id-tools-test.tfW940/evidence-resume-timeout/notarization-metadata.json
+Resuming Developer ID notarization submission: abcdefab-cdef-abcd-efab-cdefabcdefab
+Synthetic staple succeeded
+Synthetic staple validation succeeded
+Developer ID notarization accepted and stapled: abcdefab-cdef-abcd-efab-cdefabcdefab
+Evidence: /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T//estrobo-developer-id-tools-test.tfW940/evidence-api-resume-timeout/notarization-metadata.json
+estrobo-v0.1.0-beta.3-developer-id-candidate-0123456789ab-macos-universal.zip: OK
+estrobo-v0.1.0-beta.3-developer-id-candidate-0123456789ab-manifest.json: OK
+notarization-evidence/notary-submit.json: OK
+notarization-evidence/notary-wait.json: OK
+notarization-evidence/notary-log.json: OK
+notarization-evidence/notarization-metadata.json: OK
+Developer ID candidate packaged: /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T//estrobo-developer-id-tools-test.tfW940/DistDeveloperID/estrobo-v0.1.0-beta.3-developer-id-candidate-0123456789ab-macos-universal.zip
+SHA-256: bc83e48d7eaec3f0460e6878ee409de33c35b5eb05e6b90f861ee1dc7cea741e
+Manifest: /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T//estrobo-developer-id-tools-test.tfW940/DistDeveloperID/estrobo-v0.1.0-beta.3-developer-id-candidate-0123456789ab-manifest.json
+Checksums: /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T//estrobo-developer-id-tools-test.tfW940/DistDeveloperID/estrobo-v0.1.0-beta.3-developer-id-candidate-0123456789ab-SHA256SUMS
+Notarization evidence: /var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T//estrobo-developer-id-tools-test.tfW940/DistDeveloperID/notarization-evidence
+estrobo-v0.1.0-beta.3-developer-id-candidate-0123456789ab-macos-universal.zip: OK
+estrobo-v0.1.0-beta.3-developer-id-candidate-0123456789ab-manifest.json: OK
+notarization-evidence/notary-submit.json: OK
+notarization-evidence/notary-wait.json: OK
+notarization-evidence/notary-log.json: OK
+notarization-evidence/notarization-metadata.json: OK
+Developer ID release tooling tests passed
+./scripts/test-local-developer-id-release-source.sh
+Local Developer ID release source tests passed
+./scripts/test-developer-id-dmg-tools.sh
+Developer ID DMG tooling tests passed (32 isolated cases)
+./scripts/test-local-developer-id-release-approval.sh
+Local Developer ID release approval tests passed

@@ -1,0 +1,17 @@
+✓ Lockfile passes supply-chain policies (verified 35m ago)
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +272
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 272, reused 272, downloaded 0, added 272, done
+
+dependencies:
++ @fontsource-variable/instrument-sans 5.3.0
++ @phosphor-icons/web 2.1.2
++ astro 7.2.6
+
+devDependencies:
++ @astrojs/check 0.9.10
++ typescript 6.0.3
+
+Done in 1.1s using pnpm v11.16.0

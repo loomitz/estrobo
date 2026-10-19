@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "failure": null,
+  "cases": [
+    {
+      "case": "negative-control-held-ready-normal-quit",
+      "passed": true,
+      "observed_unconsented_build": "2"
+    }
+  ]
+}

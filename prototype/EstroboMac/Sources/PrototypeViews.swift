@@ -7,17 +7,19 @@ import AppKit
 @MainActor
 struct PrototypeRootView: View {
     @ObservedObject var controller: GodoxSessionController
+    private let updater: UpdateCoordinator?
 
     @EnvironmentObject private var languageStore: AppLanguageStore
     @State private var variant: PrototypeVariant
     @State private var selectedGroup: GodoxGroup = .b
     private let workspaceViewPreferences: WorkspaceViewPreferences
 
-    init(controller: GodoxSessionController) {
+    init(controller: GodoxSessionController, updater: UpdateCoordinator? = nil,
+         workspaceViewPreferences: WorkspaceViewPreferences = WorkspaceViewPreferences()) {
         self.controller = controller
-        let preferences = WorkspaceViewPreferences()
-        workspaceViewPreferences = preferences
-        _variant = State(initialValue: preferences.launchVariant(arguments: CommandLine.arguments))
+        self.updater = updater
+        self.workspaceViewPreferences = workspaceViewPreferences
+        _variant = State(initialValue: workspaceViewPreferences.launchVariant(arguments: CommandLine.arguments))
     }
 
     private var minimumWidth: CGFloat {
@@ -53,6 +55,8 @@ struct PrototypeRootView: View {
                     Rectangle()
                         .fill(PrototypePalette.divider)
                         .frame(height: 1)
+
+                    if let updater { MainUpdateStatus(updater: updater) }
 
                     if controller.showsControlWorkspace {
                         QuickControlsBar(controller: controller)
@@ -129,6 +133,28 @@ struct PrototypeRootView: View {
             visibleGroups: controller.visibleGroups
         ), valid != selectedGroup {
             selectedGroup = valid
+        }
+    }
+}
+
+@MainActor
+private struct MainUpdateStatus: View {
+    @ObservedObject var updater: UpdateCoordinator
+    var body: some View {
+        if updater.snapshot.showsOptInInvitation {
+            UpdateInvitation()
+                .environmentObject(updater)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 12)
+            Divider().overlay(PrototypePalette.divider)
+        } else if updater.snapshot.offer != nil && [.available, .downloading, .downloaded, .blocked].contains(updater.snapshot.stage) {
+            UpdateStatusIndicator()
+                .environmentObject(updater)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 8)
+            Divider().overlay(PrototypePalette.divider)
         }
     }
 }
@@ -3076,6 +3102,12 @@ private struct LocalConfigurationPopover: View {
                                 .foregroundStyle(PrototypePalette.secondaryText)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
+                    }
+
+                    SettingsDivider()
+
+                    SettingsRow(title: "updates.title", alignment: .top) {
+                        UpdateSettingsSection()
                     }
 
                     SettingsDivider()

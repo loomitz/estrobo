@@ -24,23 +24,27 @@ app_pid=""
 /bin/mkdir -p "$isolated_home"
 /usr/bin/codesign -d --entitlements :- "$app_bundle" \
     >"$source_entitlements" 2>/dev/null
-entitlement_count=$(
-    /usr/bin/plutil -p "$source_entitlements" | /usr/bin/grep -c '=>'
-)
-if [[ "$entitlement_count" != "2" ||
-      "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.app-sandbox' "$source_entitlements")" != "true" ||
-      "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.device.bluetooth' "$source_entitlements")" != "true" ]]; then
-    print -u2 "The built Estrobo app does not have the exact Sandbox + Bluetooth entitlement contract"
-    exit 1
-fi
+# Reuse the updater's exact host contract; the development app is thin, so
+# distribution/universal verification remains in its dedicated release checks.
+python3 - "$source_entitlements" "${0:A:h}/../../../scripts/macos-updater-artifacts.py" <<'PYVERIFY'
+import pathlib, plistlib, runpy, sys
+actual = plistlib.loads(pathlib.Path(sys.argv[1]).read_bytes())
+expected = runpy.run_path(sys.argv[2])["HOST_ENTITLEMENTS"]
+if actual != expected:
+    raise SystemExit("The built Estrobo app does not have the exact updater entitlement contract")
+PYVERIFY
 
 /usr/bin/ditto "$app_bundle" "$isolated_app"
 /usr/libexec/PlistBuddy \
     -c "Set :CFBundleIdentifier $isolated_bundle_id" \
     "$isolated_app/Contents/Info.plist"
-/usr/bin/codesign --force --deep --sign - \
-    --options runtime \
+# The source and its precise embedded components use development ad hoc signing
+# without Hardened Runtime. Re-sign only the renamed outer harness, intentionally
+# without Sandbox entitlements. Developer ID distribution verification is separate.
+/usr/bin/codesign --force --sign - \
+    --options 0 \
     "$isolated_app" >/dev/null
+/usr/bin/codesign --verify --strict "$isolated_app"
 
 cleanup() {
     if [[ -n "$app_pid" ]] && kill -0 "$app_pid" 2>/dev/null; then

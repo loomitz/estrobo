@@ -1,0 +1,7 @@
+{
+  "appInfoSource": "/Users/loomitz/Dev/estrobo-macos-auto-update/prototype/EstroboMac/Info.plist",
+  "sourceATSAbsent": true,
+  "os": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434\n",
+  "toolchain": "Apple Swift version 6.4 (swiftlang-6.4.0.27.1 clang-2100.3.27.1)\nTarget: arm64-apple-macosx27.0.0\n",
+  "fixtureRoot": "/var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T/estrobo-ats-runtime-dqzc5o4c"
+}

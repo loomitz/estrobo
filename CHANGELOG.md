@@ -2,6 +2,22 @@
 
 Todos los cambios relevantes de Estrobo se documentan aquí. Mientras el proyecto esté en beta, las interfaces y la matriz de compatibilidad pueden cambiar entre prereleases.
 
+## Sin publicar / Unreleased — actualizaciones macOS
+
+Implementación local para el shell macOS; **no es una nueva release pública**. La descarga vigente sigue siendo `0.1.0-beta.4`, sin actualizador. iOS/iPadOS no incorporan este mecanismo. Build 5 (`0.1.0`, beta, `v0.1.0-beta.5`) está asignado en el ledger y permanece sin publicar.
+
+- Coordinador único para búsqueda manual, preferencias opt-in de búsqueda/descarga en segundo plano, progreso, notas firmadas en español/inglés, cancelación, aplazamiento y errores diferenciados. Un fallo no se presenta como «actualizado».
+- Instalación confirmada por oferta exacta, con revalidación fresca y transmisor desconectado, reutilizando seguridad de sesión/cierre y persistencia. Descargar, salir o reiniciar no concede permiso para instalar; actualizar no conecta ni transmite al radio automáticamente.
+- Adaptador Sparkle 2.10.0 con feed/archivo firmados, verificación antes de extracción, cache de la descarga exacta y preparación sólo después de autorización. ATS sin excepciones HTTP externas; sin perfilado, JavaScript, notas remotas, analítica ni datos del transmisor en solicitudes.
+- Empaquetado universal con firma explícita de helpers/framework/host, allowlists precisas y raíz pública externa obligatoria para distribución. Asignación global de builds, canal explícito y tags estables correctivos independientes del marketing version.
+- Herramientas locales de candidato/aprobación/retirada del catálogo y build del sitio que valida bytes aprobados e historial público. Publicación/despliegue requieren autorización separada, estado fresco, serialización y verificación pública; no hay CAS de infraestructura.
+- Privacidad/soporte/guías bilingües distinguen las conexiones nuevas de actualización de beta 4 e iOS/iPadOS. Proveedores reciben IP/User-Agent y pueden registrar datos técnicos; los datos de radio/perfil permanecen locales.
+- Translocación/DMG, fallos de copia y autenticación del instalador muestran recuperación local y permisos en español/inglés. El catálogo rechaza archivos mayores de 64 MiB o notas mayores de 16,384 bytes UTF-8 por idioma; el bundle incluye y verifica los avisos oficiales completos de Sparkle.
+
+**Pendiente de distribución:** raíz EdDSA/backup recuperable, upgrade exacto firmado/notarizado, Intel y macOS mínimo, autorización/translocación/recuperación, catálogo/assets públicos y tráfico/cache/retirada. La aceptación integrada y revisión final se registran aparte; builds, fixtures ad hoc y tests simulados no acreditan esos gates.
+
+**English:** unreleased macOS updater implementation with opt-in checks/downloads, bilingual signed notes, explicit safe installation and precise Sparkle packaging/catalog tooling. Public beta 4 remains the manual download; iOS/iPadOS have no updater. Production keys/backups, signed/notarized pair upgrades, platform execution and public distribution gates remain pending. See [Support](SUPPORT.en.md) and [Privacy](PRIVACY.en.md).
+
 ## 0.1.0-beta.4 — 2026-08-28
 
 ### Añadido

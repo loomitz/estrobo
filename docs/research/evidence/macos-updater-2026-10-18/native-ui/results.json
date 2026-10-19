@@ -1,0 +1,70 @@
+{
+  "passed": true,
+  "failure": null,
+  "cleanup_errors": [],
+  "cases": [
+    {
+      "case": "visible-download-ordinary-command-q",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "visible-process-restart-close-window-button",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "visible-cancel-transfer-and-retry",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "visible-cancel-remains-usable-during-preparation",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "visible-appkit-veto-before-preparation",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "visible-final-appkit-veto-cancels-prepared-installer",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "visible-command-q-cancels-prepared-attempt",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "visible-new-unsafe-work-invalidates-consent",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "visible-fresh-signed-offer-change-rejected",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "visible-cache-eviction-fails-closed",
+      "passed": true,
+      "installed_build": "1",
+      "additional_archive_requests": 0
+    },
+    {
+      "case": "visible-tampered-cache-rejected-by-sparkle",
+      "passed": true,
+      "installed_build": "1"
+    },
+    {
+      "case": "visible-cancel-and-retry-installs-exact-cache-and-relaunches",
+      "passed": true,
+      "installed_build": "2",
+      "additional_archive_requests": 0,
+      "archive_sha256": "acf9abfd05e3a426642a14bd35fbeba97613ce7eecf06af1f96dd8bc356a0285"
+    }
+  ]
+}

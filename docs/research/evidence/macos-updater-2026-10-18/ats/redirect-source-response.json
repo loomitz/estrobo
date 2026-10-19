@@ -1,0 +1,5 @@
+{
+  "url": "https://httpbingo.org/redirect-to?url=http%3A%2F%2Fexample.com%2F",
+  "status": 302,
+  "location": "http://example.com/"
+}

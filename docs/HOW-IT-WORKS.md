@@ -1,6 +1,8 @@
 # Cómo funciona Estrobo
 
-Estrobo es una aplicación SwiftUI/AppKit que actúa como central BLE mediante CoreBluetooth. La app conserva el estado deseado, construye tramas del protocolo observado y las entrega directamente al transmisor. No existe cuenta, backend, acceso a Internet, analítica ni telemetría.
+Estrobo es una aplicación SwiftUI/AppKit que actúa como central BLE mediante CoreBluetooth. La app conserva el estado deseado, construye tramas del protocolo observado y las entrega directamente al transmisor. El control local funciona sin Internet y no requiere cuenta ni backend de usuarios; no hay analítica ni telemetría.
+
+La beta pública macOS `0.1.0-beta.4` e iOS/iPadOS conservan su comportamiento sin red de la app. El candidato macOS posterior añade HTTPS exclusivamente para actualizaciones asistidas: catálogo firmado en `estrobo.app` y DMG exactos de GitHub Releases, sin transmitir datos del radio o workspace. Búsqueda y descarga automáticas requieren activación; instalar y reiniciar exige confirmación y un momento seguro con el radio desconectado. La primera instalación del actualizador es manual. Sus gates de distribución siguen pendientes; consulta [Actualizaciones macOS](ACTUALIZACIONES-MACOS.md).
 
 ## Modelo mental
 
@@ -12,7 +14,7 @@ flowchart LR
     C -->|"CoreBluetooth BLE/GATT"| R["Transmisor"]
     R -->|"acuse GATT y FEC8 limitado"| C
     L --> S["Preferencias del sandbox"]
-    X["Sin cuenta, backend ni Internet"] -.-> UI
+    X["Control local sin Internet, cuenta ni telemetría"] -.-> UI
 ```
 
 El transmisor no ofrece una lectura completa que permita reconstruir su estado. Por eso la flecha importante va de Estrobo al radio: el estado local es la fuente de verdad.

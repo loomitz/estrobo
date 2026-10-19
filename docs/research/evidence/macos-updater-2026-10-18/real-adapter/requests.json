@@ -1,0 +1,518 @@
+[
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 429 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 429 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/update.dmg",
+    "message": "\"GET /update.dmg HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/update4.dmg",
+    "message": "\"GET /update4.dmg HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/update5.dmg",
+    "message": "\"GET /update5.dmg HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/update.dmg",
+    "message": "\"GET /update.dmg HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/update.dmg",
+    "message": "\"GET /update.dmg HTTP/1.1\" 403 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/update.dmg",
+    "message": "\"GET /update.dmg HTTP/1.1\" 429 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/update.dmg",
+    "message": "\"GET /update.dmg HTTP/1.1\" 302 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/update.dmg",
+    "message": "\"GET /update.dmg HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/update.dmg",
+    "message": "\"GET /update.dmg HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/update.dmg",
+    "message": "\"GET /update.dmg HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "HEAD",
+    "path": "/appcast.xml",
+    "message": "\"HEAD /appcast.xml HTTP/1.1\" 200 -"
+  },
+  {
+    "host": "127.0.0.1:54042",
+    "method": "GET",
+    "path": "/appcast.xml",
+    "message": "\"GET /appcast.xml HTTP/1.1\" 200 -"
+  }
+]

@@ -1,0 +1,11 @@
+PASS: 59 local Markdown destinations across five new/current documents
+PASS: all active tickets 10–17 resolved; final code-review remains pending in spec/tracker/report
+PASS: native-ui: 12 recorded cases, successful aggregate; fixture limits retained
+PASS: real-adapter: 26 recorded cases, successful aggregate; fixture limits retained
+PASS: presentation-ui: 40 recorded cases, successful aggregate; fixture limits retained
+PASS: ATS nested external HTTP/downgrade -1022; HTTPS signature-control 3002; observed 302 Location
+PASS: inline note parser output; initial fix/final ship reviewer verdict; detector [] retained
+PASS: shared XCTest log contains 67 passing cases; iOS compile has BUILD SUCCEEDED
+PASS: 26 text archives match provenance/SHA-256 manifest: 23 byte-exact, 3 normalized only for CRLF/trailing whitespace; original hashes retained; no keys/binaries copied
+PASS: shared/Package/iOS paths unchanged from iOS compile base to inspected integration
+PASS: git diff --check against inspected integration, including staged/new evidence after whitespace normalization; no behavior changes or repeat runtime suites in ticket 17

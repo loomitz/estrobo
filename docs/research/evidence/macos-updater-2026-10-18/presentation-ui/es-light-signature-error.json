@@ -1,0 +1,177 @@
+[
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXWindow",
+    "title" : "Presentation capture es false",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXScrollArea",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Actualizaciones"
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Versión instalada"
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "0.1.0 · build 4 · Canal beta de Estrobo"
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Última comprobación exitosa: 18 oct 2026, 5:27"
+  },
+  {
+    "description" : "",
+    "identifier" : "updates.status",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "No se pudo completar la actualización."
+  },
+  {
+    "description" : "",
+    "identifier" : "updates.failure",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "La firma no es válida. No se instalará esta actualización. Vuelve a buscar o consulta soporte."
+  },
+  {
+    "description" : "Buscar actualizaciones…",
+    "identifier" : "updates.check",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Buscar actualizaciones en segundo plano"
+  },
+  {
+    "description" : "",
+    "identifier" : "updates.automaticChecks",
+    "role" : "AXCheckBox",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Descargar actualizaciones en segundo plano"
+  },
+  {
+    "description" : "",
+    "identifier" : "updates.automaticDownloads",
+    "role" : "AXCheckBox",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Estrobo comprueba cada 24 horas mientras está abierto. Instalar siempre requiere tu confirmación."
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Para descargar en segundo plano, activa la búsqueda en segundo plano."
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Las búsquedas contactan estrobo.app y sus proveedores; las descargas, GitHub. Reciben datos normales de conexión, como IP y agente de usuario, sin datos del transmisor ni analítica."
+  },
+  {
+    "description" : "Contactar soporte",
+    "identifier" : "updates.support",
+    "role" : "AXLink",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "Descarga manual",
+    "identifier" : "updates.manual",
+    "role" : "AXLink",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "identifier" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Presentation capture es false"
+  }
+]

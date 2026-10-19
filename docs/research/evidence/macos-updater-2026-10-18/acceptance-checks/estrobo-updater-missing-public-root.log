@@ -1,0 +1,2 @@
+macOS updater artifact verification failed: A canonical 32-byte SPARKLE_PUBLIC_ED_KEY is required for distribution
+make: *** [developer-id-preflight] Error 1

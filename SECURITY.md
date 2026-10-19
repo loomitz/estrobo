@@ -34,15 +34,19 @@ Nunca incluyas un Código del radio real, payload `Psub`/`PWOK`, token, private 
 
 ## Modelo de seguridad
 
-Estrobo reduce su superficie al enlace local:
+El control del transmisor permanece local. El contrato distingue la beta pública y las plataformas del candidato macOS con actualizador:
 
 - App Sandbox y entitlement Bluetooth en macOS; contenedor de aplicación y permiso Bluetooth en iOS/iPadOS;
-- sin entitlement de red, cuenta, backend, analítica o telemetría;
+- beta pública macOS `0.1.0-beta.4` e iOS/iPadOS: sin red de la app; sin cuenta, backend de usuarios, analítica o telemetría en ninguna plataforma;
+- candidato macOS posterior con actualización asistida: cliente HTTPS sólo para catálogos y archivos de actualización, sin enviar datos del transmisor, workspace o Código del radio; conserva ATS sin excepciones, feed/archivo firmados y consentimiento por oferta;
+- ese candidato conserva App Sandbox y Bluetooth y añade exclusivamente `com.apple.security.network.client` y las excepciones Mach `mx.loo.estrobo-spks`/`mx.loo.estrobo-spki`; sólo incluye Installer XPC, Autoupdate y Updater.app de Sparkle, con entitlements vacíos; no hay servidor de red, Downloader XPC, login item ni agente persistente;
 - snapshots, preferencias y recuperación dentro del contenedor local;
 - Test sólo mediante acción explícita y sin reintento automático;
 - writes A1 seriales con recuperación fail-closed.
 
 Estas propiedades no convierten el protocolo BLE en un canal autenticado de forma fuerte.
+
+La implementación local del actualizador no equivale a una nueva distribución pública. Raíz/custodia, dos builds Developer ID/notarizados/sandboxed, autorización/recuperación/datos, Intel/macOS 13 y verificación de tráfico/feed públicos siguen siendo gates pendientes. Consulta [Actualizaciones macOS](docs/ACTUALIZACIONES-MACOS.md) y el [contrato de firma](release/signing/README.md).
 
 ## Riesgos aceptados y límites
 

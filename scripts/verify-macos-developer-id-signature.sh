@@ -112,6 +112,9 @@ entitlement_value() {
 [[ "$(entitlement_value com.apple.security.device.bluetooth)" == true ]] || \
   fail "Bluetooth entitlement is missing"
 
+if /usr/bin/plutil -extract EstroboSparkleVersion raw -o - "$plist" >/dev/null 2>&1; then
+  python3 "${0:A:h}/macos-updater-artifacts.py" verify-signatures --app "$APP_BUNDLE" --distribution --team "$DEVELOPER_ID_TEAM_ID" --certificate "$DEVELOPER_ID_CERTIFICATE"
+else
 actual_entitlement_keys="$(
   /usr/bin/plutil -convert xml1 -o - "$entitlements_plist" |
     /usr/bin/sed -n 's/.*<key>\([^<]*\)<\/key>.*/\1/p' |
@@ -123,6 +126,8 @@ expected_entitlement_keys=$'com.apple.security.app-sandbox\ncom.apple.security.d
   print -u2 -r -- "$actual_entitlement_keys"
   fail "effective entitlements must match the App Sandbox + Bluetooth allowlist"
 }
+
+fi
 
 "${0:A:h}/verify-developer-id-certificate.sh" \
   "$DEVELOPER_ID_CERTIFICATE" \

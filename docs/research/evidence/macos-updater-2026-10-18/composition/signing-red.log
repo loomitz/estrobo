@@ -1,0 +1,14 @@
+F
+======================================================================
+FAIL: test_inside_out_signatures_preserve_exact_entitlements_and_universal_helpers (__main__.ArtifactTests.test_inside_out_signatures_preserve_exact_entitlements_and_universal_helpers)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/private/tmp/estrobo-macos-updater-composition/scripts/tests/test_macos_updater_artifacts.py", line 85, in test_inside_out_signatures_preserve_exact_entitlements_and_universal_helpers
+    self.assertNotIn('runtime', details, 'An ad hoc development component has no Team ID for library validation')
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'runtime' unexpectedly found in 'Executable=/private/var/folders/1y/8thwntgj3gxfv6s4qbfn5pr40000gn/T/estrobo-updater-sign-test-sc195gqr/estrobo.app/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate\nIdentifier=Autoupdate-5555494414702111ff343bf9aa9139b533091c57\nFormat=Mach-O universal (x86_64 arm64)\nCodeDirectory v=20500 size=1012 flags=0x10002(adhoc,runtime) hashes=20+7 location=embedded\nHash type=sha256 size=32\nCandidateCDHash sha256=7720b4d9f0d3528c227842132da7e87dcd40d8c3\nCandidateCDHashFull sha256=7720b4d9f0d3528c227842132da7e87dcd40d8c339b9c38252bc718d4649e07a\nHash choices=sha256\nCMSDigest=7720b4d9f0d3528c227842132da7e87dcd40d8c339b9c38252bc718d4649e07a\nCMSDigestType=2\nCDHash=7720b4d9f0d3528c227842132da7e87dcd40d8c3\nSignature=adhoc\nInfo.plist=not bound\nTeamIdentifier=not set\nRuntime Version=26.5.0\nSealed Resources=none\nInternal requirements count=0 size=12\nTotal signatures=1\nChosen signature=1\n' : An ad hoc development component has no Team ID for library validation
+
+----------------------------------------------------------------------
+Ran 1 test in 4.054s
+
+FAILED (failures=1)

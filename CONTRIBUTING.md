@@ -47,7 +47,7 @@ Los builds universales firmados y paquetes públicos pertenecen al workflow de r
 - El Código del radio conserva `Psub`/`PWOK`, seis dígitos, `SecureField` y `privacySensitive`; recordar empieza apagado y nunca se filtra a logs/presets/diagnósticos/issues.
 - A0 confirma por GATT; A1 por GATT + `FEC8`. `FEC8` no identifica grupo ni resultado óptico.
 - Test es explícito, fail-fast y sin reintento automático.
-- App Sandbox/Bluetooth permanecen activos y no se añade red, analítica o telemetría.
+- App Sandbox/Bluetooth permanecen activos. Beta 4 e iOS/iPadOS conservan su comportamiento sin red de la app; la nueva implementación macOS admite cliente HTTPS exclusivamente para actualizaciones según la [especificación](.scratch/macos-auto-update/spec.md) y el [contrato de firma](release/signing/README.md): network.client, excepciones Mach de Estrobo y sólo Installer XPC, Autoupdate y Updater.app de Sparkle, sin Downloader XPC opcional. No se añade HTTP al núcleo compartido, analítica ni telemetría.
 - No se omite el handshake `Psub`/`PWOK` ni se añade pairing obligatorio, criptografía casera, cambio de código, firmware u OAD por conjetura.
 
 Si tu propuesta cambia alguno, primero abre una discusión y aporta evidencia suficiente para una decisión explícita.

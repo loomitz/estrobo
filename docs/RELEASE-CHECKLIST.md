@@ -2,6 +2,8 @@
 
 Este checklist es un gate, no una guía opcional. Un release permanece **draft** mientras cualquier punto aplicable esté pendiente. Nunca se publica con CI fallando, una slice ausente o sin smoke físico/limpio requerido. Desde `beta.3`, el contrato público es Developer ID + notarización + DMG; el carril autosignado queda congelado para las betas 1 y 2 históricas. Developer ID puede ejecutarse mediante el workflow cifrado de Actions o mediante la excepción local documentada para un único mantenedor; ninguno publica por sí mismo.
 
+La beta pública 4 conserva instalación manual y ausencia de red. El candidato macOS posterior con Sparkle aplica el [contrato de firma del actualizador](../release/signing/README.md) y los [gates de actualizaciones](ACTUALIZACIONES-MACOS.md); iOS/iPadOS quedan fuera. La implementación local no cierra los gates productivos de claves, reemplazo entre dos builds notarizados/sandboxed, autorización/recuperación/datos, Intel/macOS 13 ni tráfico/feed/promotion/withdrawal públicos.
+
 ## 1. Preparación de versión
 
 - [ ] `main` está limpia y sincronizada con `origin/main`; no hay WIP ajeno incluido.
@@ -12,7 +14,7 @@ Este checklist es un gate, no una guía opcional. Un release permanece **draft**
 - [ ] `LSMinimumSystemVersion` y ambas slices declaran macOS 13.0 o posterior.
 - [ ] Existe `docs/releases/<tag>.md` sin secretos, códigos reales, PII ni compatibilidad no demostrada.
 - [ ] `CHANGELOG.md`, `README.md`, `PRIVACY.md`, `SECURITY.md` y limitaciones están actualizados.
-- [ ] Se documenta que el bundle identifier nuevo crea una identidad limpia y no migra preferencias del prototipo.
+- [ ] El candidato con actualizador conserva `mx.loo.estrobo`, contenedor, preferencias y acceso a Keychain; la migración de datos heredados y su preservación durante reemplazo se verifican con fixtures y en el gate de distribución real.
 
 ## 2. Higiene del repositorio
 
@@ -29,10 +31,11 @@ Este checklist es un gate, no una guía opcional. Un release permanece **draft**
 make mac-prototype-check
 make mac-prototype-test
 make mac-prototype-universal
-make mac-prototype-release-verify
-make mac-prototype-package
 make mac-prototype-developer-id-tools-test
+make -C prototype/EstroboMac test-update-error-recovery
 ```
+
+Estas comprobaciones locales no firman ni notarizan una release. Para el candidato actual, seguir los targets `mac-prototype-developer-id-*` del [contrato de firma](../release/signing/README.md) después de sus preflights y autorización aplicables. `mac-prototype-release-verify` y `mac-prototype-package` pertenecen al carril autosignado histórico; no se aplican al candidato con red/Sparkle y sus gates antiguos no se relajan.
 
 - [ ] Todos los comandos terminan con código 0.
 - [ ] Las pruebas usan códigos sintéticos y no inicializan Bluetooth real.
@@ -84,7 +87,10 @@ Un candidato aprobado aquí sigue sin ser un release hasta completar el DMG, los
 - [ ] El certificado encadena a Apple, su `OU` coincide con `ESTROBO_APPLE_TEAM_ID` y su digest coincide también con la variable protegida.
 - [ ] El bundle se firma como `Developer ID Application` con Hardened Runtime y `Timestamp=` seguro; `Signed Time` por sí solo no satisface el gate.
 - [ ] `TeamIdentifier`, certificado leaf, bundle ID, versión, build, ambas slices y macOS mínimo coinciden exactamente.
-- [ ] Los entitlements efectivos son exclusivamente App Sandbox + Bluetooth; no contienen red, `get-task-allow` ni excepciones de Hardened Runtime.
+- [ ] Para beta 4/manual sin actualizador, los entitlements efectivos son exclusivamente App Sandbox + Bluetooth, sin red. Para el candidato con Sparkle, el host contiene exactamente App Sandbox, Bluetooth, `com.apple.security.network.client` y `com.apple.security.temporary-exception.mach-lookup.global-name` con `mx.loo.estrobo-spks` y `mx.loo.estrobo-spki`. No se permiten servidor de red, `get-task-allow` ni excepciones de Hardened Runtime.
+- [ ] Sparkle 2.10.0 coincide con archivo/layout fijados; sólo Installer XPC, Autoupdate, Updater.app y framework se firman antes del host, con identidad/Team/timestamp coincidentes y entitlements vacíos en los componentes anidados. No hay Downloader XPC.
+- [ ] `Contents/Resources/Sparkle-LICENSE.txt` conserva exactamente los avisos oficiales completos, verificados por digest, y el inventario de terceros identifica la dependencia.
+- [ ] La raíz pública EdDSA real revisada se suministra mediante `SPARKLE_PUBLIC_ED_KEY`; fixtures públicos sintéticos sólo prueban los tests y nunca sustituyen la confianza de distribución. Configuración del bundle, preflight del candidato y verificación final conservan el gate de raíz obligatoria.
 - [ ] El ZIP temporal de notarización se envía una sola vez; se conserva el Submission ID y un timeout nunca dispara un reenvío automático.
 - [ ] Un timeout conserva el ZIP exacto enviado y el submit result bajo la protección correspondiente al carril; la recuperación reanuda el mismo Submission ID sin ejecutar otro `submit`.
 - [ ] Submit, wait y log tienen el mismo Submission ID; Apple devuelve `Accepted` y el digest del log coincide con el ZIP enviado.

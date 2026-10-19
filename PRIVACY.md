@@ -2,9 +2,9 @@
 
 <p align="center"><strong>Español</strong> &nbsp;·&nbsp; <a href="PRIVACY.en.md">English</a></p>
 
-Estrobo controla un transmisor por Bluetooth de forma local. La aplicación no crea cuentas, no tiene backend, no solicita acceso de red, no incorpora analítica ni telemetría y no envía datos a Internet.
+Estrobo controla el transmisor por Bluetooth de forma local, sin cuentas, backend de usuarios, anuncios, analítica ni telemetría. La beta pública macOS `0.1.0-beta.4` y los candidatos iOS/iPadOS no tienen un actualizador ni flujo de red de la app. La nueva implementación macOS añade conexiones exclusivamente para comprobar y descargar actualizaciones; todavía no se ha publicado una release que las incorpore.
 
-Esta política describe el candidato de desarrollo compartido para macOS, iOS y iPadOS. La beta pública macOS `0.1.0-beta.4` conserva el Código del radio sin cifrar en preferencias sólo por opt-in; la migración a Keychain descrita aquí pertenece al candidato y aún no es una nueva release pública. No hay una distribución pública iOS o iPadOS. El navegador, GitHub, el sistema operativo de Apple y cualquier otra app que uses para descargar, reportar o diagnosticar tienen sus propias prácticas; no forman parte del tráfico de Estrobo.
+Esta política describe el candidato de desarrollo compartido para macOS, iOS y iPadOS. La beta pública macOS `0.1.0-beta.4` conserva el Código del radio sin cifrar en preferencias sólo por opt-in; la migración a Keychain descrita aquí pertenece al candidato y aún no es una nueva release pública. No hay una distribución pública iOS o iPadOS. La raíz de firma de producción, el catálogo público y los gates de distribución del actualizador siguen pendientes. El navegador, GitHub y el sistema operativo de Apple tienen sus propias prácticas; abrir un enlace o una validación propia de macOS es distinto de una solicitud del actualizador.
 
 ## Datos que Estrobo guarda localmente
 
@@ -15,6 +15,7 @@ Dentro del contenedor sandbox de la app pueden conservarse:
 - snapshots A0/A1 deseados y últimos baselines locales confirmados;
 - presets con nombre;
 - identidad visual de los grupos;
+- en la nueva implementación macOS, preferencias de búsqueda/descarga de actualizaciones, última comprobación exitosa, próximo intento automático y cache del DMG con la identidad de su oferta; la confirmación de instalación no se guarda como autorización permanente;
 - puntos de recuperación con UUID del radio, grupo y snapshot A1 anterior;
 - si tú lo eliges, nombre y UUID CoreBluetooth del radio recordado; su Código del radio se conserva por separado en Keychain.
 
@@ -29,7 +30,7 @@ El Código del radio es un parámetro local de compatibilidad/proximidad de seis
 - Se guarda en el Keychain local como un elemento exclusivo del dispositivo que sólo está disponible mientras el dispositivo está desbloqueado. La sincronización de Keychain está desactivada.
 - El nombre recordado y el UUID CoreBluetooth pueden guardarse en las preferencias de la app, pero el Código del radio no forma parte de ese registro de metadatos.
 - Si Estrobo encuentra un registro plaintext compatible de un beta anterior, migra cada código a Keychain y verifica el resultado antes de eliminar el registro anterior. Una migración incompleta falla cerrado y queda disponible para reintentarse.
-- Nunca se envía a Internet porque Estrobo no tiene flujo de red.
+- Nunca se envía a Internet: las solicitudes de actualización excluyen el Código del radio y los datos de sesión, aunque la nueva app macOS tenga acceso de red.
 - No reutilices un PIN personal.
 - **Olvidar** elimina el nombre, UUID y código guardados y limpia el valor visible.
 - Cancelar, fallar o desconectar limpia el código de la sesión en memoria según el flujo correspondiente.
@@ -44,9 +45,17 @@ Los comandos viajan directamente entre el iPhone, iPad o Mac y el transmisor. Es
 
 ## Red, analítica y telemetría
 
-La app no tiene flujo de red cliente o servidor. Su código no incorpora un SDK de analítica, anuncios, crash reporting remoto ni telemetría.
+El control Bluetooth no necesita Internet. La beta pública macOS `0.1.0-beta.4` y los candidatos iOS/iPadOS conservan su comportamiento sin red de la app. El actualizador pertenece sólo a la nueva implementación macOS; no actualiza iOS/iPadOS ni añade HTTP al núcleo del radio.
 
-Al abrir enlaces de documentación, GitHub Releases, Issues o Private Vulnerability Reporting, la acción ocurre fuera de Estrobo en tu navegador/GitHub.
+En una futura release macOS configurada para actualizar, la búsqueda y descarga automáticas empiezan apagadas. Puedes activarlas por separado en Actualizaciones; descargar automáticamente requiere buscar automáticamente. Una búsqueda manual contacta los servicios aunque no hayas activado automatismos y no cambia tus preferencias. Desactivar la búsqueda detiene las tareas automáticas pendientes; el control local sigue disponible sin Internet.
+
+Las comprobaciones contactan `estrobo.app`; los DMG se obtienen de releases exactas de GitHub. Esos servicios y sus proveedores reciben datos técnicos normales, como IP, User-Agent y datos de la conexión HTTPS, y pueden conservar logs conforme a sus propias prácticas. El feed utiliza las redirecciones HTTPS estándar de Sparkle: no hay una allowlist de dominios que vete cada origen del feed antes de contactarlo. Se mantienen HTTPS/ATS y la verificación obligatoria del catálogo y archivo firmados; el tráfico público real sigue siendo un gate de distribución pendiente.
+
+Las solicitudes no incluyen Código del radio, payloads de autenticación, UUID, nombres de transmisores, presets, snapshots, perfiles ni identificadores del estudio. El perfilado de Sparkle está desactivado. No hay analítica, anuncios, crash reporting remoto ni telemetría. Las notas se incluyen como texto firmado en español/inglés, sin descarga automática de páginas, imágenes, scripts o recursos externos.
+
+Instalar y reiniciar siempre requiere confirmar una oferta concreta con el transmisor desconectado y el trabajo local en un estado seguro. Descargar, cerrar la app o reiniciar el Mac no concede ese permiso. La actualización conserva la identidad de la app y utiliza la persistencia/migración existente; nunca borra recuperación para facilitar una instalación ni conecta al radio por haber actualizado. Su validación real entre builds firmados/notarizados permanece pendiente.
+
+Al abrir enlaces de documentación, descarga manual, Issues o Private Vulnerability Reporting, la acción ocurre explícitamente en tu navegador/GitHub y sigue las prácticas de esos servicios.
 
 ## Logs, diagnósticos y reportes
 

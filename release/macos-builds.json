@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "allocations": [
+    {
+      "build": 1,
+      "version": "0.1.0",
+      "channel": "beta",
+      "tag": "v0.1.0-beta.1",
+      "status": "historical"
+    },
+    {
+      "build": 2,
+      "version": "0.1.0",
+      "channel": "beta",
+      "tag": "v0.1.0-beta.2",
+      "status": "historical"
+    },
+    {
+      "build": 3,
+      "version": "0.1.0",
+      "channel": "beta",
+      "tag": "v0.1.0-beta.3",
+      "status": "historical"
+    },
+    {
+      "build": 4,
+      "version": "0.1.0",
+      "channel": "beta",
+      "tag": "v0.1.0-beta.4",
+      "status": "historical"
+    },
+    {
+      "build": 5,
+      "version": "0.1.0",
+      "channel": "beta",
+      "tag": "v0.1.0-beta.5",
+      "status": "allocated-unpublished",
+      "allocatedOn": "2026-10-18",
+      "evidence": "All local/remote refs with product Info.plist and GitHub Releases (including draft beta.1) inspected; maximum assigned product build 4. Synthetic Sparkle fixtures are not distribution allocations."
+    }
+  ]
+}
