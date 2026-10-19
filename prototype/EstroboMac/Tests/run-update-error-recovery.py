@@ -15,7 +15,7 @@ import uuid
 HERE = pathlib.Path(__file__).resolve().parent
 SOURCES = HERE.parent / 'Sources'
 SPARKLE = pathlib.Path(os.environ.get('SPARKLE_DIR', HERE.parents[2] / '.build/Sparkle/2.10.0'))
-ENV = dict(os.environ, DEVELOPER_DIR=os.environ.get('DEVELOPER_DIR', '/Applications/Xcode-beta.app/Contents/Developer'))
+ENV = dict(os.environ)
 
 
 def main():

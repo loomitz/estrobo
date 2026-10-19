@@ -92,7 +92,7 @@ class CatalogTests(unittest.TestCase):
             public = temporary / 'public'
             keydir = temporary / 'keys'
             keydir.mkdir()
-            environment = dict(os.environ, DEVELOPER_DIR=os.environ.get('DEVELOPER_DIR', '/Applications/Xcode-beta.app/Contents/Developer'))
+            environment = dict(os.environ)
             subprocess.run(['xcrun', 'swift', str(ROOT / 'prototype/MacUpdaterConsentSpike/fixture-key.swift'), str(keydir)], check=True, env=environment)
             tools = pathlib.Path(os.environ.get('SPARKLE_DIR', str(ROOT / '.build/Sparkle/2.10.0')))
             offer = {'build': '5', 'version': '0.1.0', 'channel': 'beta', 'tag': 'v0.1.0-beta.5', 'minimumMacOSVersion': '13.0', 'architectures': ['arm64', 'x86_64'], 'releaseNotes': {'en':'Fixture only', 'es':'Sólo fixture'}, 'archive': {'url': 'https://github.com/loomitz/estrobo/releases/download/v0.1.0-beta.5/estrobo-v0.1.0-beta.5-macos-universal.dmg', 'length': 123, 'sha256': 'a'*64, 'edSignature': base64.b64encode(b'x'*64).decode()}}

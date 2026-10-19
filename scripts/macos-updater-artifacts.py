@@ -245,7 +245,7 @@ def sign(app, identity, entitlements, keychain=None):
 
 def verify_signatures(app, distribution=False, team=None, certificate=None):
     verify_bundle(app, distribution)
-    environment = dict(os.environ, DEVELOPER_DIR=os.environ.get('DEVELOPER_DIR', '/Applications/Xcode-beta.app/Contents/Developer'))
+    environment = dict(os.environ)
     for component in components(app):
         subprocess.run(['/usr/bin/codesign', '--verify', '--strict', str(component)], check=True)
         details = subprocess.run(['/usr/bin/codesign', '-dvvv', str(component)], capture_output=True, text=True, check=True).stderr

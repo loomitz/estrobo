@@ -14,3 +14,9 @@ Evidence:
 - Local macOS 27.0.1, full Xcode beta: `make -C prototype/EstroboMac test-update-presentation` passed using the verified Sparkle 2.10.0 cache. Radio transport and update service are controlled fixtures.
 
 The normal protected PR checks will validate the final commit on both native architectures. These are source/fixture checks, not proof of a notarized production upgrade or physical Bluetooth smoke.
+
+## Selected Xcode portability
+
+The next full ARM run passed presentation, composition and product scenes, then exposed a separate tool configuration bug: `run-update-error-recovery.py` substituted this workstation's `/Applications/Xcode-beta.app/Contents/Developer` when `DEVELOPER_DIR` was absent. GitHub's selected full Xcode is installed elsewhere. The same fallback existed in signature verification and its narrow fixture drivers.
+
+These six tool environments now inherit the caller's environment. Explicit `DEVELOPER_DIR` remains respected, and an unset value allows `xcrun` to use the selected Xcode. No machine-wide Xcode selection is changed. The failing evidence is [full ARM run 39197097070](https://github.com/loomitz/estrobo/actions/runs/39197097070), after the native confirmation fix had passed.

@@ -28,7 +28,7 @@ threading.Thread(target=server.serve_forever, daemon=True).start()
 try:
     with tempfile.TemporaryDirectory(prefix='estrobo-foundation-policy-') as temporary:
         binary = pathlib.Path(temporary) / 'levers'
-        subprocess.run(['xcrun', 'clang', '-fobjc-arc', '-framework', 'Foundation', str(root / 'levers.m'), '-o', str(binary)], check=True, env=dict(os.environ, DEVELOPER_DIR=os.environ.get('DEVELOPER_DIR', '/Applications/Xcode-beta.app/Contents/Developer')))
+        subprocess.run(['xcrun', 'clang', '-fobjc-arc', '-framework', 'Foundation', str(root / 'levers.m'), '-o', str(binary)], check=True, env=dict(os.environ))
         results = {}
         for mode in ['default-protocol', 'shared-protocol', 'explicit-protocol', 'default-cache', 'cache-only']:
             result = subprocess.run([str(binary), mode, f'http://127.0.0.1:{server.server_port}/{mode}'], capture_output=True, text=True, timeout=10)

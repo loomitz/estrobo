@@ -72,7 +72,7 @@ class ArtifactTests(unittest.TestCase):
             (app / 'Contents/MacOS').mkdir(parents=True)
             source = temporary / 'main.c'
             source.write_text('int main(void) { return 0; }')
-            environment = dict(os.environ, DEVELOPER_DIR=os.environ.get('DEVELOPER_DIR', '/Applications/Xcode-beta.app/Contents/Developer'))
+            environment = dict(os.environ)
             subprocess.run(['xcrun', 'clang', '-arch', 'arm64', '-arch', 'x86_64', '-mmacosx-version-min=13.0', str(source), '-o', str(app / 'Contents/MacOS/estrobo')], check=True, env=environment)
             shutil.copy2(ROOT / 'prototype/EstroboMac/Info.plist', app / 'Contents/Info.plist')
             self.assertEqual(invoke('configure', '--app', app, '--version', '0.1.0', '--build', '5', '--channel', 'stable', '--tag', 'v0.1.0+build.5').returncode, 0)
