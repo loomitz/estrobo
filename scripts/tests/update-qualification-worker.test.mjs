@@ -4,7 +4,7 @@ import {readFile} from "node:fs/promises";
 
 const template = await readFile(new URL("../macos-update-qualification-worker.mjs", import.meta.url), "utf8");
 async function worker(expiry) {
-  return (await import("data:text/javascript;base64," + Buffer.from(template.replace("__ESTROBO_QUALIFICATION_EXPIRES_AT__", expiry)).toString("base64"))).default;
+  return (await import("data:text/javascript;base64," + Buffer.from(template.replace("__ESTROBO_QUALIFICATION_EXPIRES_AT__", expiry).replace("__ESTROBO_QUALIFICATION_FEED_BASE64__", Buffer.from("signed bytes").toString("base64"))).toString("base64"))).default;
 }
 test("qualification requires exact edge IP, live policy and GET/HEAD; never trusts forwarded client headers", async () => {
   const gate = await worker(new Date(Date.now() + 60000).toISOString());
@@ -16,7 +16,7 @@ test("qualification requires exact edge IP, live policy and GET/HEAD; never trus
     assert.equal(response.headers.get("Cache-Control"), "private, no-store");
     if (method === "GET" && expected === 200) assert.equal(await response.text(), "signed bytes");
   }
-  assert.equal(fetched, 2);
+  assert.equal(fetched, 0); // The qualified feed has no static asset fallback.
   const request = new Request("https://estrobo.app/updates/macos/appcast.xml", {headers: {"CF-Connecting-IP": "192.0.2.1"}});
   assert.equal((await gate.fetch(request, {...env, ESTROBO_UPDATER_QUALIFICATION_IPS: ""})).status, 404);
   assert.equal((await (await worker("2000-01-01T00:00:00Z")).fetch(request, env)).status, 404);

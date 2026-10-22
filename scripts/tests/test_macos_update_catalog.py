@@ -45,7 +45,8 @@ class CatalogTests(unittest.TestCase):
             published.write_text(json.dumps({'revision': 0, 'withdrawnBuilds': []}))
             public = source / 'public'
             module.site(source, public, published)
-            self.assertEqual((public / 'updates/macos/appcast.xml').read_bytes(), (source / 'appcast.xml').read_bytes())
+            self.assertFalse((public / 'updates/macos/appcast.xml').exists())
+            self.assertIn(base64.b64encode((source / 'appcast.xml').read_bytes()).decode(), (public / '_worker.js').read_text())
             self.assertIn(policy['expiresAt'], (public / '_worker.js').read_text())
             self.assertEqual(json.loads((public / '_routes.json').read_text())['exclude'], ['/updates/macos/state.json'])
             self.assertEqual(json.loads((public / 'updates/macos/state.json').read_text())['revision'], 1)

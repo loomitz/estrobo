@@ -238,7 +238,10 @@ def site(source, public, published=None):
     qualification = approval.get('qualification')
     if qualification:
         template = (ROOT / 'scripts/macos-update-qualification-worker.mjs').read_text()
-        worker.write_text(template.replace('__ESTROBO_QUALIFICATION_EXPIRES_AT__', qualification['expiresAt']))
+        worker.write_text(template.replace('__ESTROBO_QUALIFICATION_EXPIRES_AT__', qualification['expiresAt']).replace('__ESTROBO_QUALIFICATION_FEED_BASE64__', base64.b64encode(target.read_bytes()).decode()))
+        # Do not leave static feed bytes that a provider fail-open quota fallback
+        # or a normalized alternate asset path could expose without the gate.
+        target.unlink()
         # Public state is essential: hiding it would make revision 1 look like
         # an unconfigured bootstrap to another build and allow history erasure.
         routes.write_text(json.dumps({'version': 1, 'include': ['/updates/macos/*'], 'exclude': ['/updates/macos/state.json']}, indent=2)+'\n')

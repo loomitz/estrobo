@@ -65,6 +65,11 @@ Missing configuration, a different address, unsupported methods or expiry
 returns 404 with `private, no-store`. Allowed feed responses also use
 `private, no-store` and preserve exact signed bytes.
 
+Qualified feed bytes are embedded in the Worker, not uploaded as a static
+appcast asset. A provider fail-open quota fallback therefore cannot serve that
+feed without the gate. Set Pages Functions routing to fail closed as well, and
+verify the deployed output has no static `updates/macos/appcast.xml`.
+
 `state.json` remains public and revalidated so another build cannot mistake a
 hidden feed for a fresh bootstrap and erase revision/withdrawal history.
 Worker routes cover `/updates/macos/*` except this state file. The rest of the
