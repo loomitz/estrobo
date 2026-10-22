@@ -84,15 +84,50 @@ def validate_catalog(catalog, withdrawals):
     return retired
 
 
-def validate_feed(feed, catalog):
+def policy_text(policy):
+    return json.dumps(policy, sort_keys=True, separators=(',', ':'))
+
+
+def validate_qualification(policy, catalog, active=False):
+    if not isinstance(policy, dict) or set(policy) != {'purpose', 'authorizedAt', 'expiresAt', 'authorizationSHA256', 'build', 'tag', 'commit', 'dmgSHA256'}:
+        raise ValueError('Malformed qualification policy')
+    if policy['purpose'] != 'official-updater-qualification':
+        raise ValueError('Invalid qualification purpose')
+    for field, size in [('authorizationSHA256', 64), ('commit', 40), ('dmgSHA256', 64)]:
+        if not isinstance(policy[field], str) or not re.fullmatch('[0-9a-f]{'+str(size)+'}', policy[field]):
+            raise ValueError('Invalid qualification identity')
+    start = datetime.datetime.fromisoformat(policy['authorizedAt'])
+    end = datetime.datetime.fromisoformat(policy['expiresAt'])
+    if start.utcoffset() != datetime.timedelta(0) or end.utcoffset() != datetime.timedelta(0) or not datetime.timedelta(0) < end-start <= datetime.timedelta(hours=48):
+        raise ValueError('Qualification must have UTC dates and last at most 48 hours')
+    now = datetime.datetime.now(datetime.timezone.utc)
+    if active and (start > now or end <= now):
+        raise ValueError('Qualification is not active or has expired')
+    if len(catalog['offers']) != 1:
+        raise ValueError('Qualification requires exactly one beta offer')
+    offer = catalog['offers'][0]
+    if offer['channel'] != 'beta' or any(str(offer[field]) != policy[field] for field in ('build', 'tag')) or offer['archive']['sha256'] != policy['dmgSHA256']:
+        raise ValueError('Qualification differs from exact beta archive')
+
+
+def validate_feed(feed, catalog, qualification=None):
     data = feed.read_bytes()
     if b'<!DOCTYPE' in data.upper() or b'<!ENTITY' in data.upper():
         raise ValueError('External XML declarations are forbidden')
-    if b'sparkle:edSignature=' not in data:
+    # Empty signed feeds are necessary to withdraw the last offer. Their
+    # signature is the feed footer, not an absent enclosure attribute.
+    if b'sparkle:edSignature=' not in data and b'<!-- sparkle-signatures:\nedSignature: ' not in data:
         raise ValueError('Signed feed marker missing')
     rss = XML.fromstring(data)
     if rss.tag != 'rss' or rss.find('channel') is None:
         raise ValueError('Invalid appcast XML')
+    markers = rss.findall('./channel/' + ESTROBO + 'qualification')
+    if qualification is not None:
+        validate_qualification(qualification, catalog)
+        if len(markers) != 1 or markers[0].text != policy_text(qualification) or markers[0].attrib or len(markers[0]):
+            raise ValueError('Signed qualification policy differs from catalog approval')
+    elif markers:
+        raise ValueError('Signed qualification cannot become an unrestricted catalog')
     items = rss.findall('./channel/item')
     if len(items) != len(catalog['offers']):
         raise ValueError('Feed does not match approved catalog item count')
@@ -133,7 +168,7 @@ def validate_approved(source):
     catalog = read_json(source / 'catalog.json')
     withdrawals = read_json(source / 'withdrawals.json')
     retired = validate_catalog(catalog, withdrawals)
-    validate_feed(source / 'appcast.xml', catalog)
+    validate_feed(source / 'appcast.xml', catalog, approval.get('qualification'))
     return approval, retired
 
 
@@ -199,6 +234,20 @@ def site(source, public, published=None):
         state_target.write_text(json.dumps({'revision':approval['revision'], 'withdrawnBuilds':sorted(retired), 'feedSHA256':approval['feedSHA256']}, indent=2)+'\n')
     public.mkdir(parents=True, exist_ok=True)
     (public / '_headers').write_text(HEADERS + '\n/updates/macos/state.json\n  Cache-Control: no-cache, max-age=0, must-revalidate\n  Content-Type: application/json; charset=utf-8\n')
+    worker, routes = public / '_worker.js', public / '_routes.json'
+    qualification = approval.get('qualification')
+    if qualification:
+        template = (ROOT / 'scripts/macos-update-qualification-worker.mjs').read_text()
+        worker.write_text(template.replace('__ESTROBO_QUALIFICATION_EXPIRES_AT__', qualification['expiresAt']).replace('__ESTROBO_QUALIFICATION_FEED_BASE64__', base64.b64encode(target.read_bytes()).decode()))
+        # Do not leave static feed bytes that a provider fail-open quota fallback
+        # or a normalized alternate asset path could expose without the gate.
+        target.unlink()
+        # Public state is essential: hiding it would make revision 1 look like
+        # an unconfigured bootstrap to another build and allow history erasure.
+        routes.write_text(json.dumps({'version': 1, 'include': ['/updates/macos/*'], 'exclude': ['/updates/macos/state.json']}, indent=2)+'\n')
+    else:
+        for path in (worker, routes):
+            path.unlink(missing_ok=True)
 
 
 def signing_tools(directory, account, expected_key):
@@ -211,7 +260,7 @@ def signing_tools(directory, account, expected_key):
     return directory / 'bin/sign_update'
 
 
-def sign_feed(output, catalog, withdrawals, directory, account, base_revision, base_feed):
+def sign_feed(output, catalog, withdrawals, directory, account, base_revision, base_feed, qualification=None):
     if output.exists():
         raise ValueError('Candidate output must be a new directory')
     retired = validate_catalog(catalog, withdrawals)
@@ -220,6 +269,9 @@ def sign_feed(output, catalog, withdrawals, directory, account, base_revision, b
     rss = XML.Element('rss', {'version':'2.0', 'xmlns:sparkle': SPARKLE[1:-1], 'xmlns:estrobo': ESTROBO[1:-1]})
     channel = XML.SubElement(rss, 'channel')
     XML.SubElement(channel, 'title').text = 'Estrobo macOS updates'
+    if qualification:
+        validate_qualification(qualification, catalog, active=True)
+        XML.SubElement(channel, 'estrobo:qualification').text = policy_text(qualification)
     for offer in sorted(catalog['offers'], key=lambda offer:int(offer['build']), reverse=True):
         item = XML.SubElement(channel, 'item')
         XML.SubElement(item, 'title').text = offer['version']
@@ -241,8 +293,10 @@ def sign_feed(output, catalog, withdrawals, directory, account, base_revision, b
     approval = {'schemaVersion':1, 'state':'candidate', 'baseRevision':base_revision, 'baseFeedSHA256':base_feed,
                 'publicKey':key, 'verifiedWith':'Sparkle 2.10.0 sign_update', 'feedSHA256':sha(feed),
                 'catalogSHA256':sha(output / 'catalog.json'), 'withdrawalsSHA256':sha(output / 'withdrawals.json')}
+    if qualification:
+        approval['qualification'] = qualification
     (output / 'candidate.json').write_text(json.dumps(approval, indent=2)+'\n')
-    validate_feed(feed, catalog)
+    validate_feed(feed, catalog, qualification)
     print(f'Signed local candidate only: {output}; feed SHA-256 {approval["feedSHA256"]}')
 
 
@@ -256,7 +310,7 @@ def source_state(source):
     return 0, None
 
 
-def prepare(args):
+def prepare(args, qualification=False):
     manifest = read_json(args.manifest)
     product, origin = manifest['product'], manifest['source']
     key = os.environ.get('SPARKLE_PUBLIC_ED_KEY')
@@ -265,6 +319,8 @@ def prepare(args):
     artifacts.validate_release_metadata(product['version'], product['build'], channel, origin['tag'])
     notes = {'en': args.notes_en.read_text(encoding='utf-8'), 'es': args.notes_es.read_text(encoding='utf-8')}
     validate_consumer_limits(args.archive.stat().st_size, notes)
+    if not qualification and read_json(args.source / 'approval.json').get('qualification'):
+        raise ValueError('Withdraw the qualification offer before preparing a public release')
     # Reuse the canonical final-approval verifier, preserving source/CI/notary/
     # exact tuple and physical smoke requirements. Catalog signing adds no authority.
     environment = dict(os.environ, DMG=str(args.archive.resolve()), MANIFEST=str(args.manifest.resolve()), CHECKSUMS=str(args.checksums.resolve()),
@@ -276,7 +332,26 @@ def prepare(args):
                        APP_VERIFY_SCRIPT=str(ROOT / 'scripts/verify-macos-developer-id-release.sh'),
                        DMG_VERIFY_SCRIPT=str(ROOT / 'scripts/verify-macos-developer-id-dmg.sh'),
                        APPROVED_TAG=origin['tag'], APPROVED_COMMIT=origin['commit'], APPROVED_DMG_SHA256=manifest['artifact']['sha256'], PHYSICAL_SMOKE_STATUS='passed')
-    subprocess.run([str(ROOT / 'scripts/finalize-local-developer-id-release-approval.sh'), 'verify'], env=environment, check=True)
+    policy = None
+    if qualification:
+        # An isolated production-identity test is deliberately separate from
+        # release approval. Never manufacture a passed physical smoke.
+        if channel != 'beta' or manifest['verification']['physicalSmoke'] != 'pending' or 'localReleaseApproval' in manifest['verification']:
+            raise ValueError('Qualification requires an honestly pending beta candidate')
+        receipt = args.authorization
+        if receipt.stat().st_uid != os.getuid() or receipt.stat().st_mode & 0o077:
+            raise ValueError('Qualification authorization must be an owner-only local file')
+        policy = read_json(receipt)
+        if policy.get('commit') != origin['commit'] or policy.get('dmgSHA256') != manifest['artifact']['sha256']:
+            raise ValueError('Qualification authorization names different source/archive bytes')
+        policy['authorizationSHA256'] = sha(receipt)
+        if subprocess.check_output(['/usr/bin/git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip() != origin['commit']:
+            raise ValueError('Qualification manifest source differs from the verified checkout')
+        environment.pop('PHYSICAL_SMOKE_STATUS')
+        subprocess.run([str(ROOT / 'scripts/verify-local-developer-id-release-source.sh')], env=environment, check=True)
+        subprocess.run([str(ROOT / 'scripts/verify-macos-developer-id-dmg.sh')], env=environment, check=True)
+    else:
+        subprocess.run([str(ROOT / 'scripts/finalize-local-developer-id-release-approval.sh'), 'verify'], env=environment, check=True)
     if sha(args.archive) != manifest['artifact']['sha256'] or args.archive.stat().st_size != manifest['artifact']['sizeBytes']:
         raise ValueError('Final DMG bytes changed after approval')
     tool = signing_tools(args.sparkle_dir, args.account, key)
@@ -293,7 +368,7 @@ def prepare(args):
         raise ValueError('Build already assigned in the immutable catalog; allocate a higher build')
     catalog['offers'].append(offer)
     revision, feed = source_state(args.source)
-    sign_feed(args.output, catalog, withdrawals, args.sparkle_dir, args.account, revision, feed)
+    sign_feed(args.output, catalog, withdrawals, args.sparkle_dir, args.account, revision, feed, policy)
 
 
 def withdraw(args):
@@ -306,7 +381,8 @@ def withdraw(args):
         raise ValueError('Withdrawn build is not an existing approved offer')
     catalog['offers'] = [offer for offer in catalog['offers'] if str(offer['build']) != args.build]
     withdrawals['withdrawals'].append({'build':args.build, 'reason':args.reason, 'withdrawnAt':datetime.datetime.now(datetime.timezone.utc).isoformat()})
-    sign_feed(args.output, catalog, withdrawals, args.sparkle_dir, args.account, revision, feed)
+    previous_policy = read_json(args.source / 'approval.json').get('qualification')
+    sign_feed(args.output, catalog, withdrawals, args.sparkle_dir, args.account, revision, feed, previous_policy if catalog['offers'] else None)
 
 
 def approve(args):
@@ -326,7 +402,10 @@ def approve(args):
     previous_records = read_json(args.source / 'withdrawals.json')['withdrawals']
     if withdrawals['withdrawals'][:len(previous_records)] != previous_records or not previous_retired.issubset(retired):
         raise ValueError('Withdrawal history is append-only')
-    validate_feed(args.candidate / 'appcast.xml', catalog)
+    qualification = candidate.get('qualification')
+    validate_feed(args.candidate / 'appcast.xml', catalog, qualification)
+    if qualification:
+        validate_qualification(qualification, catalog, active=True)
     key = os.environ.get('SPARKLE_PUBLIC_ED_KEY')
     if candidate['publicKey'] != key:
         raise ValueError('Candidate key differs from approved external root')
@@ -367,16 +446,18 @@ def main():
     build.add_argument('--source', type=pathlib.Path, default=ROOT / 'release/macos-updates')
     build.add_argument('--public', type=pathlib.Path, default=ROOT / 'website/public')
     build.add_argument('--published-state', type=pathlib.Path, help='Exact freshly retrieved public state, for offline build validation')
-    for name in ('prepare', 'withdraw', 'approve'):
+    for name in ('prepare', 'prepare-qualification', 'withdraw', 'approve'):
         command = commands.add_parser(name)
         command.add_argument('--source', type=pathlib.Path, default=ROOT / 'release/macos-updates')
         command.add_argument('--sparkle-dir', type=pathlib.Path, default=pathlib.Path(os.environ.get('SPARKLE_DIR', ROOT / '.build/Sparkle/2.10.0')))
         command.add_argument('--account', required=True, help='Existing maintainer Keychain signing account (no generation/export)')
-        if name in ('prepare', 'withdraw'):
+        if name in ('prepare', 'prepare-qualification', 'withdraw'):
             command.add_argument('--output', type=pathlib.Path, required=True)
-        if name == 'prepare':
+        if name in ('prepare', 'prepare-qualification'):
             for field in ('archive', 'manifest', 'checksums', 'notes-en', 'notes-es'):
                 command.add_argument('--'+field, type=pathlib.Path, required=True)
+        if name == 'prepare-qualification':
+            command.add_argument('--authorization', type=pathlib.Path, required=True, help='Owner-only exact source/archive authorization, UTC expiry within 48 hours; not final release approval')
         if name == 'withdraw':
             command.add_argument('--build', required=True)
             command.add_argument('--reason', required=True)
@@ -388,6 +469,8 @@ def main():
         site(args.source, args.public, args.published_state)
     elif args.command == 'prepare':
         prepare(args)
+    elif args.command == 'prepare-qualification':
+        prepare(args, qualification=True)
     elif args.command == 'withdraw':
         withdraw(args)
     elif args.command == 'approve':

@@ -44,3 +44,5 @@ DerivedData/
 
 # Generated from the reviewed macOS update source during website build
 /website/public/updates/macos/
+/website/public/_worker.js
+/website/public/_routes.json

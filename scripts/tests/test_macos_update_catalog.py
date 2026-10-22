@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Approved catalog/site boundary: exact signed bytes and permanent withdrawals."""
 import hashlib
+import datetime
+import importlib.util
 import base64
 import os
 import plistlib
@@ -15,6 +17,60 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 TOOL = ROOT / 'scripts/macos-update-catalog.py'
 
 class CatalogTests(unittest.TestCase):
+    def test_qualification_policy_is_signed_and_cannot_be_removed_or_extended(self):
+        spec = importlib.util.spec_from_file_location('catalog_qualification_test', TOOL)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temporary:
+            source = pathlib.Path(temporary)
+            write_catalog_fixture(source, length=123, en='Fixture', es='Fixture')
+            catalog = json.loads((source / 'catalog.json').read_text())
+            now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+            policy = {'purpose': 'official-updater-qualification', 'authorizedAt': now.isoformat(),
+                      'expiresAt': (now + datetime.timedelta(hours=24)).isoformat(),
+                      'authorizationSHA256': 'a' * 64, 'build': '5', 'tag': 'v0.1.0-beta.5',
+                      'commit': 'b' * 40, 'dmgSHA256': 'a' * 64}
+            module.validate_qualification(policy, catalog, active=True)
+            with self.assertRaisesRegex(ValueError, 'qualification'):
+                module.validate_feed(source / 'appcast.xml', catalog, policy)
+            rss = XML.fromstring((source / 'appcast.xml').read_bytes())
+            XML.register_namespace('sparkle', module.SPARKLE[1:-1])
+            XML.SubElement(rss.find('channel'), module.ESTROBO + 'qualification').text = module.policy_text(policy)
+            (source / 'appcast.xml').write_bytes(XML.tostring(rss))
+            module.validate_feed(source / 'appcast.xml', catalog, policy)
+            approval = json.loads((source / 'approval.json').read_text())
+            approval.update(qualification=policy, feedSHA256=hashlib.sha256((source / 'appcast.xml').read_bytes()).hexdigest())
+            (source / 'approval.json').write_text(json.dumps(approval))
+            published = source / 'published.json'
+            published.write_text(json.dumps({'revision': 0, 'withdrawnBuilds': []}))
+            public = source / 'public'
+            module.site(source, public, published)
+            self.assertFalse((public / 'updates/macos/appcast.xml').exists())
+            self.assertIn(base64.b64encode((source / 'appcast.xml').read_bytes()).decode(), (public / '_worker.js').read_text())
+            self.assertIn(policy['expiresAt'], (public / '_worker.js').read_text())
+            self.assertEqual(json.loads((public / '_routes.json').read_text())['exclude'], ['/updates/macos/state.json'])
+            self.assertEqual(json.loads((public / 'updates/macos/state.json').read_text())['revision'], 1)
+            with self.assertRaisesRegex(ValueError, 'qualification'):
+                module.validate_feed(source / 'appcast.xml', catalog)
+            changed = dict(policy, expiresAt=(now + datetime.timedelta(hours=25)).isoformat())
+            with self.assertRaisesRegex(ValueError, 'qualification'):
+                module.validate_feed(source / 'appcast.xml', catalog, changed)
+            with self.assertRaisesRegex(ValueError, '48 hours'):
+                module.validate_qualification(dict(policy, expiresAt=(now + datetime.timedelta(hours=49)).isoformat()), catalog)
+            expired = dict(policy, authorizedAt=(now - datetime.timedelta(hours=25)).isoformat(), expiresAt=(now - datetime.timedelta(hours=1)).isoformat())
+            module.validate_qualification(expired, catalog)  # History remains withdrawable.
+            with self.assertRaisesRegex(ValueError, 'expired'):
+                module.validate_qualification(expired, catalog, active=True)
+
+    def test_empty_signed_feed_can_retire_the_last_offer(self):
+        spec = importlib.util.spec_from_file_location('catalog_empty_test', TOOL)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temporary:
+            feed = pathlib.Path(temporary) / 'appcast.xml'
+            feed.write_text('<rss><channel><title>Estrobo</title></channel></rss><!-- sparkle-signatures:\nedSignature: ' + base64.b64encode(bytes(64)).decode() + '\nlength: 61\n-->\n')
+            module.validate_feed(feed, {'schemaVersion': 1, 'offers': []})
+
     def test_prepare_and_approve_reject_consumer_limits_before_signing_or_public_requests(self):
         with tempfile.TemporaryDirectory(prefix='estrobo-catalog-early-bounds-test-') as temporary:
             temporary = pathlib.Path(temporary)

@@ -92,3 +92,6 @@ jobs:
 
       - name: Check and build the website
         run: pnpm build
+
+      - name: Test temporary updater feed isolation
+        run: node --test ../scripts/tests/update-qualification-worker.test.mjs
