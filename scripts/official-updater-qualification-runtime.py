@@ -104,6 +104,8 @@ def prepare():
             subprocess.run(['hdiutil', 'detach', str(mount)], check=True)
     if pathlib.Path('/Applications/estrobo.app').stat().st_uid != os.getuid():
         raise ValueError('The app must be owned by the isolated test user')
+    subprocess.run(['/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister',
+                    '-f', '/Applications/estrobo.app'], check=True)
     shutil.copyfile(ROOT/'prototype/OfficialUpdaterQualification/Fixtures/synthetic-preferences.plist', WORK/'synthetic-preferences.plist')
     plan = dict(inputs, dmgSHA256=inputs['dmg_sha256'], purpose='official-updater-qualification')
     (WORK/'plan.json').write_text(json.dumps(plan, indent=2)+'\n')

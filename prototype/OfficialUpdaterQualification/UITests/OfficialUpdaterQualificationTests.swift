@@ -28,6 +28,14 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         }
     }
 
+    override func tearDownWithError() throws {
+        guard NSUserName() == "runner", FileManager.default.fileExists(atPath: root.appendingPathComponent("plan.json").path),
+              let run = testRun, run.failureCount > 0 else { return }
+        try XCUIScreen.main.screenshot().pngRepresentation.write(to: evidence.appendingPathComponent("failure.png"))
+        try JSONSerialization.data(withJSONObject: ["passed": false, "failureCount": run.failureCount], options: .prettyPrinted)
+            .write(to: evidence.appendingPathComponent("failure.json"))
+    }
+
     private func command(_ path: String, _ arguments: [String]) throws -> String {
         let process = Process(), output = Pipe()
         process.executableURL = URL(fileURLWithPath: path); process.arguments = arguments
