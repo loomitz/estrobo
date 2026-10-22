@@ -1,0 +1,39 @@
+name: OfficialUpdaterQualification
+options:
+  bundleIdPrefix: mx.loo.estrobo.qualification
+  deploymentTarget:
+    macOS: '15.0'
+settings:
+  base:
+    CODE_SIGN_IDENTITY: '-'
+    CODE_SIGN_STYLE: Manual
+    GENERATE_INFOPLIST_FILE: YES
+    SWIFT_VERSION: '5.0'
+targets:
+  QualificationHost:
+    type: application
+    platform: macOS
+    sources: [Host]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: mx.loo.estrobo.qualification-host
+        ENABLE_APP_SANDBOX: NO
+  QualificationUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources: [UITests]
+    dependencies:
+      - target: QualificationHost
+    settings:
+      base:
+        TEST_TARGET_NAME: QualificationHost
+schemes:
+  OfficialUpdaterQualification:
+    build:
+      targets:
+        QualificationHost: all
+        QualificationUITests: [test]
+    test:
+      targets: [QualificationUITests]
+      parallelizable: false
+      randomExecutionOrder: false

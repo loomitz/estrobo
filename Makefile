@@ -172,3 +172,4 @@ mac-prototype-updater-tools-test:
 	$(MAKE) -C "$(MAC_PROTOTYPE_DIR)" sparkle-dependency SPARKLE_DIR="$(SPARKLE_DIR)"
 	SPARKLE_DIR="$(SPARKLE_DIR)" python3 scripts/tests/test_macos_updater_artifacts.py
 	SPARKLE_DIR="$(SPARKLE_DIR)" python3 scripts/tests/test_macos_update_catalog.py
+	python3 scripts/tests/test_official_updater_qualification_runtime.py

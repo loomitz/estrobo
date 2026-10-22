@@ -1,0 +1,125 @@
+name: Official macOS updater qualification
+
+on:
+  workflow_dispatch:
+    inputs:
+      bootstrap_release_id:
+        description: Exact immutable bootstrap draft release ID
+        type: string
+        default: '416881043'
+        required: true
+      candidate_release_id:
+        description: Exact signed/notarized build 6 release ID
+        type: string
+        required: true
+      source_sha:
+        description: Exact protected source commit recorded in build 6
+        type: string
+        required: true
+      dmg_sha256:
+        description: Final stapled build 6 DMG SHA-256
+        type: string
+        required: true
+      manifest_sha256:
+        description: Exact honestly pending build 6 manifest SHA-256
+        type: string
+        required: true
+      feed_sha256:
+        description: Exact locally signed bounded qualification feed SHA-256
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: official-updater-qualification
+  cancel-in-progress: false
+
+jobs:
+  runtime:
+    name: Official update (${{ matrix.arch }})
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    env:
+      SPARKLE_PUBLIC_ED_KEY: ${{ vars.ESTROBO_SPARKLE_PUBLIC_ED_KEY }}
+      QUALIFICATION_INPUT_JSON: ${{ toJSON(inputs) }}
+      EXPECTED_ARCH: ${{ matrix.arch }}
+    steps:
+      - name: Check out trusted test harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Verify disposable native host and install pinned XcodeGen
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = "$EXPECTED_ARCH"
+          test "$HOME" = /Users/runner
+          test ! -e /Applications/estrobo.app
+          xcodebuild -version
+          archive="$RUNNER_TEMP/xcodegen.zip"
+          curl --fail --location --silent --show-error --retry 3 \
+            https://github.com/yonaskolb/XcodeGen/releases/download/2.46.0/xcodegen.zip --output "$archive"
+          echo "4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806  $archive" | shasum -a 256 -c -
+          ditto -x -k "$archive" "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+
+      - name: Download and verify exact release tuples; install bootstrap
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/official-updater-qualification-runtime.py prepare
+
+      - name: Expose only ephemeral test routing metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: qualification-host-${{ matrix.arch }}-${{ github.run_id }}
+          path: ~/estrobo-qualification/runner-metadata.json
+          if-no-files-found: error
+          retention-days: 2
+
+      - name: Compile native UI test host
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodegen generate --spec prototype/OfficialUpdaterQualification/project.yml
+          xcodebuild -project prototype/OfficialUpdaterQualification/OfficialUpdaterQualification.xcodeproj \
+            -scheme OfficialUpdaterQualification -configuration Debug -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/QualificationBuild" build-for-testing CODE_SIGN_IDENTITY=-
+
+      - name: Wait for the separately promoted official feed
+        run: python3 scripts/official-updater-qualification-runtime.py wait-feed
+
+      - name: Run native cancellation, recovery and real installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project prototype/OfficialUpdaterQualification/OfficialUpdaterQualification.xcodeproj \
+            -scheme OfficialUpdaterQualification -configuration Debug -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/QualificationBuild" \
+            -resultBundlePath "$RUNNER_TEMP/Qualification.xcresult" test-without-building CODE_SIGN_IDENTITY=-
+
+      - name: Verify the installed official identity, signature and notarization
+        run: python3 scripts/official-updater-qualification-runtime.py verify-installed
+
+      - name: Preserve scoped screenshots and result metadata only
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: qualification-result-${{ matrix.arch }}-${{ github.run_id }}
+          path: |
+            ~/estrobo-qualification/evidence/*.png
+            ~/estrobo-qualification/evidence/*.json
+            ~/estrobo-qualification/evidence/official-appcast.xml
+          if-no-files-found: warn
+          retention-days: 14
