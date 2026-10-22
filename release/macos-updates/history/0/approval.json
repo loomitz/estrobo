@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "state": "unconfigured",
+  "reason": "Production Sparkle public root, signed/notarized pair acceptance, and public promotion have not been supplied. No updater feed is published by a site build."
+}
