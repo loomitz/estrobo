@@ -37,6 +37,15 @@
       "status": "allocated-unpublished",
       "allocatedOn": "2026-10-18",
       "evidence": "All local/remote refs with product Info.plist and GitHub Releases (including draft beta.1) inspected; maximum assigned product build 4. Synthetic Sparkle fixtures are not distribution allocations."
+    },
+    {
+      "build": 6,
+      "version": "0.1.0",
+      "channel": "beta",
+      "tag": "v0.1.0-beta.6",
+      "status": "allocated-unpublished",
+      "allocatedOn": "2026-10-22",
+      "evidence": "Maintainer requested official-identity/feed qualification after the separate private-identity rehearsal. Fresh canonical main, remote heads/tags, and GitHub Releases including drafts were inspected: highest assigned production build is 5. Private rehearsal numbers are not production allocations. This reservation does not approve publication or record unperformed physical/platform tests."
     }
   ]
 }
