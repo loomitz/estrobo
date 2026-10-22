@@ -275,13 +275,22 @@ DEVELOPER_ID_CERTIFICATE_SHA256="$DEVELOPER_ID_CERTIFICATE_SHA256" \
   "$APP_VERIFY_SCRIPT"
 
 if [[ -n "$manifest_app_code_directory_hash" ]]; then
-  mounted_app_signature_details="$("$codesign_command" -dvvv "$mount_dir/estrobo.app" 2>&1)" || \
-    fail "could not inspect the mounted app CodeDirectory"
-  mounted_app_code_directory_hash="$(
-    print -r -- "$mounted_app_signature_details" | \
-      /usr/bin/awk -F= '$1 == "CDHash" { print tolower(substr($0, index($0, "=") + 1)); exit }'
-  )"
-  [[ "$mounted_app_code_directory_hash" == "$manifest_app_code_directory_hash" ]] || \
+  # The notarizing host records its native slice. Both slices were verified
+  # above; an independent Intel host must also accept an ARM notarization record
+  # (and vice versa), without accepting a hash absent from the exact app.
+  manifest_hash_matches_slice=false
+  for architecture in arm64 x86_64; do
+    mounted_app_signature_details="$("$codesign_command" -dvvv --arch "$architecture" "$mount_dir/estrobo.app" 2>&1)" || \
+      fail "could not inspect the mounted app CodeDirectory for $architecture"
+    mounted_app_code_directory_hash="$(
+      print -r -- "$mounted_app_signature_details" | \
+        /usr/bin/awk -F= '$1 == "CDHash" { print tolower(substr($0, index($0, "=") + 1)); exit }'
+    )"
+    [[ "$mounted_app_code_directory_hash" =~ '^[0-9a-f]{40}$' ]] || \
+      fail "mounted app CodeDirectory hash is invalid for $architecture"
+    [[ "$mounted_app_code_directory_hash" != "$manifest_app_code_directory_hash" ]] || manifest_hash_matches_slice=true
+  done
+  [[ "$manifest_hash_matches_slice" == true ]] || \
     fail "mounted app does not match its notarization CodeDirectory hash"
 fi
 

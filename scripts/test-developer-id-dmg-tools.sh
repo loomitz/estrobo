@@ -155,6 +155,14 @@ if [[ "${1:-}" == -dvvv ]]; then
   target="${argv[-1]}"
   if [[ -d "$target" ]]; then
     app_cdhash="${FAKE_APP_CDHASH_OVERRIDE:-0123456789abcdef0123456789abcdef01234567}"
+    for ((index = 1; index < $#; index++)); do
+      if [[ "${argv[$index]}" == --arch ]]; then
+        case "${argv[$((index + 1))]}" in
+          arm64) app_cdhash="${FAKE_APP_ARM64_CDHASH:-0123456789abcdef0123456789abcdef01234567}" ;;
+          x86_64) app_cdhash="${FAKE_APP_X86_64_CDHASH:-0123456789abcdef0123456789abcdef01234567}" ;;
+        esac
+      fi
+    done
     cat <<DETAILS
 Identifier=mx.loo.estrobo
 Format=app bundle with Mach-O universal (arm64 x86_64)
@@ -740,6 +748,19 @@ assert_count "$case_state" diskutil.info 1
 assert_count "$case_state" hdiutil.attach 1
 assert_count "$case_state" hdiutil.detach 1
 assert_count "$case_state" stapler.validate 2
+
+# A universal app's native CDHash changes with the verification host. The
+# notarization record must bind one of its two verified slices, not host CPU.
+FAKE_APP_CDHASH_OVERRIDE=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+FAKE_APP_ARM64_CDHASH="$app_code_directory_hash" \
+FAKE_APP_X86_64_CDHASH=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+  run_real_verifier >>"$case_output" 2>&1 || fail "universal notarization binding depends on verifier CPU"
+if FAKE_APP_CDHASH_OVERRIDE=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+   FAKE_APP_ARM64_CDHASH=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+   FAKE_APP_X86_64_CDHASH=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb \
+   run_real_verifier >>"$case_output" 2>&1; then
+  fail "universal notarization binding accepted a hash absent from both slices"
+fi
 
 # API authentication must be forwarded consistently to submit, wait, and log.
 prepare_case api-success

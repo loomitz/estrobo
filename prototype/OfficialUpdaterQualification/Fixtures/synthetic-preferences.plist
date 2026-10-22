@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Estrobo.appearance.v1</key>
+	<string>dark</string>
+	<key>GodoxMacControlPrototype.appLanguage.v1</key>
+	<string>es</string>
+	<key>GodoxMacControlPrototype.savedRadios.v2</key>
+	<data>
+	eyJyYWRpb3MiOlt7Im5hbWUiOiJHb2RveCBRQSBvZmljaWFsIiwiZGV2aWNlSUQiOiJE
+	MDhFNDYwMi0wRTU0LTQ2QjAtOTIxQy05MDU1NDk0RkUzN0MiLCJyYWRpb0NvZGUiOiI0
+	ODM3MjYifV0sInZlcnNpb24iOjJ9
+	</data>
+	<key>GodoxMacControlPrototype.studioLibrary.v1</key>
+	<data>
+	eyJwcmVzZXRzIjpbeyJjcmVhdGVkQXQiOjE3OTI2NjAxNDUuNzU4NjI2LCJncm91cHMi
+	OlsxMSwxMl0sImlkIjoiODI1MkQ3RjAtMEQ4Ny00RTc0LTk2NjItOUNFOTg4OTU3RjA5
+	IiwibXVsdGlGbGFzaFNldHRpbmdzIjp7ImNvdW50Qnl0ZSI6MTAsImhlcnR6Qnl0ZSI6
+	MTAsInBvd2VyQnl0ZSI6NTB9LCJuYW1lIjoiUUEgb2ZpY2lhbCBhY3R1YWxpemFjaW9u
+	IDUgYSA2IiwicHJvZmlsZUlEIjoiZ2RiaC1vYnNlcnZlZC0wLWYiLCJzdGF0ZXMiOlt7
+	Imdyb3VwIjoxMSwibGFzdEtub3duQWN0aXZlTW9kZUJ5dGUiOjEsInJlc3RvcmVzQWZ0
+	ZXJNdWx0aSI6ZmFsc2UsInN0YXRlIjp7ImJlZXBCeXRlIjowLCJjb21wZW5zYXRpb25C
+	eXRlIjowLCJtb2RlQnl0ZSI6MSwibW9kZWxpbmdJbnRlbnNpdHlCeXRlIjowLCJtb2Rl
+	bGluZ01vZGVCeXRlIjowLCJwb3dlckJ5dGUiOjkwfX0seyJncm91cCI6MTIsImxhc3RL
+	bm93bkFjdGl2ZU1vZGVCeXRlIjoxLCJyZXN0b3Jlc0FmdGVyTXVsdGkiOmZhbHNlLCJz
+	dGF0ZSI6eyJiZWVwQnl0ZSI6MCwiY29tcGVuc2F0aW9uQnl0ZSI6MCwibW9kZUJ5dGUi
+	OjEsIm1vZGVsaW5nSW50ZW5zaXR5Qnl0ZSI6MCwibW9kZWxpbmdNb2RlQnl0ZSI6MSwi
+	cG93ZXJCeXRlIjo3M319XSwidXBkYXRlZEF0IjoxNzkyNjYwMTQ1Ljc1ODYyNn1dLCJ2
+	ZXJzaW9uIjoxLCJ3b3Jrc3BhY2UiOnsiZ3JvdXBTdGF0ZXMiOlt7ImFzc2lnbmVkRmxh
+	c2hNb2RlbElEcyI6WyJhZDYwMHByby1paSJdLCJncm91cCI6MTEsImxhc3RLbm93bkFj
+	dGl2ZU1vZGVCeXRlIjoxLCJyZXN0b3Jlc0FmdGVyTXVsdGkiOmZhbHNlLCJzdGF0ZSI6
+	eyJiZWVwQnl0ZSI6MCwiY29tcGVuc2F0aW9uQnl0ZSI6MCwibW9kZUJ5dGUiOjEsIm1v
+	ZGVsaW5nSW50ZW5zaXR5Qnl0ZSI6MCwibW9kZWxpbmdNb2RlQnl0ZSI6MCwicG93ZXJC
+	eXRlIjo5MH19LHsiYXNzaWduZWRGbGFzaE1vZGVsSURzIjpbImFkNDAwcHJvIl0sImdy
+	b3VwIjoxMiwibGFzdEtub3duQWN0aXZlTW9kZUJ5dGUiOjEsInJlc3RvcmVzQWZ0ZXJN
+	dWx0aSI6ZmFsc2UsInN0YXRlIjp7ImJlZXBCeXRlIjowLCJjb21wZW5zYXRpb25CeXRl
+	IjowLCJtb2RlQnl0ZSI6MSwibW9kZWxpbmdJbnRlbnNpdHlCeXRlIjowLCJtb2RlbGlu
+	Z01vZGVCeXRlIjoxLCJwb3dlckJ5dGUiOjczfX1dLCJtdWx0aUZsYXNoU2V0dGluZ3Mi
+	OnsiY291bnRCeXRlIjoxMCwiaGVydHpCeXRlIjoxMCwicG93ZXJCeXRlIjo1MH0sIm9u
+	Ym9hcmRpbmdDb21wbGV0ZWQiOnRydWUsInByb2ZpbGVJRCI6ImdkYmgtb2JzZXJ2ZWQt
+	MC1mIiwidmlzaWJsZUdyb3VwcyI6WzExLDEyXSwid29ya2luZ0dyb3VwcyI6WzExLDEy
+	XX19
+	</data>
+	<key>GodoxMacControlPrototype.visibleGroups.v1</key>
+	<array>
+		<integer>11</integer>
+		<integer>12</integer>
+	</array>
+</dict>
+</plist>
