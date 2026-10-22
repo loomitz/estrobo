@@ -1,9 +1,12 @@
 import importlib.util
+import datetime
+import json
 import os
 import pathlib
 import subprocess
 import sys
 import unittest
+from unittest import mock
 
 sys.dont_write_bytecode = True
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -14,6 +17,36 @@ spec.loader.exec_module(runtime)
 
 
 class QualificationRuntimeTests(unittest.TestCase):
+    def transfer(self):
+        names = ['estrobo-v0.1.0-beta.5-macos-universal.dmg', 'estrobo-v0.1.0-beta.5-manifest.json', 'SHA256SUMS']
+        receipt = {'releaseId': '416881043', 'expiresAt': (datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(minutes=30)).isoformat(),
+                   'assets': {name: {'url': 'https://release-assets.githubusercontent.com/asset?sig=temporary', 'sha256': sha}
+                              for name, sha in zip(names, (runtime.BOOTSTRAP_DMG, runtime.BOOTSTRAP_MANIFEST, runtime.BOOTSTRAP_CHECKSUMS))}}
+        return names, receipt
+
+    def test_bootstrap_transfer_is_expiring_exact_and_download_only(self):
+        names, receipt = self.transfer()
+        with mock.patch.dict(os.environ, BOOTSTRAP_TRANSFER_JSON=json.dumps(receipt)):
+            self.assertEqual(runtime.bootstrap_transfer('416881043', names), receipt['assets'])
+        for field, value in [('releaseId', '416881044'), ('expiresAt', '2000-01-01T00:00:00+00:00'),
+                             ('expiresAt', '2999-01-01T00:00:00+00:00')]:
+            with mock.patch.dict(os.environ, BOOTSTRAP_TRANSFER_JSON=json.dumps(dict(receipt, **{field: value}))), self.assertRaises(ValueError):
+                runtime.bootstrap_transfer('416881043', names)
+        for url in ('http://release-assets.githubusercontent.com/a?sig=x', 'https://attacker.example/a?sig=x',
+                    'https://user:password@release-assets.githubusercontent.com/a?sig=x'):
+            receipt['assets'][names[0]]['url'] = url
+            with mock.patch.dict(os.environ, BOOTSTRAP_TRANSFER_JSON=json.dumps(receipt)), self.assertRaises(ValueError):
+                runtime.bootstrap_transfer('416881043', names)
+
+    def test_failed_transfer_does_not_disclose_download_credential(self):
+        names, receipt = self.transfer()
+        asset = receipt['assets'][names[0]]
+        with mock.patch.object(runtime.urllib.request, 'urlopen', side_effect=RuntimeError(asset['url'])):
+            with self.assertRaises(ValueError) as failure:
+                runtime.download_bootstrap(asset, pathlib.Path('/unused'), 1024)
+        self.assertNotIn('sig=', str(failure.exception))
+        self.assertNotIn('temporary', str(failure.exception).replace('temporary transfer', 'transfer'))
+
     def test_exact_distinct_immutable_tuple_is_required(self):
         valid = {'source_sha': 'a'*40, 'dmg_sha256': 'b'*64, 'manifest_sha256': 'c'*64,
                  'feed_sha256': 'd'*64, 'bootstrap_release_id': '416881043', 'candidate_release_id': '416881044'}

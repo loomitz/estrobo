@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Disposable hosted macOS qualification. Read-only release/feed authority."""
 import argparse
+import datetime
 import hashlib
 import ipaddress
 import json
@@ -14,6 +15,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 HOME = pathlib.Path.home()
@@ -22,6 +24,7 @@ FEED = 'https://estrobo.app/updates/macos/appcast.xml'
 BOOTSTRAP_COMMIT = 'e10629c0d84fce46a25488f726cb5e6dba98d627'
 BOOTSTRAP_DMG = '2a663503219c6b139167de407121342b8d15dfb546079796195c04b2e3b38345'
 BOOTSTRAP_MANIFEST = '38da8a041a2364c2d76a24f4858bccbc00534c2db5611fa87c4831a132408504'
+BOOTSTRAP_CHECKSUMS = 'b2855cbdf559f6107515683a1ab52b7c26defae23bb15f12223534eb5b2a998e'
 
 
 def digest(path):
@@ -50,21 +53,62 @@ def validate_inputs(inputs):
     return inputs
 
 
+def bootstrap_transfer(release_id, names):
+    # A contents:read Actions token cannot read a draft. The maintainer supplies
+    # short-lived asset download URLs, never a token with release write access.
+    transfer = json.loads(os.environ.get('BOOTSTRAP_TRANSFER_JSON', '{}'))
+    now = datetime.datetime.now(datetime.timezone.utc)
+    expiry = datetime.datetime.fromisoformat(transfer.get('expiresAt', '1970-01-01T00:00:00+00:00'))
+    if str(transfer.get('releaseId')) != release_id or expiry.tzinfo is None or not now < expiry <= now + datetime.timedelta(hours=2):
+        raise ValueError('An exact unexpired read-only bootstrap transfer is required')
+    assets = transfer.get('assets', {})
+    expected = dict(zip(names, (BOOTSTRAP_DMG, BOOTSTRAP_MANIFEST, BOOTSTRAP_CHECKSUMS)))
+    if set(assets) != set(expected):
+        raise ValueError('Bootstrap transfer must contain exactly the pinned tuple')
+    for name, asset in assets.items():
+        url = urllib.parse.urlsplit(asset.get('url', ''))
+        if (url.scheme != 'https' or url.hostname != 'release-assets.githubusercontent.com' or
+                url.username or url.password or url.port or url.fragment or not url.query or
+                asset.get('sha256') != expected[name]):
+            raise ValueError('Bootstrap transfer differs from the pinned GitHub asset identity')
+    return assets
+
+
+def download_bootstrap(asset, destination, limit):
+    try:
+        request = urllib.request.Request(asset['url'], headers={'User-Agent': 'EstroboQualificationVerifier/1.0'})
+        with urllib.request.urlopen(request, timeout=120) as response:
+            if response.url != asset['url']:
+                raise ValueError('Unexpected redirect')
+            data = response.read(limit+1)
+        if len(data) > limit or hashlib.sha256(data).hexdigest() != asset['sha256']:
+            raise ValueError('Bootstrap download digest/size mismatch')
+    except Exception:
+        # Do not expose temporary signed URLs in Actions logs or tracebacks.
+        raise ValueError('Read-only bootstrap download failed; refresh its temporary transfer') from None
+    destination.write_bytes(data)
+
+
 def release_tuple(release_id, build, expected_source, expected_dmg, expected_manifest):
     destination = WORK / ('build'+build)
     destination.mkdir()
-    release = json.loads(run(['gh', 'api', 'repos/loomitz/estrobo/releases/'+release_id]))
     tag = 'v0.1.0-beta.'+build
-    if release['tag_name'] != tag or not release['prerelease']:
-        raise ValueError('Qualification requires the exact beta release')
     names = ['estrobo-'+tag+'-macos-universal.dmg', 'estrobo-'+tag+'-manifest.json', 'SHA256SUMS']
-    assets = {asset['name']: asset for asset in release['assets']}
-    if set(assets) != set(names):
-        raise ValueError('The release must contain exactly DMG, manifest and checksums')
-    for name in names:
-        with (destination / name).open('xb') as output:
-            subprocess.run(['gh', 'api', '-H', 'Accept: application/octet-stream',
-                            'repos/loomitz/estrobo/releases/assets/'+str(assets[name]['id'])], stdout=output, check=True)
+    if build == '5':
+        assets = bootstrap_transfer(release_id, names)
+        for name in names:
+            download_bootstrap(assets[name], destination/name, 64*1024*1024 if name.endswith('.dmg') else 1024*1024)
+    else:
+        release = json.loads(run(['gh', 'api', 'repos/loomitz/estrobo/releases/'+release_id]))
+        if release['tag_name'] != tag or not release['prerelease'] or release['draft']:
+            raise ValueError('Qualification requires the exact public beta release')
+        assets = {asset['name']: asset for asset in release['assets']}
+        if set(assets) != set(names):
+            raise ValueError('The release must contain exactly DMG, manifest and checksums')
+        for name in names:
+            with (destination / name).open('xb') as output:
+                subprocess.run(['gh', 'api', '-H', 'Accept: application/octet-stream',
+                                'repos/loomitz/estrobo/releases/assets/'+str(assets[name]['id'])], stdout=output, check=True)
     archive, manifest = destination / names[0], destination / names[1]
     if digest(archive) != expected_dmg or digest(manifest) != expected_manifest:
         raise ValueError('Downloaded release differs from the authorized exact tuple')
@@ -122,7 +166,7 @@ def prepare():
     metadata = {'architecture': platform.machine(), 'macOS': run(['sw_vers', '-productVersion']),
                 'addresses': sorted(addresses), 'sourceCommit': inputs['source_sha'],
                 'archiveSHA256': inputs['dmg_sha256'], 'expectedFeedSHA256': inputs['feed_sha256'],
-                'bootstrap': 'Authenticated GitHub draft download; browser quarantine is not claimed'}
+                'bootstrap': 'Temporary read-only GitHub draft asset download; browser quarantine is not claimed'}
     (WORK/'runner-metadata.json').write_text(json.dumps(metadata, indent=2)+'\n')
     print('Exact release tuples verified and bootstrap installed in the fresh user. No signing credentials were supplied.')
 

@@ -78,6 +78,7 @@ jobs:
       - name: Download and verify exact release tuples; install bootstrap
         env:
           GH_TOKEN: ${{ github.token }}
+          BOOTSTRAP_TRANSFER_JSON: ${{ secrets.ESTROBO_QUALIFICATION_BOOTSTRAP_TRANSFER }}
         run: python3 scripts/official-updater-qualification-runtime.py prepare
 
       - name: Expose only ephemeral test routing metadata
