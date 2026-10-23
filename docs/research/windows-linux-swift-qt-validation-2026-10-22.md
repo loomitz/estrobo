@@ -4,7 +4,7 @@ Fecha: 2026-10-22. Baseline macOS: [bf98e82637b562fff732ca82d7a92a66fe984d66](ht
 
 ## Estado de esta revisión
 
-**Scaffold preparado; Windows y Linux todavía sin ejecutar.** No hay resultado que permita aprobar la arquitectura. La preparación local de copias inmutables y la sintaxis de los scripts Python se verificaron; no equivalen a compilar Swift/Qt.
+**Primer intento ejecutado: núcleo y host reales compilaron en Linux; el suite y Qt no han pasado.** No hay resultado que permita aprobar la arquitectura. La preparación local de copias inmutables y la sintaxis de los scripts Python se verificaron; no equivalen a compilar Swift/Qt.
 
 El experimento vive en [prototype/SwiftQtValidation](../../prototype/SwiftQtValidation/README.md), separado de fuentes Apple. Rama prevista: [research/windows-linux-swift-qt-validation-2026-10-22](https://github.com/loomitz/estrobo/tree/research/windows-linux-swift-qt-validation-2026-10-22). La definición [workflow.yml](../../prototype/SwiftQtValidation/workflow.yml) se publica como workflow activo únicamente en esa rama. El estado de ejecución y los impedimentos reales se registrarán aquí tras intentar su publicación.
 
@@ -21,7 +21,7 @@ El experimento vive en [prototype/SwiftQtValidation](../../prototype/SwiftQtVali
 
 El host usa el **SimulatedRadioTransport existente**, no un controlador inventado. Los repositorios en memoria se extraen de los auxiliares del suite existente; la fachada sólo traduce comandos y resultados.
 
-Diferencias explícitas: compilador Swift **6.1.3**, pero modo de lenguaje **Swift 5** para aislar compatibilidad de OpenCombine. El paquete productivo declara tools-version 6.0 sin esta reducción. Un éxito no demostraría compatibilidad plena con modo Swift 6 ni strict-concurrency. Se adaptan imports en copias y visibilidad de tipos auxiliares de fixtures; no se modifica la lógica del controlador ni las fuentes originales.
+Diferencias explícitas: compilador Swift **6.1.3** y modo de lenguaje **Swift 6**. El primer intento usó modo 5 y falló al compilar defaults @MainActor de fixtures (SE-0411); el segundo conserva el modo 6 del paquete productivo. OpenCombine conserva el modo de su propio manifest. Se adaptan imports en copias y visibilidad de tipos auxiliares de fixtures; no se modifica la lógica del controlador ni las fuentes originales.
 
 ## Reproducción y dependencias
 
@@ -38,6 +38,14 @@ El [README](../../prototype/SwiftQtValidation/README.md) y [run.py](../../protot
 Compilación, suite Core y puente deben ejecutarse satisfactoriamente en **ambos sistemas del mismo commit** antes de declarar aprobada esta prueba de integración. Cada fallo de preparación, compilación, XCTest o runtime conserva su identidad; un workflow sin ejecutar no es una prueba.
 
 Incluso con ambos jobs verdes quedan fuera: persistencia segura nativa y journal durable ante caídas, BLE/GATT físico e identidad local, accesibilidad, UI completa, actualizador, empaquetado e instalación en máquinas limpias. El port conserva la exigencia de paridad completa con el macOS fijado.
+
+## Primera ejecución y corrección del harness
+
+[Run 39907126812](https://github.com/loomitz/estrobo/actions/runs/39907126812), commit 7cffabf070c9e77747de5885c524c0b1d565a738:
+
+- Linux: Swift 6.1.3 compiló todas las fuentes Core, controlador, OpenCombine y simulador, y enlazó el host. El suite no compiló por defaults @MainActor de fixtures en modo Swift 5: call to main actor-isolated initializer in a synchronous nonisolated context. Se cambia sólo el manifest experimental a modo 6, acorde al baseline. [SE-0411](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0411-isolated-default-values.md).
+- Windows: instalador y swift --version correctos; tras activar VsDevShell, python resolvió al alias Microsoft Store y terminó con exit 9009. Se fija Python 3.12 mediante setup-python oficial y se invoca por pythonLocation.
+- Qt no se llegó a construir en este intento. Ningún test de sesión se considera aprobado.
 
 ## Evidencia local
 

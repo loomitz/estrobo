@@ -26,6 +26,10 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Select Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
       - name: Install Swift 6.1.3 Linux from Swift.org
         if: runner.os == 'Linux'
         shell: bash
@@ -79,7 +83,7 @@ jobs:
           $vsPath = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
           if (-not $vsPath) { throw 'Hosted runner has no C++ toolchain' }
           & (Join-Path $vsPath 'Common7\Tools\Launch-VsDevShell.ps1') -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
-          python prototype/SwiftQtValidation/run.py
+          & (Join-Path $env:pythonLocation 'python.exe') prototype/SwiftQtValidation/run.py
           if ($LASTEXITCODE -ne 0) { throw "Experiment exit $LASTEXITCODE" }
       - name: Preserve experiment logs and exact staged adaptation
         if: always()

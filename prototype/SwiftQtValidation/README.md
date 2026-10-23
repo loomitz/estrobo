@@ -20,7 +20,7 @@ Windows requiere entorno MSVC x64 activo y SDK de Swift. Linux se dirige a Ubunt
 - En copias staged sustituye únicamente el import Combine por import condicional OpenCombine. En el simulador añade la misma guarda de módulo que ya usa el controlador para compilar en Core.
 - Mantiene los cuerpos completos de los dos archivos existentes de tests Core: sin filtros, exclusiones o alteraciones. Un fallo de descubrimiento XCTest también queda como fallo; no se presume aprobado.
 - Extrae las implementaciones de repositorios en memoria del final del suite actual y hace internos sus tipos auxiliares privados sólo para usarlos dentro del target experimental. No sustituye el controlador. Agrega `ExperimentRuntime` como fachada del experimento.
-- Usa modo de lenguaje Swift 5 con compilador Swift 6.1.3. No acredita strict-concurrency de modo Swift 6.
+- Usa modo de lenguaje Swift 6 con compilador Swift 6.1.3. OpenCombine conserva el modo de su propio manifest. El primer intento con modo 5 compiló el host Linux pero no los defaults aislados de fixtures; se corrigió el manifest experimental, conservando los tests.
 - Guarda hashes original/staged, parche exacto y logs en `_stage` y `_results`; ambas carpetas se excluyen de Git y el script se niega a sobrescribir una ejecución previa.
 
 ## Qué verifica
