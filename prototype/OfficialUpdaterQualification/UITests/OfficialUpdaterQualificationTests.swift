@@ -21,7 +21,8 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         }
         try FileManager.default.createDirectory(at: evidence, withIntermediateDirectories: true)
         addUIInterruptionMonitor(withDescription: "Expected Bluetooth prompt in a VM") { alert in
-            guard alert.label.localizedCaseInsensitiveContains("Bluetooth") else { return false }
+            let bluetoothText = alert.staticTexts.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Bluetooth"))
+            guard alert.label.localizedCaseInsensitiveContains("Bluetooth") || bluetoothText.count > 0 else { return false }
             for label in ["Don’t Allow", "Don't Allow", "No permitir"] where alert.buttons[label].exists {
                 alert.buttons[label].click(); return true
             }
@@ -33,7 +34,8 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         guard NSUserName() == "runner", FileManager.default.fileExists(atPath: root.appendingPathComponent("plan.json").path),
               let run = testRun, run.failureCount > 0 else { return }
         try XCUIScreen.main.screenshot().pngRepresentation.write(to: evidence.appendingPathComponent("failure.png"))
-        try JSONSerialization.data(withJSONObject: ["passed": false, "failureCount": run.failureCount], options: .prettyPrinted)
+        try JSONSerialization.data(withJSONObject: ["passed": false, "failureCount": run.failureCount,
+                                                    "appHierarchy": app.debugDescription], options: .prettyPrinted)
             .write(to: evidence.appendingPathComponent("failure.json"))
     }
 
@@ -87,12 +89,16 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         app.activate()
         let updates = app.windows["Actualizaciones"]
         if updates.exists { updates.buttons[XCUIIdentifierCloseWindow].click() }
-        let saved = app.buttons["Transmisores guardados…"].firstMatch
-        XCTAssertTrue(saved.waitForExistence(timeout: 15)); saved.click()
+        let saved = app.buttons.matching(NSPredicate(format: "label == %@ OR label == %@",
+                                                     "Ver transmisores…", "Transmisores guardados…")).firstMatch
+        XCTAssertTrue(saved.waitForExistence(timeout: 15), app.debugDescription)
+        // A real click activates XCTest's interruption handler if macOS is
+        // displaying its Bluetooth permission dialog; existence queries do not.
+        saved.click()
         XCTAssertTrue(app.staticTexts["Godox QA oficial"].firstMatch.waitForExistence(timeout: 15),
                       "A saved radio is exposed only after the release app reads its credential from Keychain")
         try capture(screenshot)
-        app.buttons["Cerrar"].firstMatch.click()
+        app.buttons["Listo"].firstMatch.click()
     }
 
     private func openUpdates() {
