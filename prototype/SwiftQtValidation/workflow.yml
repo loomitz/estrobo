@@ -1,0 +1,95 @@
+name: Swift Qt validation (disposable research)
+on:
+  push:
+    branches:
+      - research/windows-linux-swift-qt-validation-2026-10-22
+    paths:
+      - prototype/SwiftQtValidation/**
+      - .github/workflows/research-swift-qt-validation.yml
+permissions:
+  contents: read
+concurrency:
+  group: research-swift-qt-validation-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  smoke:
+    name: Swift 6.1.3 and QtCore 6.8.3 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-24.04]
+    steps:
+      - name: Checkout disposable branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Install Swift 6.1.3 Linux from Swift.org
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y binutils git unzip gnupg2 libc6-dev libcurl4-openssl-dev libedit2 libgcc-13-dev libpython3-dev libsqlite3-0 libstdc++-13-dev libxml2-dev libncurses-dev libz3-dev pkg-config tzdata zlib1g-dev ninja-build cmake
+          curl --fail --location --retry 3 https://download.swift.org/swift-6.1.3-release/ubuntu2404/swift-6.1.3-RELEASE/swift-6.1.3-RELEASE-ubuntu24.04.tar.gz -o "$RUNNER_TEMP/swift.tar.gz"
+          mkdir "$RUNNER_TEMP/swift"
+          tar -xzf "$RUNNER_TEMP/swift.tar.gz" -C "$RUNNER_TEMP/swift" --strip-components=1
+          echo "$RUNNER_TEMP/swift/usr/bin" >> "$GITHUB_PATH"
+      - name: Install Swift 6.1.3 Windows from Swift.org
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Join-Path $env:RUNNER_TEMP 'swift-6.1.3.exe'
+          Invoke-WebRequest 'https://download.swift.org/swift-6.1.3-release/windows10/swift-6.1.3-RELEASE/swift-6.1.3-RELEASE-windows10.exe' -OutFile $installer
+          $installProcess = Start-Process -FilePath $installer -ArgumentList '/quiet','/norestart' -WindowStyle Hidden -Wait -PassThru
+          if ($installProcess.ExitCode -notin @(0,3010)) { throw "Swift installer exit $($installProcess.ExitCode)" }
+          foreach ($scope in @('Machine','User')) {
+            $configuredPath = [Environment]::GetEnvironmentVariable('Path', $scope)
+            if ($configuredPath) { $env:Path += ';' + $configuredPath }
+            foreach ($name in @('SDKROOT','DEVELOPER_DIR','SWIFT_DEVELOPMENT_TOOLCHAIN')) {
+              $value = [Environment]::GetEnvironmentVariable($name, $scope)
+              if ($value) { [Environment]::SetEnvironmentVariable($name, $value, 'Process'); "$name=$value" >> $env:GITHUB_ENV }
+            }
+          }
+          $swift = Get-Command swift.exe -ErrorAction SilentlyContinue
+          if (-not $swift) {
+            $roots = @((Join-Path $env:SystemDrive 'Library\Developer\Toolchains'), (Join-Path $env:LOCALAPPDATA 'Programs\Swift'))
+            $found = @($roots | Where-Object { Test-Path -LiteralPath $_ } | ForEach-Object { Get-ChildItem -LiteralPath $_ -Filter swift.exe -Recurse -File })
+            if ($found.Count -ne 1) { throw "Cannot identify installed Swift: $($found.Count) matches" }
+            $env:Path = $found[0].DirectoryName + ';' + $env:Path
+          }
+          $env:Path -split ';' | Where-Object { $_ } | ForEach-Object { $_ >> $env:GITHUB_PATH }
+          swift --version
+          if ($LASTEXITCODE -ne 0) { throw 'Swift compiler not usable' }
+      - name: Build and run isolated experiment on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 prototype/SwiftQtValidation/run.py
+      - name: Build and run isolated experiment on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $vsPath = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vsPath) { throw 'Hosted runner has no C++ toolchain' }
+          & (Join-Path $vsPath 'Common7\Tools\Launch-VsDevShell.ps1') -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+          python prototype/SwiftQtValidation/run.py
+          if ($LASTEXITCODE -ne 0) { throw "Experiment exit $LASTEXITCODE" }
+      - name: Preserve experiment logs and exact staged adaptation
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: swift-qt-${{ matrix.os }}-${{ github.sha }}
+          retention-days: 14
+          path: |
+            prototype/SwiftQtValidation/_results/
+            prototype/SwiftQtValidation/_stage/adaptation.patch
+            prototype/SwiftQtValidation/_stage/source-manifest.json
+            prototype/SwiftQtValidation/_stage/Package.swift
+            prototype/SwiftQtValidation/_stage/Package.resolved

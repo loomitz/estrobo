@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.21)
+project(EstroboSwiftQtValidation LANGUAGES CXX)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core)
+add_executable(qt-swift-smoke bridge.cpp)
+target_compile_features(qt-swift-smoke PRIVATE cxx_std_17)
+target_link_libraries(qt-swift-smoke PRIVATE Qt6::Core)
