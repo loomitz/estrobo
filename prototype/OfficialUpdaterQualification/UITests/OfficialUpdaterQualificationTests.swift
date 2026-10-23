@@ -152,9 +152,11 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
     }
 
     private func confirmationButton(_ identifier: String, title: String) -> XCUIElement {
-        let identified = app.buttons[identifier]
-        if identified.exists { return identified }
-        return app.buttons.matching(NSPredicate(format: "title == %@ OR label == %@ OR value == %@", title, title, title)).firstMatch
+        let sheet = app.sheets.firstMatch
+        XCTAssertTrue(sheet.waitForExistence(timeout: 10), app.debugDescription)
+        let identified = sheet.buttons[identifier]
+        if identified.waitForExistence(timeout: 2) { return identified }
+        return sheet.buttons.matching(NSPredicate(format: "title == %@ OR label == %@ OR value == %@", title, title, title)).firstMatch
     }
 
     private func archiveHash() throws -> String {
