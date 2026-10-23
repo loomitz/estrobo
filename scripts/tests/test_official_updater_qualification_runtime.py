@@ -1,5 +1,7 @@
 import importlib.util
 import datetime
+import contextlib
+import io
 import json
 import os
 import pathlib
@@ -17,6 +19,36 @@ spec.loader.exec_module(runtime)
 
 
 class QualificationRuntimeTests(unittest.TestCase):
+    def test_lost_apple_connection_repeats_the_complete_verification(self):
+        lost = subprocess.CompletedProcess(['canonical-verifier'], 1,
+            stdout='api.apple-cloudkit.com: Error Domain=NSURLErrorDomain Code=-1005')
+        accepted = subprocess.CompletedProcess(['canonical-verifier'], 0, stdout='verified')
+        with mock.patch.object(runtime.subprocess, 'run', side_effect=[lost, accepted]) as command, \
+                mock.patch.object(runtime.time, 'sleep') as delay, contextlib.redirect_stdout(io.StringIO()):
+            runtime.verify_with_network_retry(pathlib.Path('/canonical-verifier'), {'EXACT_BYTES': 'unchanged'})
+        self.assertEqual(command.call_count, 2)
+        self.assertEqual(command.call_args_list[0], command.call_args_list[1])
+        delay.assert_called_once_with(3)
+
+    def test_invalid_ticket_is_never_retried_or_accepted(self):
+        invalid = subprocess.CompletedProcess(['canonical-verifier'], 1, stdout='invalid notarization ticket')
+        with mock.patch.object(runtime.subprocess, 'run', return_value=invalid) as command, \
+                mock.patch.object(runtime.time, 'sleep') as delay, contextlib.redirect_stdout(io.StringIO()), \
+                self.assertRaises(subprocess.CalledProcessError):
+            runtime.verify_with_network_retry(pathlib.Path('/canonical-verifier'), {})
+        self.assertEqual(command.call_count, 1)
+        delay.assert_not_called()
+
+    def test_repeated_network_loss_still_fails_after_three_verifications(self):
+        lost = subprocess.CompletedProcess(['canonical-verifier'], 1,
+            stdout='api.apple-cloudkit.com: Error Domain=NSURLErrorDomain Code=-1005')
+        with mock.patch.object(runtime.subprocess, 'run', return_value=lost) as command, \
+                mock.patch.object(runtime.time, 'sleep') as delay, contextlib.redirect_stdout(io.StringIO()), \
+                self.assertRaises(subprocess.CalledProcessError):
+            runtime.verify_with_network_retry(pathlib.Path('/canonical-verifier'), {})
+        self.assertEqual(command.call_count, 3)
+        self.assertEqual([call.args[0] for call in delay.call_args_list], [3, 6])
+
     def transfer(self):
         names = ['estrobo-v0.1.0-beta.5-macos-universal.dmg', 'estrobo-v0.1.0-beta.5-manifest.json', 'SHA256SUMS']
         receipt = {'releaseId': '416881043', 'expiresAt': (datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(minutes=30)).isoformat(),

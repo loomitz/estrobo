@@ -60,3 +60,16 @@ The Xcode project is generated with pinned XcodeGen 2.46.0. `build-for-testing`
 is safe locally; running the test requires the disposable `runner` user and its
 explicit plan. The test host has a separate identity; only the external signed
 Estrobo app is replaced by Sparkle.
+
+The UI runner has explicit sandbox-disabled test entitlements. Xcode otherwise
+enables its own sandbox and redirects the runner's home, making the isolation
+guard skip the test and blocking synthetic fixture/evidence access. The workflow
+checks the built runner's real signature before execution; the test still
+requires the actual `/Users/runner` home and its prepared plan. Shipping Estrobo
+retains its original signed sandbox entitlements. A skip never counts as success.
+
+Canonical read-only app/DMG verification is repeated at most three times only
+when Apple's CloudKit ticket lookup reports the observed lost-connection error
+`NSURLErrorDomain Code=-1005`. Each attempt repeats all signature, hash, ticket
+and Gatekeeper checks. Other failures stop immediately, and exhausting the
+network retries remains a failure. No notary submission is made by this runner.
