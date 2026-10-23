@@ -1,12 +1,15 @@
 import importlib.util
+import base64
 import datetime
 import contextlib
+import hashlib
 import io
 import json
 import os
 import pathlib
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -19,6 +22,44 @@ spec.loader.exec_module(runtime)
 
 
 class QualificationRuntimeTests(unittest.TestCase):
+    def test_authenticated_encrypted_transfer_rejects_modified_ciphertext(self):
+        code = '''const c=require('node:crypto'); const k=c.randomBytes(32),v=c.randomBytes(12),e=c.createCipheriv('aes-256-gcm',k,v);
+const b=Buffer.concat([e.update(Buffer.from('{"verified":true}')),e.final()]);
+process.stdout.write(JSON.stringify({key:k.toString('hex'),cipher:Buffer.concat([v,e.getAuthTag(),b]).toString('base64')}));'''
+        encrypted = json.loads(subprocess.check_output(['node', '--input-type=commonjs', '-e', code], text=True))
+        cipher = base64.b64decode(encrypted['cipher'])
+        self.assertEqual(runtime.decrypt_bootstrap(cipher, encrypted['key']), {'verified': True})
+        damaged = bytearray(cipher); damaged[12] ^= 1
+        with self.assertRaises(ValueError) as failure:
+            runtime.decrypt_bootstrap(bytes(damaged), encrypted['key'])
+        self.assertNotIn(encrypted['key'], str(failure.exception))
+
+    def test_bootstrap_plaintext_is_exact_and_checked_before_writes(self):
+        values = {'archive.dmg': b'original archive', 'manifest.json': b'original manifest', 'SHA256SUMS': b'original checksums'}
+        expected = {name: hashlib.sha256(value).hexdigest() for name, value in values.items()}
+        payload = {name: base64.b64encode(value).decode() for name, value in values.items()}
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = pathlib.Path(temporary)
+            damaged = dict(payload, **{'manifest.json': base64.b64encode(b'different manifest').decode()})
+            for invalid in (damaged, dict(payload, **{'../outside': ''})):
+                with self.assertRaises(ValueError):
+                    runtime.unpack_bootstrap(invalid, destination, expected)
+                self.assertEqual(list(destination.iterdir()), [])
+            runtime.unpack_bootstrap(payload, destination, expected)
+            self.assertEqual({p.name: p.read_bytes() for p in destination.iterdir()}, values)
+
+    def test_encrypted_transfer_is_limited_to_the_temporary_project_host(self):
+        names, original = self.transfer()
+        receipt = dict(original, format='aes-256-gcm-json-v1', keyHex='a'*64, cipherSHA256='b'*64,
+                       url='https://1234abcd.estrobo.pages.dev/qualification-transfer/'+('a'*32)+'.bin')
+        receipt.pop('assets')
+        with mock.patch.dict(os.environ, BOOTSTRAP_TRANSFER_JSON=json.dumps(receipt)):
+            self.assertEqual(runtime.bootstrap_transfer('416881043', names), receipt)
+        for url in ('https://attacker.example/blob', 'http://1234abcd.estrobo.pages.dev/qualification-transfer/a.bin',
+                    'https://1234abcd.estrobo.pages.dev/qualification-transfer/'+('a'*32)+'.bin?key=secret'):
+            with mock.patch.dict(os.environ, BOOTSTRAP_TRANSFER_JSON=json.dumps(dict(receipt, url=url))), self.assertRaises(ValueError):
+                runtime.bootstrap_transfer('416881043', names)
+
     def test_lost_apple_connection_repeats_the_complete_verification(self):
         lost = subprocess.CompletedProcess(['canonical-verifier'], 1,
             stdout='api.apple-cloudkit.com: Error Domain=NSURLErrorDomain Code=-1005')

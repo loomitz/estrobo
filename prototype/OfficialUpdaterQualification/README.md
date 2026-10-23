@@ -6,15 +6,28 @@ receives Developer ID/Apple/EdDSA credentials, approves physical smoke, publishe
 a release, or deploys a feed. Its repository token is read-only and is supplied
 only while downloading the exact immutable release tuples.
 
-Draft release metadata requires write access even when its files only need to
-be downloaded. Before dispatch, the signing Mac obtains short-lived GitHub
-asset download URLs for the three unchanged build 5 files and stores their
-exact IDs/digests/expiry in the repository secret
-`ESTROBO_QUALIFICATION_BOOTSTRAP_TRANSFER`. The prepare step alone receives this
-read-only transfer. It checks the pinned host, expiry and all three known hashes,
-then performs the full canonical signature/notary verification. Refresh expired
-links before a new dispatch and delete the secret after preparation/testing.
-Never give the hosted job a maintainer token or contents write permission.
+Draft metadata needs write access, while GitHub's download-only CDN JWT lasts
+about five minutes and can expire in the macOS runner queue. Prefer a temporary
+encrypted bootstrap transfer: encrypt the three unchanged build 5 files as one
+JSON object of base64 values using Node's AES-256-GCM implementation. The binary
+envelope is a 12-byte nonce, 16-byte authentication tag and ciphertext. Publish
+only that ciphertext on an owned temporary `XXXXXXXX.estrobo.pages.dev` preview
+under `/qualification-transfer/32_HEX_DIGITS.bin`; never deploy the key or raw
+bootstrap files there.
+
+The prepare-step-only repository secret
+`ESTROBO_QUALIFICATION_BOOTSTRAP_TRANSFER` supplies `format=aes-256-gcm-json-v1`,
+the exact release ID, HTTPS URL, ciphertext SHA-256, one-time 32-byte `keyHex`
+and a receipt expiry within two hours. No signing key or maintainer token is
+transferred. The runner checks host/path/expiry/digest, authenticates the GCM
+envelope, validates all three pinned plaintext hashes before writing files, then
+performs the complete canonical signature/notary verification. Neither archive
+extraction nor arbitrary filenames are allowed. Delete the secret and owned
+temporary ciphertext deployment after testing. Legacy five-minute GitHub URLs
+remain supported for immediate transfers. Keep contents:read permissions.
+
+This transport only installs the initial build 5. The real build 6 update still
+uses the unmodified production identity, official feed and canonical GitHub URL.
 
 Both production apps remain unchanged. The UI test launches `mx.loo.estrobo`,
 uses its native update window and confirmation, downloads from its canonical
