@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: research-swift-qt-validation-${{ github.ref }}
+  group: research-swift-qt-validation-${{ github.sha }}
   cancel-in-progress: false
 jobs:
   smoke:
