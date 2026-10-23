@@ -33,6 +33,11 @@ Both production apps remain unchanged. The UI test launches `mx.loo.estrobo`,
 uses its native update window and confirmation, downloads from its canonical
 GitHub enclosure via the real HTTPS official feed, cancels, quits normally,
 recovers the verified download, then explicitly installs and verifies relaunch.
+After reopening, a new manual check and Download action recover the cache; the
+descriptor must remain byte-identical, including its original archive path.
+Only a displayed connection failure permits up to two manual Check retries.
+Signature, offer and installation errors still fail immediately, and the result
+records the number of manual connection retries.
 It compares persistent product data and observes a remembered radio hydrated
 from the real Keychain before and after the replacement. Automatic checking and
 downloading must remain off.

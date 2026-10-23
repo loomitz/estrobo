@@ -12,6 +12,7 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
     private var preferenceFile: URL { container.appendingPathComponent("Library/Preferences/\(productID).plist") }
     private var cache: URL { container.appendingPathComponent("Library/Caches/EstroboAssistedUpdates") }
     private var evidence: URL { root.appendingPathComponent("evidence") }
+    private var networkRetries = 0
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -133,6 +134,23 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         return (status.value as? String) ?? status.label
     }
 
+    private func waitForOfficialCheck(_ expected: String) {
+        for attempt in 0..<3 {
+            wait("An official check must finish") {
+                self.updateStatusText() == expected ||
+                (self.app.staticTexts["updates.failure"].exists && self.app.buttons["updates.check"].isEnabled)
+            }
+            if updateStatusText() == expected { return }
+            let failure = app.staticTexts["updates.failure"]
+            let message = (failure.value as? String) ?? failure.label
+            guard attempt < 2, message.hasPrefix("No se pudo conectar.") else {
+                XCTFail("Official check failed: " + message); return
+            }
+            networkRetries += 1
+            app.buttons["updates.check"].click()
+        }
+    }
+
     private func confirmationButton(_ identifier: String, title: String) -> XCUIElement {
         let identified = app.buttons[identifier]
         if identified.exists { return identified }
@@ -162,12 +180,13 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         let before = try productHashes()
         XCTAssertGreaterThanOrEqual(before.count, 5)
         openUpdates()
-        wait("The official signed feed must offer build 6") { self.updateStatusText() == "Hay una actualización disponible." }
+        waitForOfficialCheck("Hay una actualización disponible.")
         try capture("02-official-offer")
         app.buttons["updates.download"].click()
         wait("The exact public GitHub DMG must finish downloading", seconds: 180) { self.app.buttons["updates.install"].exists && self.app.buttons["updates.install"].isEnabled }
         let downloaded = try archiveHash()
         XCTAssertEqual(downloaded, plan["dmgSHA256"] as? String)
+        let originalDescriptor = try Data(contentsOf: cache.appendingPathComponent("download.json"))
         app.buttons["updates.install"].click()
         let cancel = confirmationButton("updates.cancelConfirmation", title: "Cancelar")
         XCTAssertTrue(cancel.waitForExistence(timeout: 10)); cancel.click()
@@ -176,8 +195,14 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 20))
         XCTAssertEqual(installedBuild(), "5", "Normal quit must not silently install")
         app.launch(); openUpdates()
+        waitForOfficialCheck("Hay una actualización disponible.")
+        // Coordinator state starts fresh. The user's Download action asks the
+        // release service to recover its verified descriptor and existing file.
+        app.buttons["updates.download"].click()
         wait("The verified download must recover after relaunch") { self.app.buttons["updates.install"].exists && self.app.buttons["updates.install"].isEnabled }
         XCTAssertEqual(try archiveHash(), downloaded)
+        XCTAssertEqual(try Data(contentsOf: cache.appendingPathComponent("download.json")), originalDescriptor,
+                       "Recovery must reuse the same descriptor/path, not download a replacement archive")
         let oldPID = try command("/usr/bin/pgrep", ["-x", "estrobo"]).trimmingCharacters(in: .whitespacesAndNewlines)
         app.buttons["updates.install"].click()
         let confirm = confirmationButton("updates.confirm", title: "Instalar y reiniciar")
@@ -189,13 +214,14 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         try assertRadioHydrates("04-build6-keychain")
         XCTAssertEqual(try productHashes(), before)
         openUpdates()
-        wait("The installed app must recognize build 6 as current") { self.updateStatusText() == "Estrobo está actualizado." }
+        waitForOfficialCheck("Estrobo está actualizado.")
         try capture("05-build6-current")
         let result: [String: Any] = ["passed": true, "installedBuild": "6", "bundleIdentifier": productID,
             "feedURL": "https://estrobo.app/updates/macos/appcast.xml", "archiveSHA256": downloaded,
             "normalQuitKeptBuild5": true, "verifiedDownloadRecovered": true, "oldPID": oldPID, "newPID": newPID,
             "productDataHashes": before, "syntheticKeychainHydratedInBothReleases": true,
             "automaticChecks": false, "automaticDownloads": false,
+            "manualNetworkRetries": networkRetries,
             "scope": "Hosted macOS native UI; browser quarantine, physical Bluetooth and macOS 13 remain separate gates"]
         try JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]).write(to: evidence.appendingPathComponent("result.json"))
     }
