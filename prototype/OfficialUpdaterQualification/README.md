@@ -54,9 +54,11 @@ and a captured in-memory studio store; no maintainer storage was read.
    the signing Mac. Keep its source checkout at the exact protected main commit
    until `prepare-qualification` has signed the local bounded candidate. No
    smoke result may be fabricated to pass ordinary final approval.
-2. Merge this test harness through the required checks only after that local
-   preparation. Dispatch the manual workflow with exact release IDs, source,
-   DMG, manifest and signed-feed digests. These inputs contain no secrets.
+2. Iterate the reviewed test harness in disposable hosts using the manual
+   workflow with exact release IDs, source, DMG, manifest and signed-feed digests.
+   These inputs contain no secrets. The shipping app source must remain the
+   protected commit verified in step 1. Merge the final harness and retirement
+   source through required checks before the production retirement deployment.
 3. Download both `qualification-host-ARCH-RUN` artifacts while jobs wait. Their
    addresses belong to temporary hosted VMs. Add only those exact addresses to
    the separately configured production Pages qualification binding. Preview

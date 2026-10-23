@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?><!-- sparkle-sign-warning:
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
---><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:estrobo="https://estrobo.app/xmlns/updates" version="2.0"><channel><title>Estrobo macOS updates</title><estrobo:qualification>{"authorizationSHA256":"df66e20dccfa10aa0c9ffc8e75dc614181037529ef219a225260e6b37bf14187","authorizedAt":"2026-10-22T14:57:37.877653+00:00","build":"6","commit":"056618d5ab52433cb1487558dd8a2d56bb25eb39","dmgSHA256":"9d864ae93c3709aa7ac142efa48f16fd97b1b6424d5ee94ba10b6fa044fe92d7","expiresAt":"2026-10-23T14:57:37.877653+00:00","purpose":"official-updater-qualification","tag":"v0.1.0-beta.6"}</estrobo:qualification><item><title>0.1.0</title><description>Temporary qualification of the official macOS updater. Universal signed and notarized build 6. Final v1 and physical Bluetooth validation remain pending.
-</description><estrobo:releaseNotesEn>Temporary qualification of the official macOS updater. Universal signed and notarized build 6. Final v1 and physical Bluetooth validation remain pending.
-</estrobo:releaseNotesEn><estrobo:releaseNotesEs>Validación temporal del actualizador oficial de macOS. Build 6 universal firmado y notarizado. La salida v1 y la validación física de Bluetooth siguen pendientes.
-</estrobo:releaseNotesEs><sparkle:version>6</sparkle:version><sparkle:shortVersionString>0.1.0</sparkle:shortVersionString><sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion><sparkle:channel>beta</sparkle:channel><enclosure url="https://github.com/loomitz/estrobo/releases/download/v0.1.0-beta.6/estrobo-v0.1.0-beta.6-macos-universal.dmg" length="8957573" sparkle:edSignature="owE7HTer3sYgmVxSBB9annMbxOeS/gxl2yQYq+9kQ7QCvfFRwRlRoYPZpWLRvTjWGd5JNZ6uxC2YMWCf+x4RBQ==" type="application/octet-stream"></enclosure></item></channel></rss><!-- sparkle-signatures:
-edSignature: Rhoq8fkgqoj52gQ0LbzXqaqGgPwSyR80ZnpEEJsvLQf3TRQl8IKRkN4OoDEA61kWwPv2oZQi+cFdsvazuj1pAw==
-length: 2063
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:estrobo="https://estrobo.app/xmlns/updates" version="2.0"><channel><title>Estrobo macOS updates</title></channel></rss><!-- sparkle-signatures:
+edSignature: t8+QEL7e4TWRuyjOVL7JUzP/JZICsN8vK4hmfIeGRMQSRsnJLn+vTGaGeCSGX1up8GsEFchAGXaoDVaKEJBoDg==
+length: 489
 -->

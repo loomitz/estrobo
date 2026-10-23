@@ -2,7 +2,7 @@
 
 [English signing contract](../release/signing/README.md) · [English catalog operations](../release/macos-updates/README.md) · [Soporte de usuario](../SUPPORT.md)
 
-El actualizador pertenece sólo al shell macOS. La descarga pública sigue siendo `0.1.0-beta.4`, sin actualizador; iOS/iPadOS no incorporan este mecanismo. La primera release que lo incluya requerirá instalación manual verificada. No hay raíz EdDSA de producción suministrada ni catálogo público aprobado, y los gates de distribución reales siguen pendientes. Este procedimiento documenta comandos disponibles; no concede permiso para firmar, notarizar, publicar o desplegar.
+El actualizador pertenece sólo al shell macOS. La descarga pública sigue siendo `0.1.0-beta.4`, sin actualizador; iOS/iPadOS no incorporan este mecanismo. La primera release que lo incluya requerirá instalación manual verificada. La cualificación oficial utiliza la raíz EdDSA existente y los builds inmutables 5 y 6; su oferta temporal se retira mediante el catálogo vacío firmado de revisión 2. Los gates de v1 que esta prueba no acredita siguen pendientes. Este procedimiento documenta comandos disponibles; no concede permiso para firmar, notarizar, publicar o desplegar.
 
 ## Dependencia, builds y asignaciones
 
@@ -20,7 +20,7 @@ make mac-prototype-universal
 
 Estos checks locales y la compilación universal no acreditan firma/notarización, Intel/macOS mínimo en ejecución ni hardware Bluetooth. El [fixture del adaptador](../prototype/MacUpdaterAdapterCheck/README.md) ejecuta el servicio Swift real con una raíz efímera y explica sus límites; no usar esa raíz para distribución.
 
-`release/macos-builds.json` es el ledger manual de asignaciones. Build **5**, versión `0.1.0`, canal `beta`, tag `v0.1.0-beta.5` está asignado y no publicado. Antes de asignar otro, refrescar refs y revisar ledger/Info.plist/defaults/manifest de candidatos, incluyendo drafts y asignaciones no publicadas:
+`release/macos-builds.json` es el ledger manual de asignaciones. Build **5**, versión `0.1.0`, canal `beta`, tag `v0.1.0-beta.5` conserva su draft original. Build **6** está publicado como prerelease inmutable de cualificación y queda retirado permanentemente del feed por la revisión 2. El próximo candidato debe usar un build superior. Antes de asignar otro, refrescar refs y revisar ledger/Info.plist/defaults/manifest de candidatos, incluyendo drafts y asignaciones no publicadas:
 
 ```sh
 git status --porcelain=v1 --untracked-files=all
@@ -43,7 +43,7 @@ python3 scripts/macos-updater-artifacts.py metadata \
 
 ## Claves, firma y notarización
 
-`SPARKLE_PUBLIC_ED_KEY` es la parte pública externa aprobada; CI utiliza la variable pública `ESTROBO_SPARKLE_PUBLIC_ED_KEY`. La privada EdDSA pertenece al mantenedor, permanece en un account Keychain existente y necesita backup cifrado offline cuya recuperación esté demostrada. Provisionar esa raíz/backup sigue pendiente; no usar claves de tests. Developer ID y credenciales notariales son autoridades separadas. No crear/exportar claves, poner credenciales en Git/logs o sustituir los certificados históricos beta 1/2.
+`SPARKLE_PUBLIC_ED_KEY` es la parte pública externa aprobada; CI utiliza la variable pública `ESTROBO_SPARKLE_PUBLIC_ED_KEY`. La privada EdDSA pertenece al mantenedor, permanece en un account Keychain existente y necesita backup cifrado offline cuya recuperación esté demostrada. La cualificación utilizó la raíz existente; no acredita su backup ni recuperación. No usar claves de tests para distribución. Developer ID y credenciales notariales son autoridades separadas. No crear/exportar claves, poner credenciales en Git/logs o sustituir los certificados históricos beta 1/2.
 
 El lookup oficial de la parte pública es de sólo lectura:
 
@@ -124,4 +124,4 @@ Preferir corrección hacia delante con build mayor. Downgrade no acredita compat
 
 Si se pierde la privada EdDSA, restaurar/probar el backup aprobado. Con firma obligatoria y expiración cero, esperar o servir un feed inválido no recupera clientes. Si no se puede restaurar, se necesita una nueva instalación manual firmada/verificada con nueva raíz y build mayor. Una rotación planificada requiere un puente probado antes de retirar confianza previa; no cambiar ambas raíces simultáneamente. Automatizar rotación/downgrade queda fuera de este MVP.
 
-Siguen pendientes raíz/backup, upgrades firmados/notarizados, Intel/macOS mínimo, autorización/translocación/recuperación y recorrido público de promoción/tráfico/cache/retirada. El ticket 17 conserva la aceptación integrada y revisión final; este documento no las da por terminadas.
+El [recorrido oficial 5→6](https://github.com/loomitz/estrobo/actions/runs/39912706540) registra la ejecución nativa por arquitectura y su verificación posterior de firma/notarización. Los resultados y capturas se conservan como evidencia acotada fuera de Git; no sustituyen los gates de Bluetooth/Godox físico, macOS 13, cuarentena/translocación desde navegador, permisos de administrador ni recuperación del backup de firma. Cada despliegue del feed exige verificar nuevamente sus bytes, firma, revisión y headers públicos. El ticket 17 conserva la aceptación integrada y revisión final; esta cualificación no aprueba la salida v1.
