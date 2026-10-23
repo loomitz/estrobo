@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Disposable hosted macOS qualification. Read-only release/feed authority."""
 import argparse
+import base64
 import datetime
 import hashlib
 import ipaddress
@@ -61,6 +62,15 @@ def bootstrap_transfer(release_id, names):
     expiry = datetime.datetime.fromisoformat(transfer.get('expiresAt', '1970-01-01T00:00:00+00:00'))
     if str(transfer.get('releaseId')) != release_id or expiry.tzinfo is None or not now < expiry <= now + datetime.timedelta(hours=2):
         raise ValueError('An exact unexpired read-only bootstrap transfer is required')
+    if transfer.get('format') == 'aes-256-gcm-json-v1':
+        url = urllib.parse.urlsplit(transfer.get('url', ''))
+        if (url.scheme != 'https' or not re.fullmatch(r'[a-z0-9]{8}\.estrobo\.pages\.dev', url.hostname or '') or
+                url.username or url.password or url.port or url.query or url.fragment or
+                not re.fullmatch(r'/qualification-transfer/[a-f0-9]{32}\.bin', url.path) or
+                not re.fullmatch('[a-f0-9]{64}', transfer.get('keyHex', '')) or
+                not re.fullmatch('[a-f0-9]{64}', transfer.get('cipherSHA256', ''))):
+            raise ValueError('Encrypted bootstrap transfer must identify the reviewed temporary host and exact ciphertext')
+        return transfer
     assets = transfer.get('assets', {})
     expected = dict(zip(names, (BOOTSTRAP_DMG, BOOTSTRAP_MANIFEST, BOOTSTRAP_CHECKSUMS)))
     if set(assets) != set(expected):
@@ -72,6 +82,54 @@ def bootstrap_transfer(release_id, names):
                 asset.get('sha256') != expected[name]):
             raise ValueError('Bootstrap transfer differs from the pinned GitHub asset identity')
     return assets
+
+
+def decrypt_bootstrap(ciphertext, key):
+    # Use Node's audited crypto implementation. Keys are passed on stdin,
+    # never in command arguments, a URL, or diagnostic output.
+    code = '''const crypto = require('node:crypto');
+let input=''; process.stdin.on('data', x => input += x); process.stdin.on('end', () => {
+  try { const x=JSON.parse(input), b=Buffer.from(x.cipher, 'base64');
+    const d=crypto.createDecipheriv('aes-256-gcm', Buffer.from(x.key, 'hex'), b.subarray(0,12));
+    d.setAuthTag(b.subarray(12,28));
+    process.stdout.write(Buffer.concat([d.update(b.subarray(28)), d.final()]));
+  } catch { process.exitCode=1; }
+});'''
+    result = subprocess.run(['node', '--input-type=commonjs', '-e', code],
+        input=json.dumps({'cipher': base64.b64encode(ciphertext).decode(), 'key': key}),
+        capture_output=True, text=True, timeout=30)
+    if result.returncode:
+        raise ValueError('Encrypted bootstrap authentication failed')
+    return json.loads(result.stdout)
+
+
+def unpack_bootstrap(payload, destination, expected):
+    if not isinstance(payload, dict) or set(payload) != set(expected):
+        raise ValueError('Decrypted bootstrap must contain exactly the pinned tuple')
+    decoded = {name: base64.b64decode(payload[name], validate=True) for name in expected}
+    if any(hashlib.sha256(data).hexdigest() != expected[name] for name, data in decoded.items()):
+        raise ValueError('Decrypted bootstrap differs from the pinned immutable tuple')
+    for name, data in decoded.items():
+        if pathlib.Path(name).name != name or name in ('.', '..'):
+            raise ValueError('Unsafe bootstrap filename')
+    for name, data in decoded.items():
+        with (destination/name).open('xb') as output:
+            output.write(data)
+
+
+def download_encrypted_bootstrap(transfer, destination, names):
+    try:
+        request = urllib.request.Request(transfer['url'], headers={'User-Agent': 'EstroboQualificationVerifier/1.0'})
+        with urllib.request.urlopen(request, timeout=120) as response:
+            if response.url != transfer['url']:
+                raise ValueError('Unexpected redirect')
+            ciphertext = response.read(32*1024*1024+1)
+        if not 28 < len(ciphertext) <= 32*1024*1024 or hashlib.sha256(ciphertext).hexdigest() != transfer['cipherSHA256']:
+            raise ValueError('Ciphertext digest/size mismatch')
+    except Exception:
+        raise ValueError('Encrypted read-only bootstrap download failed') from None
+    expected = dict(zip(names, (BOOTSTRAP_DMG, BOOTSTRAP_MANIFEST, BOOTSTRAP_CHECKSUMS)))
+    unpack_bootstrap(decrypt_bootstrap(ciphertext, transfer['keyHex']), destination, expected)
 
 
 def download_bootstrap(asset, destination, limit):
@@ -111,8 +169,11 @@ def release_tuple(release_id, build, expected_source, expected_dmg, expected_man
     names = ['estrobo-'+tag+'-macos-universal.dmg', 'estrobo-'+tag+'-manifest.json', 'SHA256SUMS']
     if build == '5':
         assets = bootstrap_transfer(release_id, names)
-        for name in names:
-            download_bootstrap(assets[name], destination/name, 64*1024*1024 if name.endswith('.dmg') else 1024*1024)
+        if assets.get('format') == 'aes-256-gcm-json-v1':
+            download_encrypted_bootstrap(assets, destination, names)
+        else:
+            for name in names:
+                download_bootstrap(assets[name], destination/name, 64*1024*1024 if name.endswith('.dmg') else 1024*1024)
     else:
         release = json.loads(run(['gh', 'api', 'repos/loomitz/estrobo/releases/'+release_id]))
         if release['tag_name'] != tag or not release['prerelease'] or release['draft']:
@@ -140,6 +201,11 @@ def release_tuple(release_id, build, expected_source, expected_dmg, expected_man
         APP_VERIFY_SCRIPT=str(ROOT/'scripts/verify-macos-developer-id-release.sh'))
     verify_with_network_retry(ROOT/'scripts/verify-macos-developer-id-dmg.sh', environment)
     return archive
+
+
+def native_network_probe(mode):
+    result = run(['swift', str(ROOT/'prototype/OfficialUpdaterQualification/NetworkProbe.swift'), mode])
+    return json.loads(result)
 
 
 def prepare():
@@ -178,10 +244,17 @@ def prepare():
                 addresses.add(fields['ip'])
     if not addresses:
         raise ValueError('Could not establish exact public test egress addresses')
+    native_trace = native_network_probe('trace')
+    for probe in native_trace:
+        address = probe.get('address')
+        if address and ipaddress.ip_address(address).is_global:
+            addresses.add(str(ipaddress.ip_address(address)))
     metadata = {'architecture': platform.machine(), 'macOS': run(['sw_vers', '-productVersion']),
                 'addresses': sorted(addresses), 'sourceCommit': inputs['source_sha'],
                 'archiveSHA256': inputs['dmg_sha256'], 'expectedFeedSHA256': inputs['feed_sha256'],
-                'bootstrap': 'Temporary read-only GitHub draft asset download; browser quarantine is not claimed'}
+                'bootstrap': 'Exact immutable bootstrap transport; browser quarantine is not claimed',
+                'nativeNetworkTrace': native_trace,
+                'bootstrapTransport': 'encrypted temporary preview' if json.loads(os.environ.get('BOOTSTRAP_TRANSFER_JSON', '{}')).get('format') == 'aes-256-gcm-json-v1' else 'read-only GitHub assets'}
     (WORK/'runner-metadata.json').write_text(json.dumps(metadata, indent=2)+'\n')
     print('Exact release tuples verified and bootstrap installed in the fresh user. No signing credentials were supplied.')
 
@@ -198,6 +271,16 @@ def wait_feed():
                     if response.headers.get('Cache-Control') != 'private, no-store':
                         raise ValueError('Qualification feed lacks its private cache policy')
                     (WORK/'evidence/official-appcast.xml').write_bytes(data)
+                    probes = native_network_probe('feed')
+                    (WORK/'evidence/native-network-preflight.json').write_text(json.dumps(probes, indent=2)+'\n')
+                    if any(p.get('status') != 200 for p in probes):
+                        # A newly deployed IP binding may reach the native and
+                        # urllib network paths at different times. Both must
+                        # independently pass within the existing 30-minute bound.
+                        time.sleep(15)
+                        continue
+                    if probes[-1].get('sha256') != plan['feed_sha256']:
+                        raise ValueError('Native URLSession received different feed bytes; inspect scoped evidence')
                     print('The exact official HTTPS feed is available to this test VM.')
                     return
         except (urllib.error.URLError, TimeoutError):

@@ -1,4 +1,10 @@
 {
   "schemaVersion": 1,
-  "withdrawals": []
+  "withdrawals": [
+    {
+      "build": "6",
+      "reason": "Temporary official updater qualification offer retired. Build 6 remains an immutable test artifact; any subsequent release must allocate a higher global build.",
+      "withdrawnAt": "2026-10-23T06:25:50.770040+00:00"
+    }
+  ]
 }

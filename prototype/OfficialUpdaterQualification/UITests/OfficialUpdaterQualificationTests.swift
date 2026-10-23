@@ -12,6 +12,7 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
     private var preferenceFile: URL { container.appendingPathComponent("Library/Preferences/\(productID).plist") }
     private var cache: URL { container.appendingPathComponent("Library/Caches/EstroboAssistedUpdates") }
     private var evidence: URL { root.appendingPathComponent("evidence") }
+    private var networkRetries = 0
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -21,9 +22,11 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         }
         try FileManager.default.createDirectory(at: evidence, withIntermediateDirectories: true)
         addUIInterruptionMonitor(withDescription: "Expected Bluetooth prompt in a VM") { alert in
-            guard alert.label.localizedCaseInsensitiveContains("Bluetooth") else { return false }
-            for label in ["Don’t Allow", "Don't Allow", "No permitir"] where alert.buttons[label].exists {
-                alert.buttons[label].click(); return true
+            let bluetoothText = alert.staticTexts.matching(NSPredicate(format: "label CONTAINS[cd] %@ OR value CONTAINS[cd] %@ OR title CONTAINS[cd] %@", "Bluetooth", "Bluetooth", "Bluetooth"))
+            guard alert.label.localizedCaseInsensitiveContains("Bluetooth") || bluetoothText.count > 0 else { return false }
+            for label in ["Don’t Allow", "Don't Allow", "No permitir"] {
+                let button = alert.buttons.matching(NSPredicate(format: "label == %@ OR title == %@ OR value == %@", label, label, label)).firstMatch
+                if button.exists { button.click(); return true }
             }
             return false
         }
@@ -33,7 +36,9 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         guard NSUserName() == "runner", FileManager.default.fileExists(atPath: root.appendingPathComponent("plan.json").path),
               let run = testRun, run.failureCount > 0 else { return }
         try XCUIScreen.main.screenshot().pngRepresentation.write(to: evidence.appendingPathComponent("failure.png"))
-        try JSONSerialization.data(withJSONObject: ["passed": false, "failureCount": run.failureCount], options: .prettyPrinted)
+        let log = try? command("/usr/bin/log", ["show", "--last", "10m", "--style", "compact", "--predicate", "process == \"estrobo\""])
+        try JSONSerialization.data(withJSONObject: ["passed": false, "failureCount": run.failureCount,
+                                                    "appHierarchy": app.debugDescription, "productSystemLog": log ?? "unavailable"], options: .prettyPrinted)
             .write(to: evidence.appendingPathComponent("failure.json"))
     }
 
@@ -85,23 +90,73 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
 
     private func assertRadioHydrates(_ screenshot: String) throws {
         app.activate()
+        dismissExpectedBluetoothPermission()
         let updates = app.windows["Actualizaciones"]
         if updates.exists { updates.buttons[XCUIIdentifierCloseWindow].click() }
-        let saved = app.buttons["Transmisores guardados…"].firstMatch
-        XCTAssertTrue(saved.waitForExistence(timeout: 15)); saved.click()
+        let saved = app.buttons.matching(NSPredicate(format: "label == %@ OR label == %@",
+                                                     "Ver transmisores…", "Transmisores guardados…")).firstMatch
+        XCTAssertTrue(saved.waitForExistence(timeout: 15), app.debugDescription)
+        // A real click activates XCTest's interruption handler if macOS is
+        // displaying its Bluetooth permission dialog; existence queries do not.
+        saved.click()
         XCTAssertTrue(app.staticTexts["Godox QA oficial"].firstMatch.waitForExistence(timeout: 15),
                       "A saved radio is exposed only after the release app reads its credential from Keychain")
         try capture(screenshot)
-        app.buttons["Cerrar"].firstMatch.click()
+        app.buttons["Listo"].firstMatch.click()
     }
 
     private func openUpdates() {
         app.activate()
-        app.menuBars.menuBarItems.element(boundBy: 1).click()
-        let check = app.menuItems.matching(identifier: "updates.menuCheck").firstMatch
+        dismissExpectedBluetoothPermission()
+        let menu = app.menuBars.menuBarItems.element(boundBy: 1)
+        menu.click()
+        let check = menu.menuItems.matching(identifier: "updates.menuCheck").firstMatch
         if check.exists { check.click() }
-        else { app.menuItems.matching(NSPredicate(format: "label CONTAINS[cd] %@", "actualizaciones")).firstMatch.click() }
+        else { menu.menuItems.matching(NSPredicate(format: "title CONTAINS[cd] %@ OR label CONTAINS[cd] %@", "actualizaciones", "actualizaciones")).firstMatch.click() }
         XCTAssertTrue(app.buttons["updates.check"].waitForExistence(timeout: 20))
+    }
+
+    private func dismissExpectedBluetoothPermission() {
+        let center = XCUIApplication(bundleIdentifier: "com.apple.UserNotificationCenter")
+        let dialog = center.dialogs.firstMatch
+        guard dialog.waitForExistence(timeout: 2) else { return }
+        let text = dialog.staticTexts.allElementsBoundByIndex.map { ($0.value as? String) ?? $0.label }.joined(separator: " ")
+        guard text.localizedCaseInsensitiveContains("Bluetooth"), text.localizedCaseInsensitiveContains("estrobo") else { return }
+        for title in ["Don’t Allow", "Don't Allow", "No permitir"] {
+            let deny = dialog.buttons.matching(NSPredicate(format: "title == %@ OR label == %@ OR value == %@", title, title, title)).firstMatch
+            if deny.exists { deny.click(); return }
+        }
+        XCTFail("Expected Bluetooth denial action was unavailable: " + dialog.debugDescription)
+    }
+
+    private func updateStatusText() -> String {
+        let status = app.staticTexts["updates.status"]
+        return (status.value as? String) ?? status.label
+    }
+
+    private func waitForOfficialCheck(_ expected: String) {
+        for attempt in 0..<3 {
+            wait("An official check must finish") {
+                self.updateStatusText() == expected ||
+                (self.app.staticTexts["updates.failure"].exists && self.app.buttons["updates.check"].isEnabled)
+            }
+            if updateStatusText() == expected { return }
+            let failure = app.staticTexts["updates.failure"]
+            let message = (failure.value as? String) ?? failure.label
+            guard attempt < 2, message.hasPrefix("No se pudo conectar.") else {
+                XCTFail("Official check failed: " + message); return
+            }
+            networkRetries += 1
+            app.buttons["updates.check"].click()
+        }
+    }
+
+    private func confirmationButton(_ identifier: String, title: String) -> XCUIElement {
+        let sheet = app.sheets.firstMatch
+        XCTAssertTrue(sheet.waitForExistence(timeout: 10), app.debugDescription)
+        let identified = sheet.buttons[identifier]
+        if identified.waitForExistence(timeout: 2) { return identified }
+        return sheet.buttons.matching(NSPredicate(format: "title == %@ OR label == %@ OR value == %@", title, title, title)).firstMatch
     }
 
     private func archiveHash() throws -> String {
@@ -119,32 +174,41 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         XCTAssertEqual(installedBuild(), "5")
         // Bootstrap creates the sandbox through the real app. Seed synthetic
         // v2 data only after it exits; the app itself performs Keychain migration.
-        app.launch(); XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20)); app.terminate()
+        app.launch(); XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20))
+        dismissExpectedBluetoothPermission(); app.terminate()
         _ = try command("/usr/bin/defaults", ["import", preferenceFile.deletingPathExtension().path, root.appendingPathComponent("synthetic-preferences.plist").path])
         app.launch()
         try assertRadioHydrates("01-build5-keychain")
         let before = try productHashes()
         XCTAssertGreaterThanOrEqual(before.count, 5)
         openUpdates()
-        wait("The official signed feed must offer build 6") { self.app.staticTexts["updates.status"].label == "Hay una actualización disponible." }
+        waitForOfficialCheck("Hay una actualización disponible.")
         try capture("02-official-offer")
         app.buttons["updates.download"].click()
         wait("The exact public GitHub DMG must finish downloading", seconds: 180) { self.app.buttons["updates.install"].exists && self.app.buttons["updates.install"].isEnabled }
         let downloaded = try archiveHash()
         XCTAssertEqual(downloaded, plan["dmgSHA256"] as? String)
+        let originalDescriptor = try Data(contentsOf: cache.appendingPathComponent("download.json"))
         app.buttons["updates.install"].click()
-        XCTAssertTrue(app.buttons["updates.cancelConfirmation"].waitForExistence(timeout: 10))
-        app.buttons["updates.cancelConfirmation"].click()
+        let cancel = confirmationButton("updates.cancelConfirmation", title: "Cancelar")
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10)); cancel.click()
         try capture("03-cancelled")
         app.typeKey("q", modifierFlags: .command)
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 20))
         XCTAssertEqual(installedBuild(), "5", "Normal quit must not silently install")
         app.launch(); openUpdates()
+        waitForOfficialCheck("Hay una actualización disponible.")
+        // Coordinator state starts fresh. The user's Download action asks the
+        // release service to recover its verified descriptor and existing file.
+        app.buttons["updates.download"].click()
         wait("The verified download must recover after relaunch") { self.app.buttons["updates.install"].exists && self.app.buttons["updates.install"].isEnabled }
         XCTAssertEqual(try archiveHash(), downloaded)
+        XCTAssertEqual(try Data(contentsOf: cache.appendingPathComponent("download.json")), originalDescriptor,
+                       "Recovery must reuse the same descriptor/path, not download a replacement archive")
         let oldPID = try command("/usr/bin/pgrep", ["-x", "estrobo"]).trimmingCharacters(in: .whitespacesAndNewlines)
         app.buttons["updates.install"].click()
-        XCTAssertTrue(app.buttons["updates.confirm"].waitForExistence(timeout: 10)); app.buttons["updates.confirm"].click()
+        let confirm = confirmationButton("updates.confirm", title: "Instalar y reiniciar")
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10)); confirm.click()
         wait("Sparkle must replace the application with official build 6", seconds: 180) { self.installedBuild() == "6" }
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 60), "The installer must relaunch the real app")
         let newPID = try command("/usr/bin/pgrep", ["-x", "estrobo"]).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -152,13 +216,14 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         try assertRadioHydrates("04-build6-keychain")
         XCTAssertEqual(try productHashes(), before)
         openUpdates()
-        wait("The installed app must recognize build 6 as current") { self.app.staticTexts["updates.status"].label == "Estrobo está actualizado." }
+        waitForOfficialCheck("Estrobo está actualizado.")
         try capture("05-build6-current")
         let result: [String: Any] = ["passed": true, "installedBuild": "6", "bundleIdentifier": productID,
             "feedURL": "https://estrobo.app/updates/macos/appcast.xml", "archiveSHA256": downloaded,
             "normalQuitKeptBuild5": true, "verifiedDownloadRecovered": true, "oldPID": oldPID, "newPID": newPID,
             "productDataHashes": before, "syntheticKeychainHydratedInBothReleases": true,
             "automaticChecks": false, "automaticDownloads": false,
+            "manualNetworkRetries": networkRetries,
             "scope": "Hosted macOS native UI; browser quarantine, physical Bluetooth and macOS 13 remain separate gates"]
         try JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]).write(to: evidence.appendingPathComponent("result.json"))
     }

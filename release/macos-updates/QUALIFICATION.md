@@ -8,8 +8,8 @@ Ordinary `prepare` retains its full final approval gate.
 Use an isolated macOS user or VM: `mx.loo.estrobo` shares product storage and
 Keychain access with other copies in the same user. Use the unmodified production
 client, EdDSA root, Developer ID and `https://estrobo.app/updates/macos/appcast.xml`.
-There is no client feed/archive override. A VM does not prove physical Bluetooth
-or Intel execution.
+There is no client feed/archive override. VMs do not prove physical Bluetooth.
+Intel execution requires a native x86_64 host; an ARM64 VM does not satisfy it.
 
 ## Candidate
 

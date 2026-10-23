@@ -1,6 +1,6 @@
 # Reviewed macOS update source
 
-This directory is the canonical source used by website builds. It is **unconfigured**: no production public root, signed feed, live appcast or published updater release is supplied here. Beta 4's manual download remains unchanged. Generated public update files are ignored; an editorial build can only copy exact reviewed signed bytes from this directory.
+This directory is the canonical source used by website builds. Its approved revision 2 is a signed empty feed that permanently withdraws temporary qualification build 6. `history/1` preserves the preceding bounded official offer. Beta 4's manual download remains unchanged. Generated public update files are ignored; an editorial build can only copy exact reviewed signed bytes from this directory. Source approval and production deployment remain separate operations.
 
 `catalog.json` records full DMG identities, globally assigned build, numeric version, explicit channel, exact tag, system/architecture requirements and inline `releaseNotes: {en, es}`. The appcast uses English `description` as fallback and signed inline `estrobo:releaseNotesEn`/`estrobo:releaseNotesEs` under `https://estrobo.app/xmlns/updates`. The current product adapter accepts full DMGs up to 64 MiB and at most 16,384 UTF-8 bytes per notes language; keep candidates within those limits. No remote notes/assets, deltas, packages or latest-release aliases are allowed. `withdrawals.json` permanently records retired builds and reasons; records are append-only, and withdrawn builds cannot reappear. A corrective release allocates a higher build.
 
@@ -72,7 +72,7 @@ cmp release/macos-updates/appcast.xml /PRIVATE/EVIDENCE/appcast.xml
   --verify /PRIVATE/EVIDENCE/appcast.xml
 ```
 
-Compare public revision/feedSHA/withdrawn builds with approved source, inspect final response headers, and measure fresh-check/previous-download withdrawal behavior in the installed client. Provider/CDN propagation is not instantaneous and an already committed installation cannot be undone. The real public walkthrough remains a pending gate.
+Compare public revision/feedSHA/withdrawn builds with approved source, inspect final response headers, and measure fresh-check/previous-download withdrawal behavior in the installed client. Provider/CDN propagation is not instantaneous and an already committed installation cannot be undone. Record each real walkthrough separately; the [hosted qualification harness](../../prototype/OfficialUpdaterQualification/README.md) preserves scoped runtime evidence without approving the remaining release gates.
 
 If the EdDSA private key is lost, restore and prove the established offline backup first. With mandatory feed/archive verification and zero signature-failure expiration, waiting or publishing an unsigned feed does not recover clients. Without a recoverable root, a newly signed/verified **manual** installation with a new root and higher build is required. A planned trust bridge must be tested before removing old roots; automatic rotation/downgrade is outside this MVP.
 

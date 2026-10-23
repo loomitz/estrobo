@@ -68,6 +68,7 @@ jobs:
           test "$HOME" = /Users/runner
           test ! -e /Applications/estrobo.app
           xcodebuild -version
+          node --version
           archive="$RUNNER_TEMP/xcodegen.zip"
           curl --fail --location --silent --show-error --retry 3 \
             https://github.com/yonaskolb/XcodeGen/releases/download/2.46.0/xcodegen.zip --output "$archive"

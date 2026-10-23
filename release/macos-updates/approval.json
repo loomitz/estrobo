@@ -1,23 +1,13 @@
 {
   "schemaVersion": 1,
   "state": "approved",
-  "baseRevision": 0,
-  "baseFeedSHA256": null,
+  "baseRevision": 1,
+  "baseFeedSHA256": "46ec9b5f97318a88b481fe8faca5432250051a28cfebb035504f150f20edb0fb",
   "publicKey": "Ff4/cEdkVtcxwq+ze2oH83Nt4zJcwDvde0F9X3Ch8IQ=",
   "verifiedWith": "Sparkle 2.10.0 sign_update",
-  "feedSHA256": "46ec9b5f97318a88b481fe8faca5432250051a28cfebb035504f150f20edb0fb",
-  "catalogSHA256": "cb62a13b98f63a9aab8d091bdb9878a2a242e64a9b1e6a438882764bab2086aa",
-  "withdrawalsSHA256": "405ecffbc30951b82dd8d6b0efb8989c11fd99e48ef9f6b43495708eb7097225",
-  "qualification": {
-    "purpose": "official-updater-qualification",
-    "authorizedAt": "2026-10-22T14:57:37.877653+00:00",
-    "expiresAt": "2026-10-23T14:57:37.877653+00:00",
-    "build": "6",
-    "tag": "v0.1.0-beta.6",
-    "commit": "056618d5ab52433cb1487558dd8a2d56bb25eb39",
-    "dmgSHA256": "9d864ae93c3709aa7ac142efa48f16fd97b1b6424d5ee94ba10b6fa044fe92d7",
-    "authorizationSHA256": "df66e20dccfa10aa0c9ffc8e75dc614181037529ef219a225260e6b37bf14187"
-  },
-  "revision": 1,
-  "approvedAt": "2026-10-22T14:58:56.319759+00:00"
+  "feedSHA256": "dc1481d3d053489ca0dfee90135df131942b705e9a2286489f7a59f711ff74b1",
+  "catalogSHA256": "fc1c22217521a1b3a5163db6ad7c527333b9e1108098d02b06affce4df773c52",
+  "withdrawalsSHA256": "0a61b4050b6e6c2df9e4aa84e8f6555121b2e84e970ec542b77e3b56eb951588",
+  "revision": 2,
+  "approvedAt": "2026-10-23T06:42:40.462163+00:00"
 }

@@ -132,7 +132,8 @@ class CatalogTests(unittest.TestCase):
             stale.write_text('unapproved feed')
             published = temporary / 'published.json'
             published.write_text(json.dumps({'revision':0, 'withdrawnBuilds':[]}))
-            result = subprocess.run(['python3', str(TOOL), 'site', '--source', str(ROOT / 'release/macos-updates'), '--public', str(public), '--published-state', str(published)], capture_output=True, text=True)
+            source = unconfigured_fixture(temporary / 'source')
+            result = subprocess.run(['python3', str(TOOL), 'site', '--source', str(source), '--public', str(public), '--published-state', str(published)], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse(stale.exists())
             headers = (public / '_headers').read_text()
@@ -187,10 +188,20 @@ class CatalogTests(unittest.TestCase):
             state = public / 'updates/macos/state.json'
             state.parent.mkdir(parents=True)
             state.write_text(json.dumps({'revision':3, 'withdrawnBuilds':['5'], 'feedSHA256':'a'*64}))
-            result = subprocess.run(['python3', str(TOOL), 'site', '--source', str(ROOT / 'release/macos-updates'), '--public', str(public), '--published-state', str(state)], capture_output=True, text=True)
+            source = unconfigured_fixture(temporary / 'source')
+            result = subprocess.run(['python3', str(TOOL), 'site', '--source', str(source), '--public', str(public), '--published-state', str(state)], capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn('published', result.stderr.lower())
             self.assertTrue(state.exists())
+
+def unconfigured_fixture(source):
+    source.mkdir()
+    for name, value in [('approval.json', {'state': 'unconfigured'}),
+                        ('catalog.json', {'schemaVersion': 1, 'offers': []}),
+                        ('withdrawals.json', {'schemaVersion': 1, 'withdrawals': []})]:
+        (source / name).write_text(json.dumps(value))
+    return source
+
 
 def write_catalog_fixture(source, *, length, en, es):
     """Reviewed-byte fixture only; no signing key, Keychain or public offer."""
