@@ -21,14 +21,14 @@ El experimento vive en [prototype/SwiftQtValidation](../../prototype/SwiftQtVali
 
 El host usa el **SimulatedRadioTransport existente**, no un controlador inventado. Los repositorios en memoria se extraen de los auxiliares del suite existente; la fachada sólo traduce comandos y resultados.
 
-Diferencias explícitas: compilador Swift **6.1.3** y modo de lenguaje **Swift 6**. El primer intento usó modo 5 y falló al compilar defaults @MainActor de fixtures (SE-0411); el segundo conserva el modo 6 del paquete productivo. OpenCombine conserva el modo de su propio manifest. Se adaptan imports en copias y visibilidad de tipos auxiliares de fixtures; no se modifica la lógica del controlador ni las fuentes originales.
+Diferencias explícitas: compilador Swift **6.4.1** (intentos iniciales con 6.1.3) y modo de lenguaje **Swift 6**. El primer intento usó modo 5 y falló al compilar defaults @MainActor de fixtures (SE-0411); el segundo conserva el modo 6 del paquete productivo. OpenCombine conserva el modo de su propio manifest. Se adaptan imports en copias y visibilidad de tipos auxiliares de fixtures; no se modifica la lógica del controlador ni las fuentes originales.
 
 ## Reproducción y dependencias
 
 El [README](../../prototype/SwiftQtValidation/README.md) y [run.py](../../prototype/SwiftQtValidation/run.py) contienen los comandos. El driver se niega a sobrescribir una ejecución previa, limita comandos, conserva logs y resultados JSON, y verifica el SHA256 de Qt. CI usa Windows-2025 y Ubuntu-24.04 x86_64, fail-fast false, timeout de 45 minutos y permisos contents read. No usa secretos, hardware, releases ni cambios a main.
 
-- [Swift Windows manual](https://www.swift.org/install/windows/manual/) documenta MSVC/SDK y distribución oficial; el workflow fija el instalador 6.1.3 de download.swift.org.
-- [Dockerfile oficial Swift 6.1 para Ubuntu 24.04](https://github.com/swiftlang/swift-docker/blob/main/6.1/ubuntu/24.04/Dockerfile) fija Swift 6.1.3 y documenta dependencias/URL Linux.
+- [Swift Windows manual](https://www.swift.org/install/windows/manual/) documenta MSVC/SDK y distribución oficial; el workflow fija el instalador 6.4.1 de download.swift.org.
+- [Dockerfile oficial Swift 6.4 para Ubuntu 24.04](https://github.com/swiftlang/swift-docker/blob/main/6.4/ubuntu/24.04/Dockerfile) fija Swift 6.4.1 y documenta dependencias/URL Linux.
 - [OpenCombine 0.14.0](https://github.com/OpenCombine/OpenCombine/tree/8576f0d579b27020beccbccc3ea6844f3ddfc2c2) declara soporte Linux/Windows; su compatibilidad concreta con este motor se pone a prueba.
 - [Qt Windows](https://doc.qt.io/qt-6.8/windows-building.html) y [Qt Linux](https://doc.qt.io/qt-6.8/linux-building.html) documentan construcción desde fuentes. Se fija QtBase 6.8.3 desde el [archivo oficial y SHA256](https://download.qt.io/archive/qt/6.8/6.8.3/submodules/qtbase-everywhere-src-6.8.3.tar.xz.sha256), construyendo sólo módulos base necesarios para QtCore.
 - [QProcess](https://doc.qt.io/qt-6.8/qprocess.html) documenta inicio, señales y terminación de procesos; no demuestra por sí mismo el contrato de Estrobo.
@@ -53,3 +53,11 @@ Incluso con ambos jobs verdes quedan fuera: persistencia segura nativa y journal
 - stage.py: exit 0, 11 fuentes Core leídas desde el baseline y cuerpos de tests sin alterar.
 - Se generaron adaptation.patch y source-manifest.json bajo _stage, ignorado por Git.
 - No se instalaron toolchains ni se compiló Swift/Qt en la máquina del usuario.
+
+## Segundo intento y selección de toolchain actual
+
+[Run 39907441459](https://github.com/loomitz/estrobo/actions/runs/39907441459), commit 339543074e15ba21585546377b00e6677d79ea08:
+
+- Windows ejecutó Python y comenzó la compilación, pero el STL del runner Windows-2025 con VS2026 rechazó Clang del Swift 6.1.3: **STL1000: Unexpected compiler version, expected Clang 20 or newer**. No se desactiva la comprobación.
+- Linux ya pasó instalación y sigue en el driver de construcción/pruebas; se conserva el run para recoger evidencia.
+- El siguiente intento fija **Swift estable 6.4.1 en ambos sistemas**, según Swift.org y Dockerfile oficial actual. El código baseline sólo exige tools-version >=6.0; no fija compilador6.1.3. Se registran toolset/SDK/clang reales del runner y se acota setup a10min, con apt no interactivo. Aún no se presupone compatibilidad de6.4.1.

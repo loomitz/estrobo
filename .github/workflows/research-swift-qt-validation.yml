@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   smoke:
-    name: Swift 6.1.3 and QtCore 6.8.3 (${{ matrix.os }})
+    name: Swift 6.4.1 and QtCore 6.8.3 (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     strategy:
@@ -30,24 +30,26 @@ jobs:
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.12'
-      - name: Install Swift 6.1.3 Linux from Swift.org
+      - name: Install Swift 6.4.1 Linux from Swift.org
         if: runner.os == 'Linux'
+        timeout-minutes: 10
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y binutils git unzip gnupg2 libc6-dev libcurl4-openssl-dev libedit2 libgcc-13-dev libpython3-dev libsqlite3-0 libstdc++-13-dev libxml2-dev libncurses-dev libz3-dev pkg-config tzdata zlib1g-dev ninja-build cmake
-          curl --fail --location --retry 3 https://download.swift.org/swift-6.1.3-release/ubuntu2404/swift-6.1.3-RELEASE/swift-6.1.3-RELEASE-ubuntu24.04.tar.gz -o "$RUNNER_TEMP/swift.tar.gz"
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y binutils git unzip gnupg2 libc6-dev libcurl4-openssl-dev libedit2 libgcc-13-dev libpython3-dev libsqlite3-0 libstdc++-13-dev libxml2-dev libncurses-dev libz3-dev pkg-config tzdata zlib1g-dev ninja-build cmake
+          curl --fail --location --retry 3 --connect-timeout 20 --max-time 300 https://download.swift.org/swift-6.4.1-release/ubuntu2404/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE-ubuntu24.04.tar.gz -o "$RUNNER_TEMP/swift.tar.gz"
           mkdir "$RUNNER_TEMP/swift"
           tar -xzf "$RUNNER_TEMP/swift.tar.gz" -C "$RUNNER_TEMP/swift" --strip-components=1
           echo "$RUNNER_TEMP/swift/usr/bin" >> "$GITHUB_PATH"
-      - name: Install Swift 6.1.3 Windows from Swift.org
+      - name: Install Swift 6.4.1 Windows from Swift.org
         if: runner.os == 'Windows'
+        timeout-minutes: 10
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $installer = Join-Path $env:RUNNER_TEMP 'swift-6.1.3.exe'
-          Invoke-WebRequest 'https://download.swift.org/swift-6.1.3-release/windows10/swift-6.1.3-RELEASE/swift-6.1.3-RELEASE-windows10.exe' -OutFile $installer
+          $installer = Join-Path $env:RUNNER_TEMP 'swift-6.4.1.exe'
+          Invoke-WebRequest 'https://download.swift.org/swift-6.4.1-release/windows10/swift-6.4.1-RELEASE/swift-6.4.1-RELEASE-windows10.exe' -OutFile $installer
           $installProcess = Start-Process -FilePath $installer -ArgumentList '/quiet','/norestart' -WindowStyle Hidden -Wait -PassThru
           if ($installProcess.ExitCode -notin @(0,3010)) { throw "Swift installer exit $($installProcess.ExitCode)" }
           foreach ($scope in @('Machine','User')) {
@@ -83,6 +85,9 @@ jobs:
           $vsPath = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
           if (-not $vsPath) { throw 'Hosted runner has no C++ toolchain' }
           & (Join-Path $vsPath 'Common7\Tools\Launch-VsDevShell.ps1') -Arch amd64 -HostArch amd64 -SkipAutomaticLocation
+          Write-Output "VS install: $vsPath; MSVC tools: $env:VCToolsInstallDir; WindowsSDK: $env:WindowsSdkDir"
+          swift --version
+          clang --version
           & (Join-Path $env:pythonLocation 'python.exe') prototype/SwiftQtValidation/run.py
           if ($LASTEXITCODE -ne 0) { throw "Experiment exit $LASTEXITCODE" }
       - name: Preserve experiment logs and exact staged adaptation

@@ -63,7 +63,7 @@ let package = Package(
 )
 ''', encoding="utf-8", newline="\n")
     (STAGE / "adaptation.patch").write_text("".join(changes), encoding="utf-8", newline="\n")
-    (STAGE / "source-manifest.json").write_text(json.dumps({"baseline": BASELINE, "opencombine": OPENCOMBINE, "language_mode": "Swift 6 under Swift 6.1.3", "files": evidence, "test_bodies_changed": False, "fixture_extraction": "Tail from private Fixture marker, private helper types made internal; no controller substitution."}, indent=2), encoding="utf-8")
+    (STAGE / "source-manifest.json").write_text(json.dumps({"baseline": BASELINE, "opencombine": OPENCOMBINE, "language_mode": "Swift 6 under Swift 6.4.1", "files": evidence, "test_bodies_changed": False, "fixture_extraction": "Tail from private Fixture marker, private helper types made internal; no controller substitution."}, indent=2), encoding="utf-8")
     print(json.dumps({"staged": str(STAGE), "core_files": len(names), "test_bodies_changed": False}))
     return STAGE
 

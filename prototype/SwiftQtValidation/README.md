@@ -4,7 +4,7 @@ Baseline inmutable: `bf98e82637b562fff732ca82d7a92a66fe984d66`. Este experimento
 
 ## Ejecutar
 
-En un checkout que contiene el baseline, con Swift **6.1.3**, CMake >=3.21, Ninja, compilador C++17 y Python >=3.12:
+En un checkout que contiene el baseline, con Swift **6.4.1**, CMake >=3.21, Ninja, compilador C++17 y Python >=3.12:
 
 ```text
 python prototype/SwiftQtValidation/run.py
@@ -20,7 +20,7 @@ Windows requiere entorno MSVC x64 activo y SDK de Swift. Linux se dirige a Ubunt
 - En copias staged sustituye únicamente el import Combine por import condicional OpenCombine. En el simulador añade la misma guarda de módulo que ya usa el controlador para compilar en Core.
 - Mantiene los cuerpos completos de los dos archivos existentes de tests Core: sin filtros, exclusiones o alteraciones. Un fallo de descubrimiento XCTest también queda como fallo; no se presume aprobado.
 - Extrae las implementaciones de repositorios en memoria del final del suite actual y hace internos sus tipos auxiliares privados sólo para usarlos dentro del target experimental. No sustituye el controlador. Agrega `ExperimentRuntime` como fachada del experimento.
-- Usa modo de lenguaje Swift 6 con compilador Swift 6.1.3. OpenCombine conserva el modo de su propio manifest. El primer intento con modo 5 compiló el host Linux pero no los defaults aislados de fixtures; se corrigió el manifest experimental, conservando los tests.
+- Usa modo de lenguaje Swift 6 con compilador Swift 6.4.1. OpenCombine conserva el modo de su propio manifest. El primer intento con modo 5 compiló el host Linux pero no los defaults aislados de fixtures; se corrigió el manifest experimental, conservando los tests.
 - Guarda hashes original/staged, parche exacto y logs en `_stage` y `_results`; ambas carpetas se excluyen de Git y el script se niega a sobrescribir una ejecución previa.
 
 ## Qué verifica
@@ -32,7 +32,7 @@ El escenario de kill sólo comprueba el contrato y cierre de proceso: **no** dem
 ## Fuentes de dependencias
 
 - Swift y requisitos Windows: https://www.swift.org/install/windows/manual/
-- Dependencias y URL Linux de Swift 6.1.3: https://github.com/swiftlang/swift-docker/blob/main/6.1/ubuntu/24.04/Dockerfile
+- Dependencias y URL Linux de Swift 6.4.1: https://github.com/swiftlang/swift-docker/blob/main/6.4/ubuntu/24.04/Dockerfile
 - Qt desde fuentes: https://doc.qt.io/qt-6.8/windows-building.html y https://doc.qt.io/qt-6.8/linux-building.html
 - Qt 6.8.3 y hash: https://download.qt.io/archive/qt/6.8/6.8.3/submodules/qtbase-everywhere-src-6.8.3.tar.xz.sha256
 - QProcess: https://doc.qt.io/qt-6.8/qprocess.html
