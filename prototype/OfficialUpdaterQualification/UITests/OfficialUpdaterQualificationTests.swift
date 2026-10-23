@@ -21,10 +21,11 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         }
         try FileManager.default.createDirectory(at: evidence, withIntermediateDirectories: true)
         addUIInterruptionMonitor(withDescription: "Expected Bluetooth prompt in a VM") { alert in
-            let bluetoothText = alert.staticTexts.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Bluetooth"))
+            let bluetoothText = alert.staticTexts.matching(NSPredicate(format: "label CONTAINS[cd] %@ OR value CONTAINS[cd] %@ OR title CONTAINS[cd] %@", "Bluetooth", "Bluetooth", "Bluetooth"))
             guard alert.label.localizedCaseInsensitiveContains("Bluetooth") || bluetoothText.count > 0 else { return false }
-            for label in ["Don’t Allow", "Don't Allow", "No permitir"] where alert.buttons[label].exists {
-                alert.buttons[label].click(); return true
+            for label in ["Don’t Allow", "Don't Allow", "No permitir"] {
+                let button = alert.buttons.matching(NSPredicate(format: "label == %@ OR title == %@ OR value == %@", label, label, label)).firstMatch
+                if button.exists { button.click(); return true }
             }
             return false
         }
@@ -87,6 +88,7 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
 
     private func assertRadioHydrates(_ screenshot: String) throws {
         app.activate()
+        dismissExpectedBluetoothPermission()
         let updates = app.windows["Actualizaciones"]
         if updates.exists { updates.buttons[XCUIIdentifierCloseWindow].click() }
         let saved = app.buttons.matching(NSPredicate(format: "label == %@ OR label == %@",
@@ -103,11 +105,37 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
 
     private func openUpdates() {
         app.activate()
-        app.menuBars.menuBarItems.element(boundBy: 1).click()
-        let check = app.menuItems.matching(identifier: "updates.menuCheck").firstMatch
+        dismissExpectedBluetoothPermission()
+        let menu = app.menuBars.menuBarItems.element(boundBy: 1)
+        menu.click()
+        let check = menu.menuItems.matching(identifier: "updates.menuCheck").firstMatch
         if check.exists { check.click() }
-        else { app.menuItems.matching(NSPredicate(format: "label CONTAINS[cd] %@", "actualizaciones")).firstMatch.click() }
+        else { menu.menuItems.matching(NSPredicate(format: "title CONTAINS[cd] %@ OR label CONTAINS[cd] %@", "actualizaciones", "actualizaciones")).firstMatch.click() }
         XCTAssertTrue(app.buttons["updates.check"].waitForExistence(timeout: 20))
+    }
+
+    private func dismissExpectedBluetoothPermission() {
+        let center = XCUIApplication(bundleIdentifier: "com.apple.UserNotificationCenter")
+        let dialog = center.dialogs.firstMatch
+        guard dialog.waitForExistence(timeout: 2) else { return }
+        let text = dialog.staticTexts.allElementsBoundByIndex.map { ($0.value as? String) ?? $0.label }.joined(separator: " ")
+        guard text.localizedCaseInsensitiveContains("Bluetooth"), text.localizedCaseInsensitiveContains("estrobo") else { return }
+        for title in ["Don’t Allow", "Don't Allow", "No permitir"] {
+            let deny = dialog.buttons.matching(NSPredicate(format: "title == %@ OR label == %@ OR value == %@", title, title, title)).firstMatch
+            if deny.exists { deny.click(); return }
+        }
+        XCTFail("Expected Bluetooth denial action was unavailable: " + dialog.debugDescription)
+    }
+
+    private func updateStatusText() -> String {
+        let status = app.staticTexts["updates.status"]
+        return (status.value as? String) ?? status.label
+    }
+
+    private func confirmationButton(_ identifier: String, title: String) -> XCUIElement {
+        let identified = app.buttons[identifier]
+        if identified.exists { return identified }
+        return app.buttons.matching(NSPredicate(format: "title == %@ OR label == %@ OR value == %@", title, title, title)).firstMatch
     }
 
     private func archiveHash() throws -> String {
@@ -125,22 +153,23 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         XCTAssertEqual(installedBuild(), "5")
         // Bootstrap creates the sandbox through the real app. Seed synthetic
         // v2 data only after it exits; the app itself performs Keychain migration.
-        app.launch(); XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20)); app.terminate()
+        app.launch(); XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20))
+        dismissExpectedBluetoothPermission(); app.terminate()
         _ = try command("/usr/bin/defaults", ["import", preferenceFile.deletingPathExtension().path, root.appendingPathComponent("synthetic-preferences.plist").path])
         app.launch()
         try assertRadioHydrates("01-build5-keychain")
         let before = try productHashes()
         XCTAssertGreaterThanOrEqual(before.count, 5)
         openUpdates()
-        wait("The official signed feed must offer build 6") { self.app.staticTexts["updates.status"].label == "Hay una actualización disponible." }
+        wait("The official signed feed must offer build 6") { self.updateStatusText() == "Hay una actualización disponible." }
         try capture("02-official-offer")
         app.buttons["updates.download"].click()
         wait("The exact public GitHub DMG must finish downloading", seconds: 180) { self.app.buttons["updates.install"].exists && self.app.buttons["updates.install"].isEnabled }
         let downloaded = try archiveHash()
         XCTAssertEqual(downloaded, plan["dmgSHA256"] as? String)
         app.buttons["updates.install"].click()
-        XCTAssertTrue(app.buttons["updates.cancelConfirmation"].waitForExistence(timeout: 10))
-        app.buttons["updates.cancelConfirmation"].click()
+        let cancel = confirmationButton("updates.cancelConfirmation", title: "Cancelar")
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10)); cancel.click()
         try capture("03-cancelled")
         app.typeKey("q", modifierFlags: .command)
         XCTAssertTrue(app.wait(for: .notRunning, timeout: 20))
@@ -150,7 +179,8 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         XCTAssertEqual(try archiveHash(), downloaded)
         let oldPID = try command("/usr/bin/pgrep", ["-x", "estrobo"]).trimmingCharacters(in: .whitespacesAndNewlines)
         app.buttons["updates.install"].click()
-        XCTAssertTrue(app.buttons["updates.confirm"].waitForExistence(timeout: 10)); app.buttons["updates.confirm"].click()
+        let confirm = confirmationButton("updates.confirm", title: "Instalar y reiniciar")
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10)); confirm.click()
         wait("Sparkle must replace the application with official build 6", seconds: 180) { self.installedBuild() == "6" }
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 60), "The installer must relaunch the real app")
         let newPID = try command("/usr/bin/pgrep", ["-x", "estrobo"]).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -158,7 +188,7 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         try assertRadioHydrates("04-build6-keychain")
         XCTAssertEqual(try productHashes(), before)
         openUpdates()
-        wait("The installed app must recognize build 6 as current") { self.app.staticTexts["updates.status"].label == "Estrobo está actualizado." }
+        wait("The installed app must recognize build 6 as current") { self.updateStatusText() == "Estrobo está actualizado." }
         try capture("05-build6-current")
         let result: [String: Any] = ["passed": true, "installedBuild": "6", "bundleIdentifier": productID,
             "feedURL": "https://estrobo.app/updates/macos/appcast.xml", "archiveSHA256": downloaded,
