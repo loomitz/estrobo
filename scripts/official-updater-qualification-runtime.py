@@ -203,6 +203,11 @@ def release_tuple(release_id, build, expected_source, expected_dmg, expected_man
     return archive
 
 
+def native_network_probe(mode):
+    result = run(['swift', str(ROOT/'prototype/OfficialUpdaterQualification/NetworkProbe.swift'), mode])
+    return json.loads(result)
+
+
 def prepare():
     inputs = validate_inputs(json.loads(os.environ['QUALIFICATION_INPUT_JSON']))
     subprocess.run(['git', '-C', str(ROOT), 'merge-base', '--is-ancestor', inputs['source_sha'], 'origin/main'], check=True)
@@ -239,10 +244,16 @@ def prepare():
                 addresses.add(fields['ip'])
     if not addresses:
         raise ValueError('Could not establish exact public test egress addresses')
+    native_trace = native_network_probe('trace')
+    for probe in native_trace:
+        address = probe.get('address')
+        if address and ipaddress.ip_address(address).is_global:
+            addresses.add(str(ipaddress.ip_address(address)))
     metadata = {'architecture': platform.machine(), 'macOS': run(['sw_vers', '-productVersion']),
                 'addresses': sorted(addresses), 'sourceCommit': inputs['source_sha'],
                 'archiveSHA256': inputs['dmg_sha256'], 'expectedFeedSHA256': inputs['feed_sha256'],
                 'bootstrap': 'Exact immutable bootstrap transport; browser quarantine is not claimed',
+                'nativeNetworkTrace': native_trace,
                 'bootstrapTransport': 'encrypted temporary preview' if json.loads(os.environ.get('BOOTSTRAP_TRANSFER_JSON', '{}')).get('format') == 'aes-256-gcm-json-v1' else 'read-only GitHub assets'}
     (WORK/'runner-metadata.json').write_text(json.dumps(metadata, indent=2)+'\n')
     print('Exact release tuples verified and bootstrap installed in the fresh user. No signing credentials were supplied.')
@@ -260,6 +271,10 @@ def wait_feed():
                     if response.headers.get('Cache-Control') != 'private, no-store':
                         raise ValueError('Qualification feed lacks its private cache policy')
                     (WORK/'evidence/official-appcast.xml').write_bytes(data)
+                    probes = native_network_probe('feed')
+                    (WORK/'evidence/native-network-preflight.json').write_text(json.dumps(probes, indent=2)+'\n')
+                    if any(p.get('status') != 200 for p in probes) or probes[-1].get('sha256') != plan['feed_sha256']:
+                        raise ValueError('Native URLSession official-feed probe failed; inspect scoped preflight evidence')
                     print('The exact official HTTPS feed is available to this test VM.')
                     return
         except (urllib.error.URLError, TimeoutError):

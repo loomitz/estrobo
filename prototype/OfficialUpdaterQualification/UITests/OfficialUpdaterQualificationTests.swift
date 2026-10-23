@@ -35,8 +35,9 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
         guard NSUserName() == "runner", FileManager.default.fileExists(atPath: root.appendingPathComponent("plan.json").path),
               let run = testRun, run.failureCount > 0 else { return }
         try XCUIScreen.main.screenshot().pngRepresentation.write(to: evidence.appendingPathComponent("failure.png"))
+        let log = try? command("/usr/bin/log", ["show", "--last", "10m", "--style", "compact", "--predicate", "process == \"estrobo\""])
         try JSONSerialization.data(withJSONObject: ["passed": false, "failureCount": run.failureCount,
-                                                    "appHierarchy": app.debugDescription], options: .prettyPrinted)
+                                                    "appHierarchy": app.debugDescription, "productSystemLog": log ?? "unavailable"], options: .prettyPrinted)
             .write(to: evidence.appendingPathComponent("failure.json"))
     }
 

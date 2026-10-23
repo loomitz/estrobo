@@ -69,6 +69,13 @@ notary logs are never uploaded as Actions artifacts. A downloaded draft is not
 browser quarantine evidence. These VMs do not prove macOS 13 or physical
 Bluetooth/Godox behavior; those remain separate release gates.
 
+Routing metadata observes both curl and native URLSession egress. Before opening
+the product, the native stack must receive HTTP 200 for the app's HEAD preflight
+and the exact feed bytes for a Sparkle-style GET. Scoped JSON records status,
+headers and digests; a failed UI run also captures the last ten minutes of
+system messages from the Estrobo process only. These probes diagnose the
+unmodified releases and never substitute for their own network or update work.
+
 The Xcode project is generated with pinned XcodeGen 2.46.0. `build-for-testing`
 is safe locally; running the test requires the disposable `runner` user and its
 explicit plan. The test host has a separate identity; only the external signed
