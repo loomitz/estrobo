@@ -12,6 +12,10 @@ import time
 import urllib.request
 from stage import stage, HERE, STAGE, BASELINE
 
+# Hosted Windows consoles may default to CP1252; Swift logs contain Unicode.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 RESULTS = HERE / "_results"
 QT_URL = "https://download.qt.io/archive/qt/6.8/6.8.3/submodules/qtbase-everywhere-src-6.8.3.tar.xz"
 QT_SHA256 = "56001b905601bb9023d399f3ba780d7fa940f3e4861e496a7c490331f49e0b80"

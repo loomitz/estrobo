@@ -65,3 +65,7 @@ Incluso con ambos jobs verdes quedan fuera: persistencia segura nativa y journal
 ## Evidencia Linux con Swift 6.1.3 y modo 6
 
 El segundo run terminó: los **58 tests de Core pasaron** (53 de GodoxSessionController y5 smoke), en23.446s, sin cambiar sus cuerpos. Compilaron QtCore6.8.3 y el harness C++; el puente recibió fases autenticating/synchronizing/ready, Apply con pending0 y error por comando desconocido. El cierre **falló**: recibió resultado shutdown pero el lector stdin siguió abierto hasta el deadline40s. El nuevo parche del harness cierra el canal de entrada tras ese resultado y espera explícitamente al lector; falta ejecutar y comprobar esa corrección. El escenario de kill no se alcanzó. [Job Linux](https://github.com/loomitz/estrobo/actions/runs/39907441459/job/120262521691).
+
+## Primer resultado Windows con Swift 6.4.1
+
+[Job Windows del run39908125449](https://github.com/loomitz/estrobo/actions/runs/39908125449/job/120264670699), commit87ddfcc90c2571312b984cf62ac65521e31a6f1f: **58 tests pasan**, con53 de sesión, en25.077s. Toolset real: VisualStudio2026, MSVC14.51.36231; Swift6.4.1 corrige el rechazoSTL anterior. El job falló después al imprimir el log con PythonCP1252 (UnicodeEncodeError por U+2009). El log completo se conservó previamente en [artifact12482031392](https://github.com/loomitz/estrobo/actions/runs/39908125449/artifacts/12482031392) y se inspeccionó localmente. Se fija stdout/stderr del driver aUTF8; QtWindows sigue pendiente en este intento. Ningún fallo del logger se transforma en fallo del motor.
