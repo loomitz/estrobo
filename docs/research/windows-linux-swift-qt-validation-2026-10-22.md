@@ -61,3 +61,7 @@ Incluso con ambos jobs verdes quedan fuera: persistencia segura nativa y journal
 - Windows ejecutó Python y comenzó la compilación, pero el STL del runner Windows-2025 con VS2026 rechazó Clang del Swift 6.1.3: **STL1000: Unexpected compiler version, expected Clang 20 or newer**. No se desactiva la comprobación.
 - Linux ya pasó instalación y sigue en el driver de construcción/pruebas; se conserva el run para recoger evidencia.
 - El siguiente intento fija **Swift estable 6.4.1 en ambos sistemas**, según Swift.org y Dockerfile oficial actual. El código baseline sólo exige tools-version >=6.0; no fija compilador6.1.3. Se registran toolset/SDK/clang reales del runner y se acota setup a10min, con apt no interactivo. Aún no se presupone compatibilidad de6.4.1.
+
+## Evidencia Linux con Swift 6.1.3 y modo 6
+
+El segundo run terminó: los **58 tests de Core pasaron** (53 de GodoxSessionController y5 smoke), en23.446s, sin cambiar sus cuerpos. Compilaron QtCore6.8.3 y el harness C++; el puente recibió fases autenticating/synchronizing/ready, Apply con pending0 y error por comando desconocido. El cierre **falló**: recibió resultado shutdown pero el lector stdin siguió abierto hasta el deadline40s. El nuevo parche del harness cierra el canal de entrada tras ese resultado y espera explícitamente al lector; falta ejecutar y comprobar esa corrección. El escenario de kill no se alcanzó. [Job Linux](https://github.com/loomitz/estrobo/actions/runs/39907441459/job/120262521691).

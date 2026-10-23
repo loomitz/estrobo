@@ -37,3 +37,5 @@ El escenario de kill sólo comprueba el contrato y cierre de proceso: **no** dem
 - Qt 6.8.3 y hash: https://download.qt.io/archive/qt/6.8/6.8.3/submodules/qtbase-everywhere-src-6.8.3.tar.xz.sha256
 - QProcess: https://doc.qt.io/qt-6.8/qprocess.html
 - OpenCombine: https://github.com/OpenCombine/OpenCombine/tree/8576f0d579b27020beccbccc3ea6844f3ddfc2c2
+
+El cierre normal del protocolo requiere que Qt cierre stdin tras recibir el resultado shutdown. El host espera a que termine su lector; no basta con emitir una confirmación y dejar una lectura bloqueada. Este requisito se descubrió ejecutando el primer puente Linux, que agotó su plazo de40s pese a haber confirmado Start/Apply/Shutdown.

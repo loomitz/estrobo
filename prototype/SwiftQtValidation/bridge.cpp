@@ -89,8 +89,11 @@ int main(int argc, char **argv) {
                     }
                     closing = true;
                     if (!send(4, "shutdown")) { fail("shutdown rejected"); return; }
-                } else if (id == 4 && event.value("phase") != "shutdown") {
-                    fail("missing graceful shutdown result"); return;
+                } else if (id == 4) {
+                    if (!event.value("ok").toBool() || event.value("phase") != "shutdown") {
+                        fail("missing graceful shutdown result"); return;
+                    }
+                    process.closeWriteChannel(); // EOF releases the engine input reader.
                 }
             }
         }
