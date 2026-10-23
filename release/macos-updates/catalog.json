@@ -1,4 +1,27 @@
 {
   "schemaVersion": 1,
-  "offers": []
+  "offers": [
+    {
+      "build": "6",
+      "version": "0.1.0",
+      "channel": "beta",
+      "tag": "v0.1.0-beta.6",
+      "minimumMacOSVersion": "13.0",
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "releaseNotes": {
+        "en": "Temporary qualification of the official macOS updater. Universal signed and notarized build 6. Final v1 and physical Bluetooth validation remain pending.\n",
+        "es": "Validaci\u00f3n temporal del actualizador oficial de macOS. Build 6 universal firmado y notarizado. La salida v1 y la validaci\u00f3n f\u00edsica de Bluetooth siguen pendientes.\n"
+      },
+      "manifestSHA256": "e940a94a01db0943f9aa8cadb72bad2676edfdac9f6add160c59c1e9671e42ee",
+      "archive": {
+        "url": "https://github.com/loomitz/estrobo/releases/download/v0.1.0-beta.6/estrobo-v0.1.0-beta.6-macos-universal.dmg",
+        "length": 8957573,
+        "sha256": "9d864ae93c3709aa7ac142efa48f16fd97b1b6424d5ee94ba10b6fa044fe92d7",
+        "edSignature": "owE7HTer3sYgmVxSBB9annMbxOeS/gxl2yQYq+9kQ7QCvfFRwRlRoYPZpWLRvTjWGd5JNZ6uxC2YMWCf+x4RBQ=="
+      }
+    }
+  ]
 }

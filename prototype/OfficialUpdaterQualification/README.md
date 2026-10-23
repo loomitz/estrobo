@@ -6,6 +6,16 @@ receives Developer ID/Apple/EdDSA credentials, approves physical smoke, publishe
 a release, or deploys a feed. Its repository token is read-only and is supplied
 only while downloading the exact immutable release tuples.
 
+Draft release metadata requires write access even when its files only need to
+be downloaded. Before dispatch, the signing Mac obtains short-lived GitHub
+asset download URLs for the three unchanged build 5 files and stores their
+exact IDs/digests/expiry in the repository secret
+`ESTROBO_QUALIFICATION_BOOTSTRAP_TRANSFER`. The prepare step alone receives this
+read-only transfer. It checks the pinned host, expiry and all three known hashes,
+then performs the full canonical signature/notary verification. Refresh expired
+links before a new dispatch and delete the secret after preparation/testing.
+Never give the hosted job a maintainer token or contents write permission.
+
 Both production apps remain unchanged. The UI test launches `mx.loo.estrobo`,
 uses its native update window and confirmation, downloads from its canonical
 GitHub enclosure via the real HTTPS official feed, cancels, quits normally,
