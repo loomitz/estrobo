@@ -273,8 +273,14 @@ def wait_feed():
                     (WORK/'evidence/official-appcast.xml').write_bytes(data)
                     probes = native_network_probe('feed')
                     (WORK/'evidence/native-network-preflight.json').write_text(json.dumps(probes, indent=2)+'\n')
-                    if any(p.get('status') != 200 for p in probes) or probes[-1].get('sha256') != plan['feed_sha256']:
-                        raise ValueError('Native URLSession official-feed probe failed; inspect scoped preflight evidence')
+                    if any(p.get('status') != 200 for p in probes):
+                        # A newly deployed IP binding may reach the native and
+                        # urllib network paths at different times. Both must
+                        # independently pass within the existing 30-minute bound.
+                        time.sleep(15)
+                        continue
+                    if probes[-1].get('sha256') != plan['feed_sha256']:
+                        raise ValueError('Native URLSession received different feed bytes; inspect scoped evidence')
                     print('The exact official HTTPS feed is available to this test VM.')
                     return
         except (urllib.error.URLError, TimeoutError):
