@@ -15,8 +15,9 @@ final class OfficialUpdaterQualificationTests: XCTestCase {
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-        guard NSUserName() == "runner", FileManager.default.fileExists(atPath: root.appendingPathComponent("plan.json").path) else {
-            throw XCTSkip("This test may run only in the disposable hosted qualification user")
+        guard NSUserName() == "runner", FileManager.default.homeDirectoryForCurrentUser.path == "/Users/runner",
+              FileManager.default.fileExists(atPath: root.appendingPathComponent("plan.json").path) else {
+            throw XCTSkip("Disposable hosted qualification user required; user=\(NSUserName()), home=\(FileManager.default.homeDirectoryForCurrentUser.path)")
         }
         try FileManager.default.createDirectory(at: evidence, withIntermediateDirectories: true)
         addUIInterruptionMonitor(withDescription: "Expected Bluetooth prompt in a VM") { alert in

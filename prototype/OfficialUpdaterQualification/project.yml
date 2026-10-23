@@ -27,6 +27,8 @@ targets:
     settings:
       base:
         TEST_TARGET_NAME: QualificationHost
+        ENABLE_APP_SANDBOX: NO
+        CODE_SIGN_ENTITLEMENTS: UITests/QualificationUITests.entitlements
 schemes:
   OfficialUpdaterQualification:
     build:

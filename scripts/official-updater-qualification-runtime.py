@@ -89,6 +89,21 @@ def download_bootstrap(asset, destination, limit):
     destination.write_bytes(data)
 
 
+def verify_with_network_retry(script, environment):
+    for attempt in range(3):
+        result = subprocess.run([str(script)], env=environment, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True)
+        print(result.stdout, end='', flush=True)
+        if result.returncode == 0:
+            return
+        transient = ('NSURLErrorDomain Code=-1005' in result.stdout and
+                     'api.apple-cloudkit.com' in result.stdout)
+        if not transient or attempt == 2:
+            result.check_returncode()
+        print('Apple ticket lookup lost its connection; repeating the complete read-only verification.', flush=True)
+        time.sleep(3*(attempt+1))
+
+
 def release_tuple(release_id, build, expected_source, expected_dmg, expected_manifest):
     destination = WORK / ('build'+build)
     destination.mkdir()
@@ -123,7 +138,7 @@ def release_tuple(release_id, build, expected_source, expected_dmg, expected_man
         DEVELOPER_ID_CERTIFICATE=str(ROOT/'release/signing/estrobo-developer-id-application.cer'),
         DEVELOPER_ID_CERTIFICATE_SHA256=str(ROOT/'release/signing/estrobo-developer-id-application.sha256'),
         APP_VERIFY_SCRIPT=str(ROOT/'scripts/verify-macos-developer-id-release.sh'))
-    subprocess.run([str(ROOT/'scripts/verify-macos-developer-id-dmg.sh')], env=environment, check=True)
+    verify_with_network_retry(ROOT/'scripts/verify-macos-developer-id-dmg.sh', environment)
     return archive
 
 
@@ -193,6 +208,8 @@ def wait_feed():
 
 def verify_installed():
     plan = json.loads((WORK/'plan.json').read_text())
+    if not (WORK/'evidence/result.json').is_file():
+        raise ValueError('Native UI result is absent; a skipped test cannot qualify the update')
     result = json.loads((WORK/'evidence/result.json').read_text())
     if result.get('passed') is not True or result.get('archiveSHA256') != plan['dmg_sha256']:
         raise ValueError('Native runtime did not complete the authorized update')
@@ -201,7 +218,7 @@ def verify_installed():
         MACOSX_DEPLOYMENT_TARGET='13.0', DEVELOPER_ID_TEAM_ID='XG96FAV89U',
         DEVELOPER_ID_CERTIFICATE=str(ROOT/'release/signing/estrobo-developer-id-application.cer'),
         DEVELOPER_ID_CERTIFICATE_SHA256=str(ROOT/'release/signing/estrobo-developer-id-application.sha256'))
-    subprocess.run([str(ROOT/'scripts/verify-macos-developer-id-release.sh')], env=environment, check=True)
+    verify_with_network_retry(ROOT/'scripts/verify-macos-developer-id-release.sh', environment)
     result.update(architecture=platform.machine(), macOS=run(['sw_vers', '-productVersion']),
                   sourceCommit=plan['source_sha'], installedSignatureAndNotarizationVerified=True)
     (WORK/'evidence/result.json').write_text(json.dumps(result, indent=2)+'\n')

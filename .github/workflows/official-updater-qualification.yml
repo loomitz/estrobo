@@ -97,6 +97,9 @@ jobs:
           xcodebuild -project prototype/OfficialUpdaterQualification/OfficialUpdaterQualification.xcodeproj \
             -scheme OfficialUpdaterQualification -configuration Debug -destination 'platform=macOS' \
             -derivedDataPath "$RUNNER_TEMP/QualificationBuild" build-for-testing CODE_SIGN_IDENTITY=-
+          runner="$RUNNER_TEMP/QualificationBuild/Build/Products/Debug/QualificationUITests-Runner.app"
+          codesign -d --entitlements :- "$runner" > "$RUNNER_TEMP/qualification-runner-entitlements.plist"
+          python3 -c 'import plistlib,sys; assert plistlib.load(open(sys.argv[1], "rb")).get("com.apple.security.app-sandbox", False) is False' "$RUNNER_TEMP/qualification-runner-entitlements.plist"
 
       - name: Wait for the separately promoted official feed
         run: python3 scripts/official-updater-qualification-runtime.py wait-feed
