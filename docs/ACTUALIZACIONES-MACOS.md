@@ -4,6 +4,10 @@
 
 El actualizador pertenece sólo al shell macOS. La descarga pública sigue siendo `0.1.0-beta.4`, sin actualizador; iOS/iPadOS no incorporan este mecanismo. La primera release que lo incluya requerirá instalación manual verificada. La cualificación oficial utiliza la raíz EdDSA existente y los builds inmutables 5 y 6; su oferta temporal se retira mediante el catálogo vacío firmado de revisión 2. Los gates de v1 que esta prueba no acredita siguen pendientes. Este procedimiento documenta comandos disponibles; no concede permiso para firmar, notarizar, publicar o desplegar.
 
+## Investigaciones y decisiones posteriores
+
+Las investigaciones del 14 de octubre sobre [publicación y confianza](research/macos-update-distribution.md) y [compatibilidad y consentimiento](research/macos-updater-compatibility.md) se conservan como antecedentes históricos. Cada una incorpora un estado revisado el 24 de octubre, enlaza los contratos actuales y distingue decisiones resueltas, cualificación oficial acreditada y gates todavía pendientes. Sus alternativas originales no sustituyen esta guía, el [contrato funcional](../.scratch/macos-auto-update/spec.md) ni los contratos de [firma](../release/signing/README.md) y [catálogo](../release/macos-updates/README.md).
+
 ## Dependencia, builds y asignaciones
 
 Sparkle 2.10.0 se obtiene del asset oficial exacto y se verifica contra SHA-256 `c2bf58aa8387266ac179357b1415d6f2635f044da8be41042af32425dae6da0c`. La cache ignorada es `.build/Sparkle/2.10.0`; `SPARKLE_DIR` y `SPARKLE_ARCHIVE` permiten reutilización offline con la misma verificación de bytes/symlinks/permisos, sin aceptar una copia alterada por su número de versión. Requiere Python 3.12+ y Xcode completo.

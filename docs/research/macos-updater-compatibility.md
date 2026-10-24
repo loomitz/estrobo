@@ -1,10 +1,35 @@
 # Compatibilidad de actualizaciones asistidas en Estrobo para macOS
 
+> **Antecedente histórico del 14 de octubre de 2026; estado revisado el 24 de octubre de 2026.** El informe original se conserva al final. Las alternativas abiertas y los bloqueos descritos allí corresponden al baseline anterior a la implementación. El [contrato funcional](../../.scratch/macos-auto-update/spec.md), la [guía de mantenimiento](../ACTUALIZACIONES-MACOS.md) y el [contrato de firma](../../release/signing/README.md) contienen las decisiones posteriores.
+
+## Estado actual de las decisiones
+
+Contraste realizado contra `main` en `2d6ef2801c3b8ee876267ec3d59f772853c0a1e2`. Se distingue una decisión implementada de una validación operativa pendiente; esta revisión no ejecuta nuevas pruebas de instalación ni hardware.
+
+| Pregunta o bloqueo de la investigación | Estado posterior y decisión vigente | Contrato o evidencia |
+| --- | --- | --- |
+| Elección y alcance del mecanismo | **Resuelto.** Sparkle 2.10.0, fijado por archivo/hash, pertenece exclusivamente al shell macOS. El mínimo declarado sigue en macOS 13 y el bundle es universal ARM64/Intel; Sparkle no entra en los módulos Swift compartidos ni en iOS. | [Dependencia y builds](../ACTUALIZACIONES-MACOS.md#dependencia-builds-y-asignaciones), [firma del candidato](../../release/signing/README.md#macos-updater-candidates-build-5-and-later). |
+| Descargar sin armar instalación al salir | **Resuelto e implementado.** La descarga/cache se separa de preparar el instalador. Sparkle mantiene desactivadas su programación e instalación automáticas; instalar requiere consentimiento para la oferta concreta. Un cierre normal no constituye autorización. | [Decisiones de consentimiento](../../.scratch/macos-auto-update/spec.md#implementation-decisions), [aceptación local](macos-updater-acceptance-2026-10-18.md), [cualificación oficial 5→6](https://github.com/loomitz/estrobo/actions/runs/39912706540). |
+| Gate de cierre y Bluetooth | **Resuelto el contrato y su implementación.** Instalar exige transmisor desconectado y ausencia de bloqueos de cierre; se revalidan seguridad y elegibilidad antes de instalar. El actualizador no aplica, descarta ni desconecta por su cuenta. Las pruebas simuladas no acreditan comportamiento óptico. | [Contrato funcional](../../.scratch/macos-auto-update/spec.md#implementation-decisions), [revisión final y aceptación](macos-updater-acceptance-2026-10-18.md). |
+| Makefile, contenido del bundle y firma | **Resuelto.** Se conserva la compilación existente y se verifican ambas slices. El layout permitido de Sparkle tiene allowlist precisa; los componentes se firman explícitamente de dentro hacia fuera antes de firmar el host y notarizar. No se desactivan globalmente los verificadores. | [Contrato de empaquetado](../../release/signing/README.md#macos-updater-candidates-build-5-and-later), [allowlist](../../release/sparkle-2.10.0-layout.json). |
+| Sandbox y alternativa de red | **Resuelto.** Host con Sandbox, Bluetooth, `network.client` y las excepciones Mach `mx.loo.estrobo-spks`/`mx.loo.estrobo-spki`; Installer XPC habilitado, sin Downloader XPC. Sólo se conservan Installer XPC, Autoupdate y Updater.app, con entitlements vacíos en los auxiliares. | [Contrato de firma y entitlements](../../release/signing/README.md#macos-updater-candidates-build-5-and-later). |
+| Preferencias, perfil y notas | **Resuelto.** Comprobación y descarga automáticas empiezan apagadas y tienen controles propios; la búsqueda manual permanece disponible. Perfil, JavaScript y notas remotas están desactivados; las notas ES/EN son autocontenidas. | [Contrato funcional](../../.scratch/macos-auto-update/spec.md#implementation-decisions), [privacidad](../../PRIVACY.md), [límites del catálogo](../../release/macos-updates/README.md). |
+| Canales y orden de builds | **Resuelto.** Canal explícito, build global creciente y ausencia de downgrade automático. Instalar una estable mueve al canal estable; la retirada no permite reutilizar el número de build. | [Decisiones de canal](../../.scratch/macos-auto-update/spec.md#implementation-decisions), [numeración y tags](../../release/signing/README.md#global-build-allocation-and-tags), [ledger](../../release/macos-builds.json). |
+| Binarios firmados y compatibilidad en ejecución | **Acreditado parcialmente.** La cualificación oficial 5→6 pasó en macOS 15 ARM64 e Intel con las identidades y el feed oficiales, verificando firma/notarización instalada y preservación de datos sintéticos/Keychain. El mínimo declarado macOS 13 sigue sin acreditarse por esa ejecución. | [Run oficial aprobado](https://github.com/loomitz/estrobo/actions/runs/39912706540), [harness y límites](../../prototype/OfficialUpdaterQualification/README.md), [cierre del PR #27](https://github.com/loomitz/estrobo/pull/27). |
+
+## Límites que siguen abiertos
+
+La aceptación local del 18 de octubre y la cualificación oficial posterior son evidencias distintas. La segunda cubre cancelación, cierre normal sin instalar, recuperación del mismo archivo e instalación confirmada 5→6, pero no macOS 13, Bluetooth/Godox físico, cuarentena/translocación desde navegador, autorización de administrador o recuperación ante todos los fallos de reemplazo. Tampoco acredita el backup recuperable de la raíz de firma ni aprueba v1. La [guía operativa](../ACTUALIZACIONES-MACOS.md) mantiene esos gates.
+
+La oferta temporal 6 quedó retirada permanentemente en la [revisión 2 aprobada](../../release/macos-updates/approval.json), con [catálogo vacío](../../release/macos-updates/catalog.json) y [registro de retirada](../../release/macos-updates/withdrawals.json). La beta 4 pública continúa sin actualizador; su camino al primer build distribuible con esta función es manual. La compatibilidad documental de una API, un build universal o una simulación no sustituye la validación del próximo candidato exacto.
+
+## Investigación original — 14 de octubre de 2026
+
 Fecha: 2026-10-14. Investigación AFK para «Determinar qué mecanismos de actualización encajan con Estrobo».
 Base local: `91eeeb9f02ca8268dfb1908c4dcd85994c738be4`; rama de investigación `research/estrobo-macos-updater-compatibility`.
 Este informe aporta hechos y condiciones para decidir; no selecciona el mecanismo ni implementa el actualizador.
 
-## Resultado para la decisión
+### Resultado para la decisión
 
 **Sparkle 2 es un candidato mantenido y compatible con el sistema operativo y la arquitectura de Estrobo; su configuración automática estándar no cumple el consentimiento por instalación acordado.**
 La release estable observada es **2.10.0**, publicada el **2026-09-13T23:54:06Z**, sin marca prerelease; eleva el mínimo a macOS 12.0, por debajo del mínimo 13.0 de Estrobo. [S1], [S2], [L1]
@@ -15,7 +40,7 @@ Activar `SUAutomaticallyUpdate` descarga y prepara la instalación silenciosa al
 
 Recomendación técnica para la siguiente decisión: evaluar Sparkle primero por su instalación, validación y soporte sandbox, pero conservar como condición abierta la separación real entre descarga automática e instalación autorizada. Un `SPUUserDriver` personalizado, por sí solo, **no demuestra** esa separación. [S5], [S6]
 
-## Método y límites
+### Método y límites
 
 - **Verificado:** documentación y código oficiales de Sparkle, incluyendo el tag `2.10.0`; documentación Apple; lectura de los archivos locales citados en la base indicada.
 - **Inferencia:** estimaciones de mantenimiento, diseño de la adaptación al Makefile y consecuencias del contrato actual. Se identifican expresamente.
@@ -23,7 +48,7 @@ Recomendación técnica para la siguiente decisión: evaluar Sparkle primero por
 - No se descargó el framework binario ni el DMG de Estrobo, no se compiló, no se firmó, no se accedió a credenciales, no se ejecutó la app y no se operaron radios.
 - La evidencia es temporal: verificar de nuevo la versión estable y los avisos de seguridad antes de fijar una dependencia o distribuirla.
 
-## Comparación de mecanismos
+### Comparación de mecanismos
 
 | Mecanismo | Detectar y descargar | Instalar desde la app | Adecuación y coste inferido |
 | --- | --- | --- | --- |
@@ -34,7 +59,7 @@ Recomendación técnica para la siguiente decisión: evaluar Sparkle primero por
 
 La comparativa no acredita una implementación propia ni promete estimaciones de plazo. La decisión humana sigue abierta.
 
-## Compatibilidad e integración con el Makefile
+### Compatibilidad e integración con el Makefile
 
 Sparkle 2.10.0 requiere macOS 12.0. Su configuración conserva arquitecturas estándar y contempla explícitamente `x86_64`; Estrobo construye `arm64` y `x86_64` por separado y combina el ejecutable con `lipo`. **Inferencia:** no hay conflicto de plataforma declarado; no se han verificado las slices del framework distribuido. [S1], [S7], [L1]
 
@@ -51,7 +76,7 @@ Hay dos bloqueos locales concretos de validación:
 
 **Inferencia:** habrá que diseñar allowlists acotadas para el framework/auxiliares y sus entitlements, preservando los controles de contenido y firma. Desactivar globalmente esas verificaciones no es una integración equivalente.
 
-## Sandbox, red y auxiliares
+### Sandbox, red y auxiliares
 
 Para una app sandboxed, Sparkle requiere `Installer.xpc`, `SUEnableInstallerLauncherService=YES` y excepciones `mach-lookup.global-name` para `<bundle-id>-spks` y `<bundle-id>-spki`. El Makefile no tiene la sustitución automática de Xcode: los valores efectivos serían `mx.loo.estrobo-spks` y `mx.loo.estrobo-spki`, que deben comprobarse tras firmar. [S9], [L1], [L7]
 
@@ -66,7 +91,7 @@ Fuera de Archive/Export, firmar servicios, `Autoupdate`, `Updater.app` y framewo
 
 Apple exige firmas válidas para todos los ejecutables distribuidos, Developer ID, Hardened Runtime, timestamp seguro y ausencia de `get-task-allow=true` para la notarización. El nuevo bundle con sus auxiliares necesita evidencia propia; la notarización de beta 4 no lo valida. [A1], [L4]
 
-## Consentimiento, descarga e instalación
+### Consentimiento, descarga e instalación
 
 Sparkle separa comprobar de descargar mediante `automaticallyChecksForUpdates` y `automaticallyDownloadsUpdates`, y ofrece `checkForUpdates` manual. Los valores se persisten; no se deben sobreescribir en cada arranque. La segunda propiedad activa el camino de actualización automática, no una caché de descarga aislada de instalación. [S11], [S3]
 
@@ -85,7 +110,7 @@ La evidencia del tag 2.10.0 permite acotar el problema:
 
 **Preguntas concretas para prototipo/diseño:** ¿se autoriza una instalación específica antes de preparar su instalador? ¿puede una coordinación propia mantener sólo una descarga validada sin armar install-on-quit y después entregarla a un camino soportado de Sparkle? Si no existe una integración pública mantenible, decidir explícitamente entre cambiar el momento de descarga o asumir más código propio; no relajar silenciosamente el consentimiento.
 
-## Protección del cierre y operaciones Bluetooth
+### Protección del cierre y operaciones Bluetooth
 
 AppKit permite cancelar o diferir terminación en `applicationShouldTerminate(_:)`. Estrobo devuelve `.terminateCancel` cuando su controlador indica sincronización, aplicación, Test pendiente, edición interactiva, debounce, recuperación o borradores resolubles; la última ventana también pide terminar la app. [A3], [L2], [L3]
 
@@ -95,7 +120,7 @@ No se encontró evidencia de que Sparkle tenga que saltarse el veto AppKit. El r
 
 El consentimiento debe invalidarse o revalidarse si aparece nuevo trabajo antes de la salida. La prueba necesita cubrir doble click, cancelar terminación, reintentar y cierre normal posterior, sin descartar borradores ni interrumpir una orden física. Esto es un criterio de diseño inferido de las preferencias y el gate, no conducta ya implementada.
 
-## Datos transmitidos y desactivación
+### Datos transmitidos y desactivación
 
 El `User-Agent` predeterminado incluye nombre/versión visible de la app y versión de Sparkle; puede personalizarse. `httpHeaders` se aplica a feed, notas y archivo; `feedParametersForUpdater:sendingSystemProfile:` puede añadir parámetros propios independientemente del perfil. [S11], [S18]
 
@@ -107,7 +132,7 @@ Para el contrato «sin analítica/telemetría», propuesta técnica pendiente de
 
 Notas integradas, JavaScript deshabilitado y ausencia de recursos remotos son candidatos para minimizar peticiones. No se acredita «cero red» con un actualizador habilitado. Desactivar comprobaciones automáticas debe persistir y no impedir la acción manual explícita. [S3], [S11], [S10]
 
-## Canales y orden de versiones
+### Canales y orden de versiones
 
 `allowedChannelsForUpdater:` admite un conjunto vacío para sólo el canal por defecto; incluir `beta` agrega ese canal y conserva el defecto siempre. Por tanto, feed con estables sin etiqueta y betas con `sparkle:channel=beta` expresa las preferencias acordadas. [S18]
 
@@ -117,7 +142,7 @@ El comparador personalizado está deprecated y el comparador estándar puede seg
 
 La decisión de numeración, política beta→estable, feed y rollback vive en otros tickets. Este informe sólo acredita las capacidades y su límite; no fija esos contratos.
 
-## Criterios para el prototipo y la validación posterior
+### Criterios para el prototipo y la validación posterior
 
 Los puntos 1–2 orientan el prototipo de diseño y la investigación de API: estados, consentimiento y gate de cierre. Una simulación puede validar interacción, pero no demuestra el comportamiento del instalador real. Los puntos 3–6 son gates de una implementación futura con artefactos reales; este mapa no autoriza compilar, notarizar, instalar ni publicar.
 
@@ -128,7 +153,7 @@ Los puntos 1–2 orientan el prototipo de diseño y la investigación de API: es
 5. Capturar destinos y datos de red con perfil desactivado; desactivar automáticos, relanzar y comprobar que sólo una acción manual provoca comprobación.
 6. Probar canales y comparación sobre builds reales; mantener un bootstrap manual para instalaciones beta 4 que no incluyen actualizador. [L4]
 
-## Fuentes primarias
+### Fuentes primarias
 
 Las referencias Sparkle de código fijan el tag investigado; las páginas de documentación pueden evolucionar.
 

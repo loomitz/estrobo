@@ -1,17 +1,42 @@
 # Publicación y confianza de actualizaciones de Estrobo para macOS
 
+> **Antecedente histórico del 14 de octubre de 2026; estado revisado el 24 de octubre de 2026.** La investigación original se conserva al final. Sus propuestas y expresiones «pendiente», «no elegido» o «no se acredita» describen el baseline investigado, no el estado posterior del actualizador. Las decisiones vigentes están en el [contrato funcional](../../.scratch/macos-auto-update/spec.md), la [guía de mantenimiento](../ACTUALIZACIONES-MACOS.md), el [contrato de firma](../../release/signing/README.md) y las [operaciones del catálogo](../../release/macos-updates/README.md).
+
+## Estado actual de las decisiones
+
+Contraste realizado contra `main` en `2d6ef2801c3b8ee876267ec3d59f772853c0a1e2`. Esta revisión documental no ejecuta una nueva cualificación, promoción o publicación.
+
+| Pregunta de la investigación | Estado posterior y decisión vigente | Contrato o evidencia |
+| --- | --- | --- |
+| Mecanismo, proveedor y URL del feed | **Resuelto.** Sparkle 2.10.0 fijado; catálogo firmado en `https://estrobo.app/updates/macos/appcast.xml` y archivos de versiones exactas en GitHub Releases. La API de Releases y sus aliases no seleccionan directamente la oferta del cliente. | [Contrato funcional](../../.scratch/macos-auto-update/spec.md#implementation-decisions), [catálogo canónico](../../release/macos-updates/README.md). |
+| Formato y autenticidad | **Resuelto.** Instalación manual y asistida usan el mismo DMG final, con firma Developer ID y notarización/stapling independientes de app y DMG. Se requieren firma EdDSA del archivo y feed firmado, verificación antes de extraer y expiración de fallo de firma igual a cero. No hay ZIP alternativo ni deltas. | [Firma del candidato con actualizador](../../release/signing/README.md#macos-updater-candidates-build-5-and-later). |
+| Numeración y canales | **Resuelto.** Build entero global creciente, marketing version numérica y canal explícito `beta` o `stable`. Beta admite una estable posterior; la estable no admite betas. No se reciclan builds retirados. | [Asignación y tags](../../release/signing/README.md#global-build-allocation-and-tags), [ledger](../../release/macos-builds.json), [contrato funcional](../../.scratch/macos-auto-update/spec.md#implementation-decisions). |
+| Preparación, aprobación y despliegue | **Resuelto como procedimiento.** `prepare`, `approve` y `withdraw` conservan identidad exacta, comprobaciones y autoridad del mantenedor; aprobar fuente y desplegar son operaciones separadas. El build del website valida revisión y bytes aprobados; no aporta un lock de infraestructura. | [Preparación del catálogo](../ACTUALIZACIONES-MACOS.md#de-candidato-firmado-a-catálogo-aprobado), [promoción y retirada](../../release/macos-updates/README.md#promotion-and-withdrawal-commands). |
+| Retirada y recuperación | **Resuelto el contrato.** Retirada append-only, revisión creciente, elegibilidad fresca antes de instalar y corrección con build mayor. La fuente aprobada de revisión 2 contiene un catálogo vacío y retira permanentemente el build 6; no deshace instalaciones ya comprometidas. | [Aprobación de revisión 2](../../release/macos-updates/approval.json), [ofertas](../../release/macos-updates/catalog.json), [retiradas](../../release/macos-updates/withdrawals.json), [recuperación](../ACTUALIZACIONES-MACOS.md#website-retirada-y-recuperación). |
+| Datos y red | **Resuelto el alcance.** Automatismos opt-in, sin perfil/telemetría ni datos del radio; notas ES/EN autocontenidas. HTTPS y sus redirects aceptados tienen el alcance del contrato actual; las observaciones del CDN de esta investigación siguen siendo históricas. | [Contrato funcional](../../.scratch/macos-auto-update/spec.md#implementation-decisions), [privacidad](../../PRIVACY.md). |
+| Raíz de confianza y custodia | **Parcialmente acreditado.** La cualificación utilizó la raíz EdDSA oficial existente y la identidad Developer ID. La clave privada permanece fuera de Git y del hosting; el backup cifrado offline y su recuperación demostrada siguen siendo gates operativos. | [Claves y firma](../ACTUALIZACIONES-MACOS.md#claves-firma-y-notarización), [cualificación oficial](../../release/macos-updates/QUALIFICATION.md). |
+| Actualización entre dos builds reales | **Acreditado para la cualificación oficial 5→6 en macOS 15, ARM64 e Intel.** Se verificaron cancelación, cierre normal sin instalar, recuperación de la descarga, confirmación/reinicio, datos sintéticos, Keychain y firma/notarización de la app instalada. | [Run oficial aprobado](https://github.com/loomitz/estrobo/actions/runs/39912706540), [harness y límites](../../prototype/OfficialUpdaterQualification/README.md), [cierre del PR #27](https://github.com/loomitz/estrobo/pull/27). |
+
+## Límites que siguen abiertos
+
+La cualificación no aprueba v1. Siguen pendientes macOS 13, Bluetooth/Godox físico y resultado óptico, cuarentena/translocación desde navegador, autorización de administrador y su cancelación, recuperación frente a fallos de reemplazo, y recuperación del backup de firma. La verificación pública de firma, bytes, revisión y headers debe repetirse en cada despliegue autorizado; la prueba anterior no garantiza propagación instantánea ni disponibilidad futura.
+
+La descarga pública continúa en beta 4, sin actualizador. El primer build distribuible que lo incluya necesita instalación manual verificada y los gates de su candidato exacto. El build 5 conserva su draft; el 6 es un artefacto inmutable de cualificación retirado del feed. Un nuevo candidato requiere un build global superior, según la [guía vigente](../ACTUALIZACIONES-MACOS.md) y el [ledger](../../release/macos-builds.json).
+
+## Investigación original — 14 de octubre de 2026
+
 Investigado: 2026-10-14, America/Mexico_City (consultas HTTP: 2026-10-15 UTC).
 Base local: `91eeeb9f02ca8268dfb1908c4dcd85994c738be4`.
 Tipo: investigación para wayfinder; alternativas y restricciones, sin elegir proveedor ni publicar software.
 
-## Respuesta a la pregunta
+### Respuesta a la pregunta
 
 GitHub Releases puede alojar los archivos de actualización y un appcast independiente puede seleccionar qué ofrecer.
 Sparkle consume RSS enriquecido, no el JSON de Releases: usar la API exige transformar/publicar un appcast o construir otro cliente. [Sparkle][sparkle-start] [GitHub Releases][gh-releases]
 Mantener separadas la identidad del archivo, su autenticidad y su elegibilidad permite retirar una oferta sin reemplazar el archivo.
 Esta separación es una propuesta de contrato, no una decisión ya adoptada.
 
-## Evidencia comprobada y límites
+### Evidencia comprobada y límites
 
 - El plist local declara `mx.loo.estrobo`, marketing `0.1.0`, build `4` y macOS mínimo `13.0`. [Plist exacto][local-plist]
 - El workflow de candidato deriva `v<marketing>-beta.<build>` y rechaza tags ya existentes; no representa todavía un flujo estable. [Workflow exacto][local-workflow]
@@ -22,7 +47,7 @@ Esta separación es una propuesta de contrato, no una decisión ya adoptada.
 - Las fuentes de código siguientes están fijadas a ese commit. Las páginas de documentación son vivas: revalidarlas al fijar la dependencia.
 - No se inspeccionaron llaveros, secretos ni infraestructura privada. No se acredita hosting de feed, integración, recuperación de claves ni instalación real.
 
-## Opciones de metadata y alojamiento
+### Opciones de metadata y alojamiento
 
 | Alternativa | Qué aporta | Responsabilidad o límite |
 | --- | --- | --- |
@@ -39,7 +64,7 @@ Un `appcast.xml` adjunto a una release inmutable tampoco puede reemplazarse, por
 No usar `latest/download` como identidad del archivo firmado: un alias que cambia puede entregar bytes que no corresponden a la firma/longitud del ítem.
 Esto se deduce del contrato de firma del archivo y de los campos del enclosure. [Firma][sparkle-start] [Enclosure][sparkle-item]
 
-## Archivo, firma y Apple
+### Archivo, firma y Apple
 
 Sparkle soporta app bundles dentro de DMG, ZIP y otros archivos; el nombre de la app debe mantenerse y el empaquetado debe preservar symlinks.
 La documentación recomienda `ditto` para ZIP y ofrece `generate_appcast` para generar metadata y firmas del archivo final. [Publicación][sparkle-publish]
@@ -62,7 +87,7 @@ Son opciones disponibles en 2.10.0, no funciones hipotéticas; fijar su uso y po
 Firmar el archivo autentica el código; firmar el feed también protege la información y enlaces mostrados al usuario.
 Las ediciones de feed/notas firmados necesitan nuevas firmas. [Configuración][sparkle-custom] [Firma de feed][sparkle-start]
 
-## Versiones y canales
+### Versiones y canales
 
 Apple define `CFBundleVersion` como build numérico de una a tres partes y pide incrementarlo antes de distribuir un build macOS.
 `CFBundleShortVersionString` es la versión visible de tres enteros; no conviene trasladar un tag `-beta` literalmente al plist. [Build Apple][apple-build] [Versión Apple][apple-marketing]
@@ -88,7 +113,7 @@ Este último restringe build de origen; no confundirlo con `minimumAutoupdateVer
 **Propuesta:** conservar en el feed la última oferta compatible para cada población soportada y validar arm64/x86_64 y mínimo macOS del paquete exacto.
 Un universal evita dividir arquitectura hoy; elevar mínimos exige revisar alcance, metadata y pruebas. [Plist actual][local-plist] [Filtrado Sparkle][sparkle-driver]
 
-## Releases API, redirects, caché y disponibilidad
+### Releases API, redirects, caché y disponibilidad
 
 `/releases/latest` excluye prereleases/drafts y tiene semántica propia de “latest”; no sirve para descubrir betas ni como comparador de builds.
 El listado de releases requiere tratar paginación y filtrar explícitamente drafts, elegibilidad y archivos; no asumir que la primera fila es el candidato correcto. [API][gh-releases] [Buenas prácticas][gh-best]
@@ -103,7 +128,7 @@ La observación HEAD acredita sólo acceso en este momento, no un dominio/CDN fi
 Sparkle 2.10.0 solicita feeds/notas ignorando caché local; su código advierte que eso no controla descargas persistentes de archivos. [Downloader exacto][sparkle-download]
 **Inferencia:** definir latencia de retirada y pruebas con caché CDN real; la política del cliente no permite prometer retirada instantánea.
 
-## Retirar una oferta, recuperar y custodiar claves
+### Retirar una oferta, recuperar y custodiar claves
 
 Una release inmutable impide cambiar/eliminar assets o mover el tag; GitHub permite editar notas/título y flags prerelease/latest.
 Eliminar la release no permite reutilizar el tag. Esos flags editables no son una firma de elegibilidad. [GitHub inmutabilidad][gh-immutable]
@@ -122,7 +147,7 @@ Con verificación previa a extracción, perder EdDSA requiere la vía DMG firmad
 Feeds firmados tienen un fallback por fallos prolongados (20 días por defecto; `0` lo desactiva), con información restringida: decidir ese compromiso explícitamente. [Configuración][sparkle-custom]
 Si se pierden ambas raíces útiles, no prometer continuidad automática: documentar distribución e instalación manual verificadas como recuperación.
 
-## Datos enviados y decisiones que quedan
+### Datos enviados y decisiones que quedan
 
 Sin system profiling, Sparkle sigue usando un User-Agent con nombre/versión de la app y versión Sparkle; se envía al descargar feed, notas y archivo. [User-Agent exacto][sparkle-agent] [Downloader][sparkle-download]
 Profiling añade por GET datos de OS, CPU, modelo, RAM, idioma y app; debe permanecer desactivado y no añadirse información de Bluetooth en parámetros personalizados. [Profiling oficial][sparkle-profile]
@@ -133,7 +158,7 @@ Las conexiones del sistema para Gatekeeper/notarización son otra capa: no confu
 Falta decidir hosting del feed, una o dos URLs/canales, esquema monotónico, permanencia de beta, formato(s), política de firma de feed/fallback y operación de retirada/recuperación.
 La evidencia permite tomar esas decisiones; no autoriza modificar beta.4, publicar feeds/claves/releases o asegurar que la app ya se autoactualiza.
 
-## Fuentes primarias
+### Fuentes primarias
 
 [sparkle-start]: https://sparkle-project.org/documentation/
 [sparkle-publish]: https://sparkle-project.org/documentation/publishing/
