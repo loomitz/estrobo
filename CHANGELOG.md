@@ -2,6 +2,11 @@
 
 Todos los cambios relevantes de Estrobo se documentan aquí. Mientras el proyecto esté en beta, las interfaces y la matriz de compatibilidad pueden cambiar entre prereleases.
 
+## Sin publicar / Unreleased — enlaces iOS
+
+- Se corrigen los enlaces de privacidad y soporte en español e inglés, fijándolos a un commit permanente en lugar de una rama de integración eliminada.
+- Fixed Spanish and English privacy/support links by pinning them to a permanent commit instead of a deleted integration branch.
+
 ## Sin publicar / Unreleased — actualizaciones macOS
 
 Implementación local para el shell macOS; **no es una nueva release pública**. La descarga vigente sigue siendo `0.1.0-beta.4`, sin actualizador. iOS/iPadOS no incorporan este mecanismo. Build 5 (`0.1.0`, beta, `v0.1.0-beta.5`) está asignado en el ledger y permanece sin publicar.

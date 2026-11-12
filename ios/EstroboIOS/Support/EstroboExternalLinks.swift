@@ -1,9 +1,9 @@
 import Foundation
 
 enum EstroboExternalLinks {
-    // Candidate builds must show the privacy/support contract from their source
-    // branch. Before distribution, pin this to the reviewed release tag or commit.
-    private static let documentReference = "codex/integration-20260929"
+    // Keep the reviewed privacy/support contract on an immutable source commit.
+    // Before distribution, review this pin against the exact release candidate.
+    private static let documentReference = "df89dc1c55527890fcd3791f1e4eba132a6bd03f"
 
     static func privacyPolicy(for language: EstroboLanguage) -> URL {
         switch language {
