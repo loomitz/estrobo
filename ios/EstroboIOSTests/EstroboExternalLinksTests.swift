@@ -17,7 +17,7 @@ final class EstroboExternalLinksTests: XCTestCase {
             XCTAssertEqual(url.scheme, "https")
             XCTAssertEqual(url.host, "github.com")
             XCTAssertTrue(url.path.hasPrefix(
-                "/loomitz/estrobo/blob/codex/integration-20260929/"
+                "/loomitz/estrobo/blob/df89dc1c55527890fcd3791f1e4eba132a6bd03f/"
             ))
         }
 
